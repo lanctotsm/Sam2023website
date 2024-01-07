@@ -2,21 +2,26 @@
 
 import React from 'react';
 import './styles/app.scss';
-import ImageGrid from './components/ImageGrid';
+import {BrowserRouter as Router, Route, Routes} from 'react-router-dom';
 import MyNav from './components/MyNav';
+import routes from './routes';
+import { Container } from 'react-bootstrap';
+import Footer from './components/Footer';
 
 const App: React.FC = () => {
-  const images = ['url1', 'url2', 'url3', 'url4']; // replace with your actual image URLs
 
   return (
-    <div className="App container">
-      <MyNav/>
-      <h1 className='text-center'>My Image Gallery</h1>
-      <hr className='pb-1'/>
-      <div className='col-lg-8'>
-      <ImageGrid images={images} />
-      </div>
-    </div>
+   <Router>
+      <MyNav />
+      <Container>
+      <Routes>
+        {routes.map((route, index) => (
+          <Route key={index} path={route.path} element={route.component } />
+        ))}
+      </Routes>
+      </Container>
+      <Footer></Footer>
+   </Router>   
   );
 };
 

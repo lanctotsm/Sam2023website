@@ -2,7 +2,7 @@
 $body-bg: #DEB887;
 $theme-colors: (
   "primary": #DEB887,
-  "secondary": #FFDAB9,
+  "secondary": #ebbb91,
   "success": #F0E68C,
   "info": #FFA07A,
   "warning": #FF7F50,
@@ -10,5 +10,50 @@ $theme-colors: (
   "light": #FFE4E1,
   "dark": #FFDEAD
 );
+body {
+  font-family: 'Gotham', sans-serif !important;
+}
+// These are the defaults, but you can override any values
+$font-family-sans-serif: -apple-system, system-ui, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif !default;
+$font-family-serif:      Georgia, "Times New Roman", Times, serif !default;
+$font-family-monospace:  Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace !default;
+$font-family-base:       $font-family-sans-serif !default;
 
 @import '~bootstrap/scss/bootstrap';
+@import '~font-awesome/scss/font-awesome.scss';
+
+.navLink {
+  color: #c9c1c1;
+  font-weight: 300;
+  padding-left: 1.5rem;
+  padding-right: 1.5rem;
+  transition: color 0.3s, background-color 0.3s;
+  text-decoration: none;
+  border-radius: 5px;
+  margin-left: 5px;
+  margin-right: 5px;
+}
+
+.social-icons .social-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 2.5rem;
+  width: 2.5rem;
+  background-color: #495057;
+  color: #fff;
+  border-radius: 100%;
+  font-size: 2rem;
+  margin-right: 1.5rem;
+}
+.social-icons .social-icon:last-child {
+  margin-right: 0;
+}
+.social-icons .social-icon:hover {
+  background-color: #bd5d38;
+}
+
+a {
+  color: var(--bs-link-color);
+  text-decoration: none;
+}
