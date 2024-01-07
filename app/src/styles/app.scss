@@ -1,0 +1,14 @@
+//App custom theme attributes
+$body-bg: #DEB887;
+$theme-colors: (
+  "primary": #DEB887,
+  "secondary": #FFDAB9,
+  "success": #F0E68C,
+  "info": #FFA07A,
+  "warning": #FF7F50,
+  "danger": #FF6347,
+  "light": #FFE4E1,
+  "dark": #FFDEAD
+);
+
+@import '~bootstrap/scss/bootstrap';
