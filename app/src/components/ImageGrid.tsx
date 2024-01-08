@@ -14,19 +14,16 @@ const ImageGrid: React.FC<ImageGridProps> = ({ images }) => {
   return (
     <>
       <Container>
-        <Row>
+        <Row className="justify-content-center" style={{display:'flex'}}>
           {images.map((image, index) => (
-            <Col xs={6} md={4} lg={3} key={index}>
+            <Col className='pt-4' xs={6} md={4} lg={3} key={index}>
               <Image src={image} thumbnail onClick={() => setSelectedImage(image)} />
             </Col>
           ))}
         </Row>
       </Container>
 
-      <Modal show={selectedImage !== null} onHide={() => setSelectedImage(null)}>
-        <Modal.Header closeButton>
-          <Modal.Title>Selected Image</Modal.Title>
-        </Modal.Header>
+      <Modal show={selectedImage !== null} onHide={() => setSelectedImage(null)}>       
         <Modal.Body>
           <Image src={selectedImage || ''} fluid />
         </Modal.Body>

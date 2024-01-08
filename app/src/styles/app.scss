@@ -1,14 +1,14 @@
 //App custom theme attributes
-$body-bg: #DEB887;
+$body-bg: #969088;
 $theme-colors: (
-  "primary": #DEB887,
-  "secondary": #ebbb91,
-  "success": #F0E68C,
-  "info": #FFA07A,
-  "warning": #FF7F50,
-  "danger": #FF6347,
-  "light": #FFE4E1,
-  "dark": #FFDEAD
+  "primary": #969088,
+  "secondary": #bd5d38,
+  "success": #28a745,
+  "info": #17a2b8,
+  "warning": #ffc107,
+  "danger": #dc3545,
+  "light": #f8f9fa,
+  "dark": #343a40
 );
 body {
   font-family: 'Gotham', sans-serif !important;
@@ -56,4 +56,42 @@ $font-family-base:       $font-family-sans-serif !default;
 a {
   color: var(--bs-link-color);
   text-decoration: none;
+}
+h1 {
+  font-weight: bolder ;
+}
+
+.img-thumbnail {
+  padding:0px;
+
+}
+.white-text {
+  color: white;
+}
+.section-divider {
+  margin: 1.25rem 0 1.5rem;
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.section-divider .divider-line:first-child {
+  margin-right: 1rem;
+}
+.section-divider .divider-line {
+    width: 100%;
+    max-width: 7rem;
+    height: 0.25rem;
+    background-color: whitesmoke;
+    border-radius: 1rem;
+    border-color: whitesmoke;
+}
+.section-divider .divider-icon {
+  color: whitesmoke;
+  font-size: 2rem;
+}
+
+.section-divider .divider-line:last-child {
+  margin-left: 1rem;
 }
