@@ -1,0 +1,58 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: AWS CloudFormation for a Node.js website using Lambda and S3
+Parameters:
+  paramSamWebsiteBucketName:
+    Type: String
+    Default: sam-website-bucket
+    Description: Name of the S3 bucket that will host the website
+Resources:
+  SamWebsiteBucket:
+    Type: 'AWS::S3::Bucket'
+    
+
+    Properties:      
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: false
+        BlockPublicPolicy: false
+        IgnorePublicAcls: false
+        RestrictPublicBuckets: false
+      OwnershipControls:
+        Rules:
+         - ObjectOwnership: ObjectWriter
+      VersioningConfiguration:
+        Status: Enabled
+      BucketName: !Ref paramSamWebsiteBucketName
+      WebsiteConfiguration:
+        IndexDocument: index.html
+        ErrorDocument: error.html
+  SamWebsiteHostingBucketPolicy:
+    Type: 'AWS::S3::BucketPolicy'
+    Properties:
+      Bucket: !Ref paramSamWebsiteBucketName
+      PolicyDocument:
+        Statement:
+          - Sid: PublicReadGetObject
+            Action:
+              - 's3:GetObject'
+            Effect: Allow
+            Resource: !Join 
+              - ''
+              - - 'arn:aws:s3:::'
+                - !Ref paramSamWebsiteBucketName
+                - /*
+            Principal:
+              AWS: '*'
+          - Action:
+              - 's3:GetObject'
+            Effect: Allow
+            Resource: !Sub 'arn:aws:s3:::${paramSamWebsiteBucketName}/*'
+            Principal:
+              AWS: '*'
+
+Outputs:
+  WebsiteURL:
+    Description: 'URL for website hosted on S3'
+    Value: !GetAtt      
+      - SamWebsiteBucket
+      - WebsiteURL 
+    
