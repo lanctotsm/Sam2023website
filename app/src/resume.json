@@ -1,0 +1,211 @@
+{
+    "$schema": "https://raw.githubusercontent.com/jsonresume/resume-schema/v1.0.0/schema.json",
+    "basics": {
+      "name": "Samuel Lanctot",
+      "label": "Software Engineer",
+      "image": "",
+      "email": "lanctotsm@gmail.com",
+      "phone": "(703) 585-8193",
+      "website": "http://samlanctot.com",
+      "summary": "Fullstack Engineer. Learning modern front end and cloud technologies.\n\nSpecialties: Programming: \n NodeJS, C#.net, Angular,  ASP.net MVC 3-5, Webforms, AngularJS, Typescript, Javascript, front-end web development",
+      "location": {
+        "countryCode": "US",
+        "address": "United States"
+      },
+      "profiles": [
+        {
+          "network": "LinkedIn",
+          "username": "Samuel-Lanctot",
+          "url": "https://www.linkedin.com/in/samuel-lanctot-a798881b/"
+        },
+        {
+          "network": "GitHub",
+          "username": "lanctotsm",
+          "url": "https://www.github.com/lanctotsm"
+        }
+      ]
+    },
+    "work": [
+      {
+        "name": "Capital One",
+        "position": "Senior Associate",
+        "startDate": "2021-11-30",
+        "endDate": "",
+        "highlights": [],
+        "summary": "Maintained and upgraded SOX control automation software using AWS serverless technologies and ECS clusters.",
+        "url": "https://www.linkedin.com/company/capital-one/",
+        "location": "Tysons Corner, Virginia, United States"
+      },
+      {
+        "name": "GEICO",
+        "position": "Senior Software Engineer",
+        "startDate": "2019-05-31",
+        "endDate": "2021-11-30",
+        "summary": "Developed and maintained C# .Net core UI services. Implemented unique business logic for many different insurance use cases.",
+        "highlights": [],
+        "url": "https://www.linkedin.com/company/geico/",
+        "location": "Washington DC-Baltimore Area"
+      },
+      {
+        "name": "Modis",
+        "position": "Software Developer",
+        "startDate": "2017-11-30",
+        "endDate": "2019-11-30",
+        "highlights": [],
+        "summary": "Contractor in a Federal agency \n\nDeveloping C# MVC 5 application with responsive UI.",
+        "url": "",
+        "location": "Washington DC-Baltimore Area"
+      },
+      {
+        "name": "Triad Interactive",
+        "position": ".NET developer",
+        "startDate": "2015-08-31",
+        "endDate": "2017-11-30",
+        "highlights": [],
+        "summary": "Building and improving web based learning tools for Microsoft Office products.",
+        "url": "https://www.linkedin.com/company/triad-interactive/",
+        "location": "Washington D.C. Metro Area"
+      },
+      {
+        "name": "Micron Technology",
+        "position": "Manufacturing Execution Software Engineer",
+        "startDate": "2013-05-31",
+        "endDate": "2015-08-31",
+        "highlights": [],
+        "summary": "Development of monitoring systems in Perl and desktop UIs using WPF and .NET web technologies. Maintained and improved manufacturing software systems for 24/7 operation. Resolved critical issues as a part of a on call rotation as 2nd tier software support.\n\nRecieved several 'SPOT' bonuses due to good performance and proactive regression testing, identifying issues before they affected production.\n\nWorked with an international team to create requirements, develop, and test software solutions.\n\nMade suggestions for improvements to version control standards that lead to changes in the company standards.",
+        "url": "https://www.linkedin.com/company/micron-technology/"
+      },
+      {
+        "name": "Micron Technology",
+        "position": "VMEC Scholar",
+        "startDate": "2012-05-31",
+        "endDate": "2012-08-31",
+        "highlights": [],
+        "summary": "Developed a full stack web application in the Microsoft MVC framework with a MSSQL and Windows Server backend.",
+        "url": "https://www.linkedin.com/company/micron-technology/",
+        "location": "Manassas, Virginia"
+      },
+      {
+        "name": "Virginia Commonwealth University",
+        "position": "Research Assistant",
+        "startDate": "2011-09-30",
+        "endDate": "2011-12-31",
+        "highlights": [],
+        "summary": "Developing Bio-medical image processing tool to enable better decision making in pelvic trauma cases.",
+        "url": "https://www.linkedin.com/school/virginia-commonwealth-university/"
+      }
+    ],
+    
+    "education": [
+      {
+        "institution": "Virginia Commonwealth University, SCHOOL OF ENGINEERING",
+        "area": "Computer Engineering",
+        "studyType": "B.S.",
+        "startDate": "2010-12-31",
+        "endDate": "2013-12-31",
+        "score": "",
+        "courses": [
+          "Multi-Core Programming",
+          "Digital Systems Design",
+          "Computer Organization",
+          "Intro to Microcomputers",
+          "Ind Study: GPU Computing",
+          "Software Engineering",
+          "Algorithms Analysis with Advanced Data Structures",
+          "Advanced Digital Design"
+        ]
+      },
+      {
+        "institution": "Northern Virginia Community College",
+        "area": "Computer Science",
+        "studyType": "A.S",
+        "startDate": "2007-12-31",
+        "endDate": "2009-12-31",
+        "score": "",
+        "courses": []
+      }
+    ],
+    "awards": [],
+    "certificates": [
+      {
+        "name": "AWS Certified Solutions Architect - Associate",
+        "issuer": "Amazon Web Services (AWS)",
+        "endDate": "2025-03-31",
+        "startDate": "2022-03-31",
+        "url": "https://www.credly.com/badges/f99ea13e-d109-4d4a-bd77-c5e7078df163/linked_in_profile"
+      }
+    ],
+    "skills": [
+      {
+        "name": "C#",
+        "level": "8",
+        "keywords": []
+      },
+      {
+        "name": "Typescript",
+        "level": "8",
+        "keywords": []
+      },
+      {
+        "name": "ASP.NET MVC",
+        "level": "8",
+        "keywords": []
+      },
+      {
+        "name": "JavaScript",
+        "level": "8",
+        "keywords": []
+      },
+      {
+        "name": "Node.js",
+        "level": "7",
+        "keywords": []
+      },
+      {
+        "name": "Angular",
+        "level": "5",
+        "keywords": []
+      },
+      {
+        "name":"ReactJS",
+        "level": "5",
+        "keywords": []
+      },
+      {
+        "name": "AWS Lambda",
+        "level": "5",
+        "keywords": []
+      },
+      {
+        "name":"AWS CloudFormation",
+        "level": "4",
+        "keywords": []
+      },
+      {
+        "name": "Jenkins",
+        "level": "5",
+        "keywords": []
+      },
+      {
+        "name": "Scala",
+        "level": "4"
+      }                    
+    ],
+    "languages": [
+      {
+        "fluency": "Native Speaker",
+        "language": "English"
+      },
+      {
+        "fluency": "Limited Working",
+        "language": "Portuguese"
+      }
+    ],
+    "interests": [],
+    "references": [],
+    "projects": [],
+    "meta": {
+      "version": "v1.0.0",
+      "canonical": "https://github.com/jsonresume/resume-schema/blob/v1.0.0/schema.json"
+    }
+  }
