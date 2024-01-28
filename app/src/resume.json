@@ -7,7 +7,7 @@
       "email": "lanctotsm@gmail.com",
       "phone": "(703) 585-8193",
       "website": "http://samlanctot.com",
-      "summary": "Fullstack Engineer. Learning modern front end and cloud technologies.\n\nSpecialties: Programming: \n NodeJS, C#.net, Angular,  ASP.net MVC 3-5, Webforms, AngularJS, Typescript, Javascript, front-end web development",
+      "summary": "Fullstack engineer with a passion for building scalable, maintainable, and testable software. I have experience with both Microsoft and Linux backends, and various forms of back end programming. I also have a passion for learning new technologies and finding the best tool for any particular job.",
       "location": {
         "countryCode": "US",
         "address": "United States"
@@ -101,8 +101,8 @@
         "institution": "Virginia Commonwealth University",
         "area": "Computer Engineering",
         "studyType": "B.S.",
-        "startDate": "2010-12-31",
-        "endDate": "2013-12-31",
+        "startDate": "2010",
+        "endDate": "2013",
         "score": "3.45",
         "courses": [
           "Multi-Core Programming",
@@ -119,8 +119,8 @@
         "institution": "Northern Virginia Community College",
         "area": "Computer Science",
         "studyType": "A.S",
-        "startDate": "2007-12-31",
-        "endDate": "2009-12-31",
+        "startDate": "2007",
+        "endDate": "2009",
         "score": "",
         "courses": []
       }

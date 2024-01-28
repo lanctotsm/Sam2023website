@@ -11,6 +11,11 @@ const Resume: React.FC<ResumeProps> = ({resume, style}) => {
     console.log(localResume);
     return (
        <Container>
+        <Row>
+            <p>
+            {localResume.basics.summary}
+            </p>
+        </Row>
         <Row className="justify-content-center">
             <Col xs={12} md={4}>
             <div>
