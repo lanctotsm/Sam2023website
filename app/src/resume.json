@@ -25,12 +25,12 @@
         }
       ]
     },
+
     "work": [
       {
         "name": "Capital One",
         "position": "Senior Associate",
         "startDate": "2021-11-30",
-        "endDate": "",
         "highlights": [],
         "summary": "Maintained and upgraded SOX control automation software using AWS serverless technologies and ECS clusters.",
         "url": "https://www.linkedin.com/company/capital-one/",
@@ -71,8 +71,8 @@
         "position": "Manufacturing Execution Software Engineer",
         "startDate": "2013-05-31",
         "endDate": "2015-08-31",
-        "highlights": [],
-        "summary": "Development of monitoring systems in Perl and desktop UIs using WPF and .NET web technologies. Maintained and improved manufacturing software systems for 24/7 operation. Resolved critical issues as a part of a on call rotation as 2nd tier software support.\n\nRecieved several 'SPOT' bonuses due to good performance and proactive regression testing, identifying issues before they affected production.\n\nWorked with an international team to create requirements, develop, and test software solutions.\n\nMade suggestions for improvements to version control standards that lead to changes in the company standards.",
+        "highlights": ["Recieved several 'SPOT' bonuses due to good performance"],
+        "summary": "Developed monitoring software for MES operations, executed release management for software changes, and worked with an international team to create requirements, develop, and test software solutions.",
         "url": "https://www.linkedin.com/company/micron-technology/"
       },
       {
@@ -81,7 +81,7 @@
         "startDate": "2012-05-31",
         "endDate": "2012-08-31",
         "highlights": [],
-        "summary": "Developed a full stack web application in the Microsoft MVC framework with a MSSQL and Windows Server backend.",
+        "summary": "Created full stack web application in the Microsoft MVC framework with a MSSQL and Windows Server backend to aid in machine maintenance and monitoring",
         "url": "https://www.linkedin.com/company/micron-technology/",
         "location": "Manassas, Virginia"
       },
