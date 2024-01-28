@@ -98,12 +98,12 @@
     
     "education": [
       {
-        "institution": "Virginia Commonwealth University, SCHOOL OF ENGINEERING",
+        "institution": "Virginia Commonwealth University",
         "area": "Computer Engineering",
         "studyType": "B.S.",
         "startDate": "2010-12-31",
         "endDate": "2013-12-31",
-        "score": "",
+        "score": "3.45",
         "courses": [
           "Multi-Core Programming",
           "Digital Systems Design",

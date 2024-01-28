@@ -35,8 +35,29 @@ const Resume: React.FC<ResumeProps> = ({resume, style}) => {
                 <div>
                     <a href={localResume.basics.website} target="_blank" style={{color:'inherit',textDecoration:'underline'}}>{localResume.basics.website}</a>
                 </div>
-
+                <hr/>
             </div>
+            {(!localResume.education?.length)? null : 
+            <div>
+                <h3>Education</h3>
+                {(localResume.education).map((education: any, index: number) => (
+                    <div key={index+education.institution}>
+                        <h5>{education.institution}</h5>
+                        <div>{education.area}</div>
+                        {(!education.score) ? null : 
+                        <div>
+                            <span style={{fontWeight:'bold'}}>GPA: {education.score} </span>
+                        </div>
+                        }
+                        <div style={{fontWeight:'bold'}}>{education.studyType}</div>
+                        <div>{education.startDate} - {education.endDate}</div>
+                        <hr/>
+                    </div>
+                ))
+
+                }
+            </div> 
+            }
                 {(isEmpty(localResume.basics.profiles)) ? null: 
                 <div>
                     <h3>Profiles</h3>
@@ -53,6 +74,7 @@ const Resume: React.FC<ResumeProps> = ({resume, style}) => {
                     ))}
                 </div> 
             }
+          
             {(localResume.interests.length === 0) ? null:
             <div>
                    <h3 className='mb-1'>Interests</h3>
@@ -64,6 +86,7 @@ const Resume: React.FC<ResumeProps> = ({resume, style}) => {
             
             </div>
             }
+         
             </Col>
             <Col xs={12} md={8}>
             <div>
