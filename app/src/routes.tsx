@@ -9,11 +9,11 @@ const routes = [
     exact: true
   },
   {
-    path: "/gallery",
+    path: "/Gallery",
     component: <Gallery />,
   },
   {
-    path: "/resume",
+    path: "/Resume",
     component:<ResumePage/>
   }
 ];

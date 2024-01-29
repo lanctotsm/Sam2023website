@@ -16,11 +16,11 @@ function MyNav() {
             <LinkContainer to="/">
               <Nav.Link as={NavLink} to="/">Home</Nav.Link>
             </LinkContainer>
-            <LinkContainer to="/gallery">
-              <Nav.Link as={NavLink} to="/gallery" className='styles.navLink'>Gallery</Nav.Link>
+            <LinkContainer to="/Gallery">
+              <Nav.Link as={NavLink} to="/Gallery" className='styles.navLink'>Gallery</Nav.Link>
             </LinkContainer>
-            <LinkContainer to="/resume">
-              <Nav.Link as={NavLink} to="/resume">Resume</Nav.Link>
+            <LinkContainer to="/Resume">
+              <Nav.Link as={NavLink} to="/Resume">Resume</Nav.Link>
             </LinkContainer>
           </Nav>
         </Navbar.Collapse>
