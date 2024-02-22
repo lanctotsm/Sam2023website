@@ -8,7 +8,7 @@ const Gallery: React.FC  = ( ) => {
             <SectionTitle>Photos of Me And Other Things</SectionTitle>
             <SectionDivider/>
             <div className='col-lg-8'>
-            <ImageGrid images={[
+                <ImageGrid images={[
                 'https://sam-website-bucket.s3.amazonaws.com/images/GotokujiTemple.jpg',
                 'https://sam-website-bucket.s3.amazonaws.com/images/HimejiCastle.JPG',
                 'https://sam-website-bucket.s3.amazonaws.com/images/Kyoto.JPG',
