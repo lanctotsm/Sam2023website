@@ -207,9 +207,14 @@ Resources:
     Type: AWS::SNS::Topic
     Properties:
       TopicName: !Sub "${AWS::StackName}-notifications"
-      Subscription:
-        - Protocol: email
-          Endpoint: !Ref NotificationEmail
+
+  # SNS Subscription for email notifications
+  PipelineNotificationSubscription:
+    Type: AWS::SNS::Subscription
+    Properties:
+      Protocol: email
+      TopicArn: !Ref PipelineNotificationTopic
+      Endpoint: !Ref NotificationEmail
 
   # CodePipeline
   Pipeline:
@@ -266,35 +271,51 @@ Resources:
               InputArtifacts:
                 - Name: BuildOutput
 
-  # EventBridge Rule for Pipeline Failures
-  PipelineFailureEventRule:
+  # GitHub Webhook
+  GitHubWebhook:
+    Type: AWS::CodePipeline::Webhook
+    Properties:
+      Authentication: GITHUB_HMAC
+      AuthenticationConfiguration:
+        SecretToken: !Ref GitHubToken
+      Filters:
+        - JsonPath: $.ref
+          MatchEquals: !Sub "refs/heads/${GitHubBranch}"
+      TargetPipeline: !Ref Pipeline
+      TargetAction: SourceAction
+      TargetPipelineVersion: !GetAtt Pipeline.Version
+      RegisterWithThirdParty: true
+
+  # EventBridge Rule for Pipeline State Changes
+  PipelineEventRule:
     Type: AWS::Events::Rule
     Properties:
-      Name: !Sub "${AWS::StackName}-pipeline-failure"
-      Description: Trigger SNS notification on pipeline failures
+      Name: !Sub "${AWS::StackName}-pipeline-notifications"
+      Description: "Trigger notifications on pipeline action failures"
       EventPattern:
         source:
           - aws.codepipeline
         detail-type:
-          - CodePipeline Pipeline Execution State Change
           - CodePipeline Action Execution State Change
         detail:
           state:
             - FAILED
           pipeline:
+            # Filter to only this specific pipeline by name
             - !Ref Pipeline
       State: ENABLED
       Targets:
         - Arn: !Ref PipelineNotificationTopic
-          Id: PipelineFailureNotification
+          Id: PipelineNotificationTarget
           InputTransformer:
             InputPathsMap:
-              pipeline: $.detail.pipeline
-              state: $.detail.state
-              stage: $.detail.stage
-              action: $.detail.action
+              pipeline: "$.detail.pipeline"
+              state: "$.detail.state"
+              stage: "$.detail.stage"
+              action: "$.detail.action"
+              executionId: "$.detail['execution-id']"
             InputTemplate: |
-              "Pipeline '<pipeline>' has failed. State: <state>, Stage: <stage>, Action: <action>"
+              "Pipeline <pipeline> action <action> in stage <stage> has <state>. Execution ID: <executionId>"
 
   # Allow EventBridge to publish to SNS
   PipelineNotificationTopicPolicy:
@@ -310,21 +331,6 @@ Resources:
               Service: events.amazonaws.com
             Action: sns:Publish
             Resource: !Ref PipelineNotificationTopic
-
-  # GitHub Webhook
-  GitHubWebhook:
-    Type: AWS::CodePipeline::Webhook
-    Properties:
-      Authentication: GITHUB_HMAC
-      AuthenticationConfiguration:
-        SecretToken: !Ref GitHubToken
-      Filters:
-        - JsonPath: $.ref
-          MatchEquals: !Sub "refs/heads/${GitHubBranch}"
-      TargetPipeline: !Ref Pipeline
-      TargetAction: SourceAction
-      TargetPipelineVersion: !GetAtt Pipeline.Version
-      RegisterWithThirdParty: true
 
 Outputs:
   PipelineName:
