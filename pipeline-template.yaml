@@ -252,15 +252,6 @@ Resources:
                 - Name: SourceOutput
               OutputArtifacts:
                 - Name: BuildOutput
-              OnFailure:
-                ActionTypeId:
-                  Category: Invoke
-                  Owner: SNS
-                  Provider: SNS
-                  Version: '1'
-                Configuration:
-                  TopicArn: !Ref PipelineNotificationTopic
-                  Message: "Build failed for photo backend pipeline"
 
         - Name: Deploy
           Actions:
@@ -274,15 +265,6 @@ Resources:
                 ProjectName: !Ref CodeBuildDeployProject
               InputArtifacts:
                 - Name: BuildOutput
-              OnFailure:
-                ActionTypeId:
-                  Category: Invoke
-                  Owner: SNS
-                  Provider: SNS
-                  Version: '1'
-                Configuration:
-                  TopicArn: !Ref PipelineNotificationTopic
-                  Message: "Deployment failed for photo backend pipeline"
 
   # GitHub Webhook
   GitHubWebhook:
@@ -298,6 +280,52 @@ Resources:
       TargetAction: SourceAction
       TargetPipelineVersion: !GetAtt Pipeline.Version
       RegisterWithThirdParty: true
+
+  # EventBridge Rule for Pipeline State Changes
+  PipelineEventRule:
+    Type: AWS::Events::Rule
+    Properties:
+      Name: !Sub "${AWS::StackName}-pipeline-notifications"
+      Description: "Trigger notifications on pipeline state changes"
+      EventPattern:
+        source:
+          - aws.codepipeline
+        detail-type:
+          - CodePipeline Pipeline Execution State Change
+          - CodePipeline Action Execution State Change
+        detail:
+          state:
+            - FAILED
+          pipeline:
+            - !Ref Pipeline
+      State: ENABLED
+      Targets:
+        - Arn: !Ref PipelineNotificationTopic
+          Id: PipelineNotificationTarget
+          InputTransformer:
+            InputPathsMap:
+              pipeline: "$.detail.pipeline"
+              state: "$.detail.state"
+              stage: "$.detail.stage"
+              action: "$.detail.action"
+              executionId: "$.detail.execution-id"
+            InputTemplate: |
+              "Pipeline <pipeline> has <state>. Stage: <stage>, Action: <action>, Execution ID: <executionId>"
+
+  # Allow EventBridge to publish to SNS
+  PipelineNotificationTopicPolicy:
+    Type: AWS::SNS::TopicPolicy
+    Properties:
+      Topics:
+        - !Ref PipelineNotificationTopic
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: events.amazonaws.com
+            Action: sns:Publish
+            Resource: !Ref PipelineNotificationTopic
 
 Outputs:
   PipelineName:
