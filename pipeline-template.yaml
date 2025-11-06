@@ -312,7 +312,7 @@ Resources:
               state: "$.detail.state"
               stage: "$.detail.stage"
               action: "$.detail.action"
-              executionId: "$.detail.execution-id"
+              executionId: "$.detail['execution-id']"
             InputTemplate: |
               "Pipeline <pipeline> action <action> in stage <stage> has <state>. Execution ID: <executionId>"
 
