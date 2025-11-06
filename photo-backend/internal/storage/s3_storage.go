@@ -70,7 +70,15 @@ func (s *S3Storage) DownloadFile(key string) ([]byte, error) {
 
 // DeleteFile deletes a file from S3
 func (s *S3Storage) DeleteFile(key string) error {
-	return s.DeleteFileWithContext(context.Background(), key)
+	_, err := s.client.DeleteObject(&s3.DeleteObjectInput{
+		Bucket: aws.String(s.bucket),
+		Key:    aws.String(key),
+	})
+	if err != nil {
+		return s.handleS3Error("DeleteFile", err)
+	}
+
+	return nil
 }
 
 // DeleteFileWithContext deletes a file from S3 with context support

@@ -183,7 +183,7 @@ Write-Host "Stack Status: $stackStatus" -ForegroundColor Cyan
 Write-Host "`nNext Steps:" -ForegroundColor Yellow
 Write-Host "1. Configure Google OAuth credentials in your secrets.json file" -ForegroundColor White
 Write-Host "2. Run the database initialization script: .\scripts\initialize-database.ps1 -StackName $StackName" -ForegroundColor White
-Write-Host "3. If you have existing photos, run: .\scripts\migrate-existing-photos.ps1 -StackName $StackName" -ForegroundColor White
+Write-Host "3. If you have existing photos, run: .\scripts\migrate-existing-photos.ps1 -StackName $StackName -UserEmail <your-email>" -ForegroundColor White
 Write-Host "4. Test the OAuth flow by visiting: $apiEndpoint/auth/login" -ForegroundColor White
 
 Write-Host "`nDeployment validation completed!" -ForegroundColor Green
