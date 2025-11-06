@@ -184,17 +184,18 @@ func (s *SessionStorage) CleanupExpiredSessions() error {
 
 // OAuth State Management Methods
 
-// SaveOAuthState stores an OAuth state parameter temporarily in DynamoDB.
+// SaveOAuthState stores an OAuth state parameter and PKCE verifier temporarily in DynamoDB.
 // Uses the same table as sessions but with a different key prefix to separate concerns.
 // The state automatically expires via DynamoDB TTL after 5 minutes.
 func (s *SessionStorage) SaveOAuthState(state *auth.OAuthState) error {
 	// Use a prefixed key to distinguish from session tokens
 	stateKey := "oauth_state_" + state.State
 	
-	// Create DynamoDB item with TTL
+	// Create DynamoDB item with TTL and verifier
 	item := map[string]*dynamodb.AttributeValue{
 		"session_token": {S: aws.String(stateKey)},
 		"user_email":    {S: aws.String("oauth_state")}, // Placeholder for GSI compatibility
+		"verifier":      {S: aws.String(state.Verifier)}, // Store PKCE verifier
 		"created_at":    {S: aws.String(state.CreatedAt.Format(time.RFC3339))},
 		"expires_at":    {N: aws.String(fmt.Sprintf("%d", state.ExpiresAt.Unix()))}, // TTL field
 	}
@@ -210,9 +211,9 @@ func (s *SessionStorage) SaveOAuthState(state *auth.OAuthState) error {
 	return nil
 }
 
-// GetOAuthState checks if an OAuth state parameter exists and is still valid.
-// Returns true if the state exists and hasn't expired, false otherwise.
-func (s *SessionStorage) GetOAuthState(state string) (bool, error) {
+// GetOAuthState retrieves an OAuth state parameter and its associated PKCE verifier.
+// Returns the state record if it exists and hasn't expired, nil otherwise.
+func (s *SessionStorage) GetOAuthState(state string) (*auth.OAuthState, error) {
 	stateKey := "oauth_state_" + state
 	
 	result, err := s.client.GetItem(&dynamodb.GetItemInput{
@@ -222,12 +223,12 @@ func (s *SessionStorage) GetOAuthState(state string) (bool, error) {
 		},
 	})
 	if err != nil {
-		return false, fmt.Errorf("failed to get OAuth state: %w", err)
+		return nil, fmt.Errorf("failed to get OAuth state: %w", err)
 	}
 	
 	// State doesn't exist
 	if result.Item == nil {
-		return false, nil
+		return nil, nil
 	}
 	
 	// Check if state has expired (additional check beyond DynamoDB TTL)
@@ -236,11 +237,35 @@ func (s *SessionStorage) GetOAuthState(state string) (bool, error) {
 		if err == nil && time.Now().Unix() > expiresAt {
 			// State has expired, clean it up
 			s.DeleteOAuthState(state)
-			return false, nil
+			return nil, nil
 		}
 	}
 	
-	return true, nil
+	// Manually unmarshal the state record to handle time conversion
+	stateRecord := &auth.OAuthState{
+		State: state,
+	}
+	
+	// Extract verifier
+	if verifierAttr, exists := result.Item["verifier"]; exists && verifierAttr.S != nil {
+		stateRecord.Verifier = *verifierAttr.S
+	}
+	
+	// Extract created_at
+	if createdAtAttr, exists := result.Item["created_at"]; exists && createdAtAttr.S != nil {
+		if createdAt, err := time.Parse(time.RFC3339, *createdAtAttr.S); err == nil {
+			stateRecord.CreatedAt = createdAt
+		}
+	}
+	
+	// Extract expires_at (stored as Unix timestamp for TTL)
+	if expiresAtAttr, exists := result.Item["expires_at"]; exists && expiresAtAttr.N != nil {
+		if expiresAtUnix, err := strconv.ParseInt(*expiresAtAttr.N, 10, 64); err == nil {
+			stateRecord.ExpiresAt = time.Unix(expiresAtUnix, 0).UTC()
+		}
+	}
+	
+	return stateRecord, nil
 }
 
 // DeleteOAuthState removes an OAuth state parameter from storage.

@@ -161,6 +161,7 @@ func TestSessionStorage_GetOAuthState(t *testing.T) {
 	item := map[string]*dynamodb.AttributeValue{
 		"session_token": {S: aws.String("oauth_state_test-state")},
 		"user_email":    {S: aws.String("oauth_state")},
+		"verifier":      {S: aws.String("test-verifier-12345")},
 		"created_at":    {S: aws.String(time.Now().UTC().Format(time.RFC3339))},
 		"expires_at":    {N: aws.String("9999999999")}, // Future expiration
 	}
@@ -169,10 +170,10 @@ func TestSessionStorage_GetOAuthState(t *testing.T) {
 		Item: item,
 	}, nil)
 
-	valid, err := storage.GetOAuthState("test-state")
+	stateRecord, err := storage.GetOAuthState("test-state")
 
 	assert.NoError(t, err)
-	assert.True(t, valid)
+	assert.NotNil(t, stateRecord)
 	mockDB.AssertExpectations(t)
 }
 

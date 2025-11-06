@@ -27,9 +27,10 @@ type Session struct {
 
 // OAuthState represents a temporary OAuth state parameter for CSRF protection.
 // State parameters are generated during OAuth initiation and validated during callback
-// to prevent cross-site request forgery attacks.
+// to prevent cross-site request forgery attacks. Includes PKCE verifier for additional security.
 type OAuthState struct {
 	State     string    `json:"state" dynamodbav:"state"`           // Cryptographically secure random state
+	Verifier  string    `json:"verifier" dynamodbav:"verifier"`     // PKCE code verifier
 	CreatedAt time.Time `json:"created_at" dynamodbav:"created_at"` // State creation timestamp
 	ExpiresAt time.Time `json:"expires_at" dynamodbav:"expires_at"` // State expiration timestamp (5 minutes)
 }
@@ -65,20 +66,22 @@ type SessionValidationResult struct {
 	Error   string   `json:"error,omitempty"`   // Error message (if invalid)
 }
 
-// GoogleTokenInfo represents the structure of Google OAuth token information.
-// Contains user data and token metadata returned by Google's token validation endpoint.
-type GoogleTokenInfo struct {
-	Aud           string `json:"aud"`            // Audience (client ID)
-	Sub           string `json:"sub"`            // Subject (user ID)
-	Email         string `json:"email"`          // User's email address
-	EmailVerified bool   `json:"email_verified"` // Email verification status
-	Name          string `json:"name"`           // User's full name
-	Picture       string `json:"picture"`        // Profile picture URL
-	GivenName     string `json:"given_name"`     // First name
-	FamilyName    string `json:"family_name"`    // Last name
-	Locale        string `json:"locale"`         // User's locale
-	Iat           int64  `json:"iat"`            // Issued at timestamp
-	Exp           int64  `json:"exp"`            // Expiration timestamp
+// IDTokenClaims represents the structure of Google ID token claims.
+// Contains user data and token metadata from Google's ID token.
+type IDTokenClaims struct {
+	Aud           string   `json:"aud"`            // Audience (client ID)
+	Sub           string   `json:"sub"`            // Subject (user ID)
+	Email         string   `json:"email"`          // User's email address
+	EmailVerified bool     `json:"email_verified"` // Email verification status
+	Name          string   `json:"name"`           // User's full name
+	Picture       string   `json:"picture"`        // Profile picture URL
+	GivenName     string   `json:"given_name"`     // First name
+	FamilyName    string   `json:"family_name"`    // Last name
+	Locale        string   `json:"locale"`         // User's locale
+	Iat           int64    `json:"iat"`            // Issued at timestamp
+	Exp           int64    `json:"exp"`            // Expiration timestamp
+	Amr           []string `json:"amr,omitempty"`  // Authentication Methods Reference (for 2FA)
+	Acr           string   `json:"acr,omitempty"`  // Authentication Context Class Reference
 }
 
 // LoginRequest represents a login initiation request.

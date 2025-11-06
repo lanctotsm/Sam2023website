@@ -17,7 +17,7 @@ const Footer: React.FC = () => {
                             <a className="social-icon" href="https://github.com/lanctotsm/Sam2023website" target="_blank">
                                 <i className="fa fa-github"></i>
                             </a>
-                            <a className="social-icon" href="https://www.linkedin.com/in/samuel-lanctot" target="_blank">
+                            <a className="social-icon" href="https://www.linkedin.com/in/samuel-lanctot-a798881b" target="_blank">
                                 <i className="fa fa-linkedin"></i>
                             </a>
                             <a className="social-icon" href="https://www.instagram.com/lanctotsm/" target="_blank">
