@@ -18,9 +18,9 @@ This is a personal portfolio website built with React 18.2.0 and TypeScript. The
 │   │   └── routes.tsx     # Route definitions
 │   ├── public/            # Static assets
 │   ├── package.json       # Dependencies and scripts
-│   └── tsconfig.json      # TypeScript configuration
-└── src/
-    └── app.js             # Additional app logic
+│   ├── tsconfig.json      # TypeScript configuration
+│   └── cloudformation.yaml # AWS deployment configuration
+└── src/                   # Legacy/additional source files (currently empty)
 ```
 
 ## Technology Stack
@@ -125,13 +125,15 @@ This is a personal portfolio website built with React 18.2.0 and TypeScript. The
 
 ## Deployment
 
-The website is configured for deployment to AWS using:
+The website is configured for deployment to AWS S3 static website hosting:
 - **Infrastructure**: AWS CloudFormation (configuration in `app/cloudformation.yaml`)
-- **Hosting**: AWS S3 bucket with static website hosting
+- **Hosting**: AWS S3 bucket configured for static website hosting
+- **Configuration**: The CloudFormation template sets up an S3 bucket with public read access and website hosting enabled
 - **Deployment process**: 
   1. Build the production bundle: `cd app && npm run build`
-  2. Deploy using CloudFormation stack with the S3 bucket configuration
+  2. Create/update the CloudFormation stack using `app/cloudformation.yaml`
   3. Upload the `app/build/` contents to the S3 bucket
+  4. Access the website via the S3 website URL
 
 ## Important Notes
 
