@@ -74,7 +74,7 @@ sam deploy --stack-name photo-backend --capabilities CAPABILITY_IAM --parameter-
 .\scripts\initialize-database.ps1 -StackName "photo-backend"
 
 # 3. Migrate existing photos (if any)
-.\scripts\migrate-existing-photos.ps1 -StackName "photo-backend"
+.\scripts\migrate-existing-photos.ps1 -StackName "photo-backend" -UserEmail "your-email@example.com"
 
 # 4. Validate deployment
 .\scripts\validate-deployment.ps1 -StackName "photo-backend"
@@ -99,6 +99,11 @@ Initializes DynamoDB tables and verifies configuration:
 
 ### migrate-existing-photos.ps1
 Migrates existing photos to include album associations:
+- **Parameters**:
+  - `-StackName` (required): CloudFormation stack name
+  - `-UserEmail` (required): User email for photo ownership
+  - `-Region`: AWS region (default: us-east-1)
+  - `-DefaultAlbumName`: Album name (default: "Default Album")
 - Creates a default album
 - Updates existing photos with album_id and user_email
 - Updates album photo count
