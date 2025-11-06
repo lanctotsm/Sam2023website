@@ -207,9 +207,14 @@ Resources:
     Type: AWS::SNS::Topic
     Properties:
       TopicName: !Sub "${AWS::StackName}-notifications"
-      Subscription:
-        - Protocol: email
-          Endpoint: !Ref NotificationEmail
+
+  # SNS Subscription for email notifications
+  PipelineNotificationSubscription:
+    Type: AWS::SNS::Subscription
+    Properties:
+      Protocol: email
+      TopicArn: !Ref PipelineNotificationTopic
+      Endpoint: !Ref NotificationEmail
 
   # CodePipeline
   Pipeline:
@@ -286,12 +291,11 @@ Resources:
     Type: AWS::Events::Rule
     Properties:
       Name: !Sub "${AWS::StackName}-pipeline-notifications"
-      Description: "Trigger notifications on pipeline state changes"
+      Description: "Trigger notifications on pipeline action failures"
       EventPattern:
         source:
           - aws.codepipeline
         detail-type:
-          - CodePipeline Pipeline Execution State Change
           - CodePipeline Action Execution State Change
         detail:
           state:
@@ -310,7 +314,7 @@ Resources:
               action: "$.detail.action"
               executionId: "$.detail.execution-id"
             InputTemplate: |
-              "Pipeline <pipeline> has <state>. Stage: <stage>, Action: <action>, Execution ID: <executionId>"
+              "Pipeline <pipeline> action <action> in stage <stage> has <state>. Execution ID: <executionId>"
 
   # Allow EventBridge to publish to SNS
   PipelineNotificationTopicPolicy:
