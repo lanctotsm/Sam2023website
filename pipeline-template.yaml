@@ -301,6 +301,7 @@ Resources:
           state:
             - FAILED
           pipeline:
+            # Filter to only this specific pipeline by name
             - !Ref Pipeline
       State: ENABLED
       Targets:
