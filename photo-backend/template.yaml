@@ -157,6 +157,47 @@ Resources:
       AliasName: !Sub "alias/${AWS::StackName}-photos-${Environment}"
       TargetKeyId: !Ref PhotoKMSKey
 
+  # S3 Bucket for storing access logs
+  S3AccessLogBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub "${AWS::StackName}-logs-${Environment}-${AWS::AccountId}"
+      OwnershipControls:
+        Rules:
+          - ObjectOwnership: BucketOwnerPreferred
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+      LifecycleConfiguration:
+        Rules:
+          - Id: DeleteOldLogs
+            Status: Enabled
+            ExpirationInDays: !If [IsProduction, 90, 30]
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+
+  # S3 Bucket Policy for log bucket to allow S3 log delivery
+  S3AccessLogBucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket: !Ref S3AccessLogBucket
+      PolicyDocument:
+        Statement:
+          - Sid: S3ServerAccessLogsPolicy
+            Effect: Allow
+            Principal:
+              Service: logging.s3.amazonaws.com
+            Action:
+              - s3:PutObject
+            Resource: !Sub "${S3AccessLogBucket.Arn}/photo-bucket-logs/*"
+            Condition:
+              StringEquals:
+                aws:SourceAccount: !Ref AWS::AccountId
+
   # S3 Bucket for photo storage
   PhotoBucket:
     Type: AWS::S3::Bucket
@@ -194,11 +235,9 @@ Resources:
                 StorageClass: STANDARD_IA
               - TransitionInDays: 90
                 StorageClass: GLACIER
-      NotificationConfiguration:
-        CloudWatchConfigurations:
-          - Event: s3:ObjectCreated:*
-            CloudWatchConfiguration:
-              LogGroupName: !Ref S3AccessLogGroup
+      LoggingConfiguration:
+        DestinationBucketName: !Ref S3AccessLogBucket
+        LogFilePrefix: photo-bucket-logs/
 
   # S3 Bucket Policy for public read access to photos
   PhotoBucketPolicy:
@@ -484,12 +523,6 @@ Resources:
     Type: AWS::Logs::LogGroup
     Properties:
       LogGroupName: !Sub "/aws/lambda/${AWS::StackName}-photo-processor-${Environment}"
-      RetentionInDays: !If [IsProduction, 30, 7]
-
-  S3AccessLogGroup:
-    Type: AWS::Logs::LogGroup
-    Properties:
-      LogGroupName: !Sub "/aws/s3/${AWS::StackName}-${Environment}"
       RetentionInDays: !If [IsProduction, 30, 7]
 
   # CloudWatch Alarms
