@@ -3,8 +3,6 @@ package middleware
 import (
 	"context"
 	"fmt"
-	"net/http"
-	"strings"
 
 	"github.com/aws/aws-lambda-go/events"
 
@@ -18,45 +16,39 @@ type AuthServiceInterface interface {
 
 // AuthMiddleware provides authentication middleware functionality
 type AuthMiddleware struct {
-	authService AuthServiceInterface
+	authService     AuthServiceInterface
+	tokenExtractor  *TokenExtractor
+	responseBuilder *ResponseBuilder
 }
 
 // NewAuthMiddleware creates a new AuthMiddleware instance
 func NewAuthMiddleware(authService AuthServiceInterface) *AuthMiddleware {
 	return &AuthMiddleware{
-		authService: authService,
+		authService:     authService,
+		tokenExtractor:  NewTokenExtractor(),
+		responseBuilder: NewResponseBuilder(),
 	}
 }
 
 // RequireAuth wraps a handler to require authentication
 func (m *AuthMiddleware) RequireAuth(handler func(context.Context, events.APIGatewayProxyRequest, *auth.User) (events.APIGatewayProxyResponse, error)) func(context.Context, events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
 	return func(ctx context.Context, request events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
-		// Extract session token from Authorization header or cookie
-		sessionToken := m.extractSessionToken(request)
+		// Extract session token
+		sessionToken := m.tokenExtractor.ExtractSessionToken(request)
 		if sessionToken == "" {
-			return m.unauthorizedResponse("Authentication required. Please log in."), nil
+			return m.responseBuilder.UnauthorizedResponse("Authentication required. Please log in."), nil
 		}
 
 		// Validate session
 		result, err := m.authService.ValidateSession(sessionToken)
 		if err != nil {
-			return m.errorResponse(http.StatusInternalServerError, "Authentication service error"), nil
+			return m.responseBuilder.InternalErrorResponse("Authentication service error"), nil
 		}
 
 		if !result.Valid {
-			// Provide specific error messages based on validation result
-			errorMsg := "Invalid session"
-			if result.Error != "" {
-				switch result.Error {
-				case "session expired":
-					errorMsg = "Session expired. Please log in again."
-				case "invalid session token":
-					errorMsg = "Invalid session. Please log in again."
-				default:
-					errorMsg = result.Error
-				}
-			}
-			return m.unauthorizedResponse(errorMsg), nil
+			// Provide specific error messages
+			errorMsg := m.getSessionErrorMessage(result.Error)
+			return m.responseBuilder.UnauthorizedResponse(errorMsg), nil
 		}
 
 		// Add user to context for potential use by other middleware
@@ -74,7 +66,7 @@ func (m *AuthMiddleware) OptionalAuth(handler func(context.Context, events.APIGa
 		var user *auth.User
 
 		// Try to extract and validate session token
-		sessionToken := m.extractSessionToken(request)
+		sessionToken := m.tokenExtractor.ExtractSessionToken(request)
 		if sessionToken != "" {
 			result, err := m.authService.ValidateSession(sessionToken)
 			if err == nil && result.Valid {
@@ -87,89 +79,18 @@ func (m *AuthMiddleware) OptionalAuth(handler func(context.Context, events.APIGa
 	}
 }
 
-// extractSessionToken extracts session token from request
-func (m *AuthMiddleware) extractSessionToken(request events.APIGatewayProxyRequest) string {
-	// Try Authorization header first (Bearer token)
-	if auth := request.Headers["Authorization"]; auth != "" {
-		if strings.HasPrefix(auth, "Bearer ") {
-			return strings.TrimPrefix(auth, "Bearer ")
+// getSessionErrorMessage converts session validation errors to user-friendly messages
+func (m *AuthMiddleware) getSessionErrorMessage(errorMsg string) string {
+	switch errorMsg {
+	case "session expired":
+		return "Session expired. Please log in again."
+	case "invalid session token":
+		return "Invalid session. Please log in again."
+	default:
+		if errorMsg != "" {
+			return errorMsg
 		}
-	}
-
-	// Try lowercase authorization header
-	if auth := request.Headers["authorization"]; auth != "" {
-		if strings.HasPrefix(auth, "Bearer ") {
-			return strings.TrimPrefix(auth, "Bearer ")
-		}
-	}
-
-	// Try session cookie
-	if cookie := request.Headers["Cookie"]; cookie != "" {
-		return m.extractSessionFromCookie(cookie)
-	}
-
-	// Try lowercase cookie header
-	if cookie := request.Headers["cookie"]; cookie != "" {
-		return m.extractSessionFromCookie(cookie)
-	}
-
-	return ""
-}
-
-// extractSessionFromCookie extracts session token from cookie string
-func (m *AuthMiddleware) extractSessionFromCookie(cookieHeader string) string {
-	cookies := strings.Split(cookieHeader, ";")
-	for _, cookie := range cookies {
-		cookie = strings.TrimSpace(cookie)
-		if strings.HasPrefix(cookie, "session=") {
-			return strings.TrimPrefix(cookie, "session=")
-		}
-	}
-	return ""
-}
-
-// unauthorizedResponse returns a 401 Unauthorized response
-func (m *AuthMiddleware) unauthorizedResponse(message string) events.APIGatewayProxyResponse {
-	return events.APIGatewayProxyResponse{
-		StatusCode: http.StatusUnauthorized,
-		Headers: map[string]string{
-			"Content-Type":                 "application/json",
-			"Access-Control-Allow-Origin":  "*",
-			"Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
-			"Access-Control-Allow-Headers": "Content-Type, Authorization, Cookie",
-			"Access-Control-Allow-Credentials": "true",
-		},
-		Body: fmt.Sprintf(`{"error": "%s", "code": "UNAUTHORIZED"}`, message),
-	}
-}
-
-// forbiddenResponse returns a 403 Forbidden response
-func (m *AuthMiddleware) forbiddenResponse(message string) events.APIGatewayProxyResponse {
-	return events.APIGatewayProxyResponse{
-		StatusCode: http.StatusForbidden,
-		Headers: map[string]string{
-			"Content-Type":                 "application/json",
-			"Access-Control-Allow-Origin":  "*",
-			"Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
-			"Access-Control-Allow-Headers": "Content-Type, Authorization, Cookie",
-			"Access-Control-Allow-Credentials": "true",
-		},
-		Body: fmt.Sprintf(`{"error": "%s", "code": "FORBIDDEN"}`, message),
-	}
-}
-
-// errorResponse returns an error response
-func (m *AuthMiddleware) errorResponse(statusCode int, message string) events.APIGatewayProxyResponse {
-	return events.APIGatewayProxyResponse{
-		StatusCode: statusCode,
-		Headers: map[string]string{
-			"Content-Type":                 "application/json",
-			"Access-Control-Allow-Origin":  "*",
-			"Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
-			"Access-Control-Allow-Headers": "Content-Type, Authorization, Cookie",
-			"Access-Control-Allow-Credentials": "true",
-		},
-		Body: fmt.Sprintf(`{"error": "%s", "code": "ERROR"}`, message),
+		return "Invalid session"
 	}
 }
 
@@ -213,7 +134,7 @@ func (m *AuthMiddleware) RequireAuthorizedUser(authorizedEmail string, handler f
 	return m.RequireAuth(func(ctx context.Context, request events.APIGatewayProxyRequest, user *auth.User) (events.APIGatewayProxyResponse, error) {
 		// Check if user is the authorized user
 		if user.Email != authorizedEmail {
-			return m.forbiddenResponse(fmt.Sprintf("Access denied. Only %s is authorized.", authorizedEmail)), nil
+			return m.responseBuilder.ForbiddenResponse(fmt.Sprintf("Access denied. Only %s is authorized.", authorizedEmail)), nil
 		}
 
 		// Call the wrapped handler

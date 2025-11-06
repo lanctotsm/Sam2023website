@@ -90,12 +90,51 @@ func (m *MockSessionStorage) DeleteOAuthState(state string) error {
 	return nil
 }
 
+// MockOAuthStateStorage implements OAuth state storage interface for testing
+type MockOAuthStateStorage struct {
+	states map[string]*auth.OAuthState
+}
+
+func NewMockOAuthStateStorage() *MockOAuthStateStorage {
+	return &MockOAuthStateStorage{
+		states: make(map[string]*auth.OAuthState),
+	}
+}
+
+func (m *MockOAuthStateStorage) SaveOAuthState(state *auth.OAuthState) error {
+	m.states[state.State] = state
+	return nil
+}
+
+func (m *MockOAuthStateStorage) GetOAuthState(state string) (*auth.OAuthState, error) {
+	stateRecord, exists := m.states[state]
+	if !exists {
+		// For testing, return a mock state record for valid-looking states
+		if len(state) > 10 {
+			return &auth.OAuthState{
+				State:     state,
+				Verifier:  "mock-verifier-" + state,
+				CreatedAt: time.Now().UTC(),
+				ExpiresAt: time.Now().UTC().Add(10 * time.Minute),
+			}, nil
+		}
+		return nil, fmt.Errorf("invalid state")
+	}
+	return stateRecord, nil
+}
+
+func (m *MockOAuthStateStorage) DeleteOAuthState(state string) error {
+	delete(m.states, state)
+	return nil
+}
+
 func TestAuthService_CreateSession(t *testing.T) {
-	mockStorage := NewMockSessionStorage()
+	mockSessionStorage := NewMockSessionStorage()
+	mockOAuthStorage := NewMockOAuthStateStorage()
 	config := &config.Config{
 		AuthorizedEmail: "test@example.com",
 	}
-	authService := NewAuthService(config, mockStorage)
+	authService := NewAuthService(config, mockSessionStorage, mockOAuthStorage)
 
 	userEmail := "test@example.com"
 	session, err := authService.CreateSession(userEmail)
@@ -117,7 +156,7 @@ func TestAuthService_CreateSession(t *testing.T) {
 	}
 
 	// Verify session is saved in storage
-	savedSession, err := mockStorage.GetSession(session.SessionToken)
+	savedSession, err := mockSessionStorage.GetSession(session.SessionToken)
 	if err != nil {
 		t.Fatalf("Session not found in storage: %v", err)
 	}
@@ -139,7 +178,7 @@ func TestAuthService_ValidateSession(t *testing.T) {
 	config := &config.Config{
 		AuthorizedEmail: "test@example.com",
 	}
-	authService := NewAuthService(config, mockStorage)
+	authService := NewAuthService(config, mockStorage, NewMockOAuthStateStorage())
 
 	// Test empty session token
 	result, err := authService.ValidateSession("")
@@ -208,10 +247,11 @@ func TestAuthService_ValidateSession(t *testing.T) {
 
 func TestAuthService_ExpireSession(t *testing.T) {
 	mockStorage := NewMockSessionStorage()
+	mockOAuthStorage := NewMockOAuthStateStorage()
 	config := &config.Config{
 		AuthorizedEmail: "test@example.com",
 	}
-	authService := NewAuthService(config, mockStorage)
+	authService := NewAuthService(config, mockStorage, mockOAuthStorage)
 
 	// Create a session
 	userEmail := "test@example.com"
@@ -244,7 +284,7 @@ func TestAuthService_RefreshSession(t *testing.T) {
 	config := &config.Config{
 		AuthorizedEmail: "test@example.com",
 	}
-	authService := NewAuthService(config, mockStorage)
+	authService := NewAuthService(config, mockStorage, NewMockOAuthStateStorage())
 
 	// Create a session
 	userEmail := "test@example.com"
@@ -295,7 +335,7 @@ func TestAuthService_GetActiveSessions(t *testing.T) {
 	config := &config.Config{
 		AuthorizedEmail: "test@example.com",
 	}
-	authService := NewAuthService(config, mockStorage)
+	authService := NewAuthService(config, mockStorage, NewMockOAuthStateStorage())
 
 	userEmail := "test@example.com"
 
@@ -346,7 +386,7 @@ func TestAuthService_ExpireAllUserSessions(t *testing.T) {
 	config := &config.Config{
 		AuthorizedEmail: "test@example.com",
 	}
-	authService := NewAuthService(config, mockStorage)
+	authService := NewAuthService(config, mockStorage, NewMockOAuthStateStorage())
 
 	userEmail := "test@example.com"
 
@@ -384,80 +424,80 @@ func TestAuthService_ExpireAllUserSessions(t *testing.T) {
 func TestAuthService_ValidateGoogleToken(t *testing.T) {
 	// This test has been disabled as ValidateGoogleToken was replaced with ValidateIDToken
 	t.Skip("ValidateGoogleToken has been replaced with ValidateIDToken - test needs refactoring")
-	
+
 	/*
-	config := &config.Config{
-		AuthorizedEmail: "lanctotsm@gmail.com",
-	}
-	mockStorage := NewMockSessionStorage()
-	authService := NewAuthService(config, mockStorage)
-
-	// Create a mock Google OAuth server
-	mockServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.URL.Path == "/tokeninfo" {
-			// Parse the request to get the token
-			r.ParseForm()
-			token := r.FormValue("access_token")
-
-			switch token {
-			case "valid-token":
-				tokenInfo := auth.IDTokenClaims{
-					Email:         "lanctotsm@gmail.com",
-					EmailVerified: true,
-					Name:          "Test User",
-					Picture:       "https://example.com/picture.jpg",
-					Iat:           time.Now().Unix() - 300, // 5 minutes ago
-					Exp:           time.Now().Unix() + 3600, // 1 hour from now
-					Amr:           []string{"mfa", "pwd"}, // Multi-factor auth
-				}
-				json.NewEncoder(w).Encode(tokenInfo)
-			case "unauthorized-user":
-				tokenInfo := auth.IDTokenClaims{
-					Email:         "unauthorized@example.com",
-					EmailVerified: true,
-					Name:          "Unauthorized User",
-					Picture:       "https://example.com/picture.jpg",
-					Iat:           time.Now().Unix() - 300,
-					Exp:           time.Now().Unix() + 3600,
-				}
-				json.NewEncoder(w).Encode(tokenInfo)
-			case "unverified-email":
-				tokenInfo := auth.IDTokenClaims{
-					Email:         "lanctotsm@gmail.com",
-					EmailVerified: false,
-					Name:          "Test User",
-					Picture:       "https://example.com/picture.jpg",
-					Iat:           time.Now().Unix() - 300,
-					Exp:           time.Now().Unix() + 3600,
-				}
-				json.NewEncoder(w).Encode(tokenInfo)
-			case "expired-token":
-				tokenInfo := auth.IDTokenClaims{
-					Email:         "lanctotsm@gmail.com",
-					EmailVerified: true,
-					Name:          "Test User",
-					Picture:       "https://example.com/picture.jpg",
-					Iat:           time.Now().Unix() - 7200, // 2 hours ago
-					Exp:           time.Now().Unix() - 3600, // 1 hour ago (expired)
-				}
-				json.NewEncoder(w).Encode(tokenInfo)
-			case "old-token":
-				tokenInfo := auth.IDTokenClaims{
-					Email:         "lanctotsm@gmail.com",
-					EmailVerified: true,
-					Name:          "Test User",
-					Picture:       "https://example.com/picture.jpg",
-					Iat:           time.Now().Unix() - 7200, // 2 hours ago (too old for 2FA)
-					Exp:           time.Now().Unix() + 3600, // 1 hour from now
-				}
-				json.NewEncoder(w).Encode(tokenInfo)
-			default:
-				w.WriteHeader(http.StatusBadRequest)
-				w.Write([]byte("Invalid token"))
-			}
+		config := &config.Config{
+			AuthorizedEmail: "lanctotsm@gmail.com",
 		}
-	}))
-	defer mockServer.Close()
+		mockStorage := NewMockSessionStorage()
+		authService := NewAuthService(config, mockStorage, NewMockOAuthStateStorage())
+
+		// Create a mock Google OAuth server
+		mockServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if r.URL.Path == "/tokeninfo" {
+				// Parse the request to get the token
+				r.ParseForm()
+				token := r.FormValue("access_token")
+
+				switch token {
+				case "valid-token":
+					tokenInfo := auth.IDTokenClaims{
+						Email:         "lanctotsm@gmail.com",
+						EmailVerified: true,
+						Name:          "Test User",
+						Picture:       "https://example.com/picture.jpg",
+						Iat:           time.Now().Unix() - 300, // 5 minutes ago
+						Exp:           time.Now().Unix() + 3600, // 1 hour from now
+						Amr:           []string{"mfa", "pwd"}, // Multi-factor auth
+					}
+					json.NewEncoder(w).Encode(tokenInfo)
+				case "unauthorized-user":
+					tokenInfo := auth.IDTokenClaims{
+						Email:         "unauthorized@example.com",
+						EmailVerified: true,
+						Name:          "Unauthorized User",
+						Picture:       "https://example.com/picture.jpg",
+						Iat:           time.Now().Unix() - 300,
+						Exp:           time.Now().Unix() + 3600,
+					}
+					json.NewEncoder(w).Encode(tokenInfo)
+				case "unverified-email":
+					tokenInfo := auth.IDTokenClaims{
+						Email:         "lanctotsm@gmail.com",
+						EmailVerified: false,
+						Name:          "Test User",
+						Picture:       "https://example.com/picture.jpg",
+						Iat:           time.Now().Unix() - 300,
+						Exp:           time.Now().Unix() + 3600,
+					}
+					json.NewEncoder(w).Encode(tokenInfo)
+				case "expired-token":
+					tokenInfo := auth.IDTokenClaims{
+						Email:         "lanctotsm@gmail.com",
+						EmailVerified: true,
+						Name:          "Test User",
+						Picture:       "https://example.com/picture.jpg",
+						Iat:           time.Now().Unix() - 7200, // 2 hours ago
+						Exp:           time.Now().Unix() - 3600, // 1 hour ago (expired)
+					}
+					json.NewEncoder(w).Encode(tokenInfo)
+				case "old-token":
+					tokenInfo := auth.IDTokenClaims{
+						Email:         "lanctotsm@gmail.com",
+						EmailVerified: true,
+						Name:          "Test User",
+						Picture:       "https://example.com/picture.jpg",
+						Iat:           time.Now().Unix() - 7200, // 2 hours ago (too old for 2FA)
+						Exp:           time.Now().Unix() + 3600, // 1 hour from now
+					}
+					json.NewEncoder(w).Encode(tokenInfo)
+				default:
+					w.WriteHeader(http.StatusBadRequest)
+					w.Write([]byte("Invalid token"))
+				}
+			}
+		}))
+		defer mockServer.Close()
 	*/
 }
 
@@ -466,7 +506,7 @@ func TestAuthService_CleanupExpiredSessions(t *testing.T) {
 	config := &config.Config{
 		AuthorizedEmail: "test@example.com",
 	}
-	authService := NewAuthService(config, mockStorage)
+	authService := NewAuthService(config, mockStorage, NewMockOAuthStateStorage())
 
 	userEmail := "test@example.com"
 
@@ -516,7 +556,7 @@ func TestAuthService_GenerateOAuthState(t *testing.T) {
 	config := &config.Config{
 		AuthorizedEmail: "test@example.com",
 	}
-	authService := NewAuthService(config, mockStorage)
+	authService := NewAuthService(config, mockStorage, NewMockOAuthStateStorage())
 
 	// Generate OAuth state
 	state, verifier, err := authService.GenerateOAuthState()
@@ -528,7 +568,7 @@ func TestAuthService_GenerateOAuthState(t *testing.T) {
 	if state == "" {
 		t.Error("Generated state should not be empty")
 	}
-	
+
 	if verifier == "" {
 		t.Error("Generated verifier should not be empty")
 	}
@@ -542,7 +582,7 @@ func TestAuthService_GenerateOAuthState(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Second GenerateOAuthState failed: %v", err)
 	}
-	
+
 	_ = verifier2 // Avoid unused variable warning
 
 	if state == state2 {
@@ -555,7 +595,7 @@ func TestAuthService_ValidateOAuthState(t *testing.T) {
 	config := &config.Config{
 		AuthorizedEmail: "test@example.com",
 	}
-	authService := NewAuthService(config, mockStorage)
+	authService := NewAuthService(config, mockStorage, NewMockOAuthStateStorage())
 
 	// Test empty state
 	_, err := authService.ValidateOAuthState("")
@@ -586,12 +626,12 @@ func TestAuthService_ValidateOAuthState(t *testing.T) {
 
 func TestAuthService_GetGoogleOAuthURL(t *testing.T) {
 	config := &config.Config{
-		GoogleClientID:     "test-client-id",
-		GoogleRedirectURL:  "https://example.com/callback",
-		AuthorizedEmail:    "test@example.com",
+		GoogleClientID:    "test-client-id",
+		GoogleRedirectURL: "https://example.com/callback",
+		AuthorizedEmail:   "test@example.com",
 	}
 	mockStorage := NewMockSessionStorage()
-	authService := NewAuthService(config, mockStorage)
+	authService := NewAuthService(config, mockStorage, NewMockOAuthStateStorage())
 
 	state := "test-state-parameter"
 	verifier := "test-verifier-12345"
@@ -637,16 +677,16 @@ func TestAuthService_2FAVerification(t *testing.T) {
 		AuthorizedEmail: "test@example.com",
 	}
 	mockStorage := NewMockSessionStorage()
-	authService := NewAuthService(config, mockStorage)
+	authService := NewAuthService(config, mockStorage, NewMockOAuthStateStorage())
 
 	// Test 2FA verification with recent token (should pass)
 	recentTokenInfo := &auth.IDTokenClaims{
 		Email:         "test@example.com",
 		EmailVerified: true,
 		Name:          "Test User",
-		Iat:           time.Now().Unix() - 300, // 5 minutes ago
+		Iat:           time.Now().Unix() - 300,  // 5 minutes ago
 		Exp:           time.Now().Unix() + 3600, // 1 hour from now
-		Amr:           []string{"mfa", "pwd"}, // Multi-factor auth
+		Amr:           []string{"mfa", "pwd"},   // Multi-factor auth
 	}
 
 	err := authService.verify2FA(recentTokenInfo)

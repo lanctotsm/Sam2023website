@@ -455,7 +455,7 @@ func TestAuthMiddleware_ExtractSessionToken(t *testing.T) {
 				Headers: tc.headers,
 			}
 
-			result := middleware.extractSessionToken(request)
+			result := middleware.tokenExtractor.ExtractSessionToken(request)
 			if result != tc.expected {
 				t.Errorf("Expected '%s', got '%s'", tc.expected, result)
 			}

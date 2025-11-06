@@ -10,6 +10,8 @@ import (
 	"testing"
 
 	"github.com/aws/aws-lambda-go/events"
+	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/request"
 	"github.com/aws/aws-sdk-go/service/dynamodb"
 	"github.com/aws/aws-sdk-go/service/dynamodb/dynamodbiface"
 	"github.com/aws/aws-sdk-go/service/s3"
@@ -349,13 +351,13 @@ func TestSessionTokenExtraction(t *testing.T) {
 	ctx := context.Background()
 
 	testCases := []struct {
-		name    string
-		headers map[string]string
+		name               string
+		headers            map[string]string
 		expectUnauthorized bool
 	}{
 		{
-			name:    "NoToken",
-			headers: map[string]string{},
+			name:               "NoToken",
+			headers:            map[string]string{},
 			expectUnauthorized: true,
 		},
 		{
@@ -428,16 +430,17 @@ func TestSessionTokenExtraction(t *testing.T) {
 // setupTestEnvironmentForRequestFlow sets up required environment variables for testing
 func setupTestEnvironmentForRequestFlow(t *testing.T) {
 	envVars := map[string]string{
-		"S3_BUCKET":             "test-bucket",
-		"DYNAMODB_TABLE":        "test-photos-table",
-		"SESSIONS_TABLE":        "test-sessions-table",
-		"ALBUMS_TABLE":          "test-albums-table",
-		"GOOGLE_CLIENT_ID":      "test-client-id",
-		"GOOGLE_CLIENT_SECRET":  "test-client-secret",
-		"GOOGLE_REDIRECT_URL":   "https://example.com/callback",
-		"AUTHORIZED_EMAIL":      "lanctotsm@gmail.com",
-		"AWS_REGION":            "us-east-1",
-		"ENVIRONMENT":           "test",
+		"S3_BUCKET":            "test-bucket",
+		"DYNAMODB_TABLE":       "test-photos-table",
+		"SESSIONS_TABLE":       "test-sessions-table",
+		"ALBUMS_TABLE":         "test-albums-table",
+		"OAUTH_STATES_TABLE":   "test-oauth-states-table",
+		"GOOGLE_CLIENT_ID":     "test-client-id",
+		"GOOGLE_CLIENT_SECRET": "test-client-secret",
+		"GOOGLE_REDIRECT_URL":  "https://example.com/callback",
+		"AUTHORIZED_EMAIL":     "lanctotsm@gmail.com",
+		"AWS_REGION":           "us-east-1",
+		"ENVIRONMENT":          "test",
 	}
 
 	for key, value := range envVars {
@@ -465,6 +468,7 @@ func createTestHandlerWithMocks(t *testing.T) *handler.Handler {
 	albumStorage := storage.NewAlbumStorage(mockDynamoDB, cfg.AlbumsTable)
 	photoStorage := storage.NewPhotoStorage(mockDynamoDB, cfg.DynamoTable)
 	sessionStorage := storage.NewSessionStorage(mockDynamoDB, cfg.SessionsTable)
+	oauthStateStorage := storage.NewOAuthStateStorage(mockDynamoDB, cfg.OAuthStatesTable)
 	s3Storage := storage.NewS3Storage(mockS3, cfg.S3Bucket)
 
 	// Initialize processing layer
@@ -472,7 +476,7 @@ func createTestHandlerWithMocks(t *testing.T) *handler.Handler {
 
 	// Initialize business services
 	albumService := service.NewAlbumService(albumStorage, photoStorage)
-	authService := service.NewAuthService(cfg, sessionStorage)
+	authService := service.NewAuthService(cfg, sessionStorage, oauthStateStorage)
 	photoService, err := service.NewPhotoService(s3Storage, photoStorage, imageProcessor, albumService)
 	require.NoError(t, err, "Photo service should initialize successfully")
 
@@ -503,6 +507,11 @@ func (m *EnhancedMockDynamoDBAPI) PutItem(input *dynamodb.PutItemInput) (*dynamo
 func (m *EnhancedMockDynamoDBAPI) GetItem(input *dynamodb.GetItemInput) (*dynamodb.GetItemOutput, error) {
 	// For session validation, return empty (session not found)
 	return &dynamodb.GetItemOutput{}, nil
+}
+
+func (m *EnhancedMockDynamoDBAPI) GetItemWithContext(ctx aws.Context, input *dynamodb.GetItemInput, opts ...request.Option) (*dynamodb.GetItemOutput, error) {
+	// Delegate to the regular GetItem method for consistent behavior
+	return m.GetItem(input)
 }
 
 func (m *EnhancedMockDynamoDBAPI) Scan(input *dynamodb.ScanInput) (*dynamodb.ScanOutput, error) {

@@ -23,8 +23,10 @@ type SessionStorageInterface interface {
 	DeleteSession(sessionToken string) error
 	ListSessionsByUser(userEmail string) ([]auth.Session, error)
 	CleanupExpiredSessions() error
-	
-	// OAuth state management for CSRF protection
+}
+
+// OAuthStateStorageInterface defines the interface for OAuth state storage operations
+type OAuthStateStorageInterface interface {
 	SaveOAuthState(state *auth.OAuthState) error
 	GetOAuthState(state string) (*auth.OAuthState, error)
 	DeleteOAuthState(state string) error
@@ -32,15 +34,17 @@ type SessionStorageInterface interface {
 
 // AuthService handles authentication-related operations
 type AuthService struct {
-	config         *config.Config
-	sessionStorage SessionStorageInterface
+	config              *config.Config
+	sessionStorage      SessionStorageInterface
+	oauthStateStorage   OAuthStateStorageInterface
 }
 
 // NewAuthService creates a new AuthService instance
-func NewAuthService(config *config.Config, sessionStorage SessionStorageInterface) *AuthService {
+func NewAuthService(config *config.Config, sessionStorage SessionStorageInterface, oauthStateStorage OAuthStateStorageInterface) *AuthService {
 	return &AuthService{
-		config:         config,
-		sessionStorage: sessionStorage,
+		config:            config,
+		sessionStorage:    sessionStorage,
+		oauthStateStorage: oauthStateStorage,
 	}
 }
 
@@ -412,7 +416,7 @@ func (a *AuthService) storeOAuthState(state, verifier string) error {
 		ExpiresAt: now.Add(5 * time.Minute),
 	}
 	
-	return a.sessionStorage.SaveOAuthState(stateRecord)
+	return a.oauthStateStorage.SaveOAuthState(stateRecord)
 }
 
 // consumeOAuthState validates and removes an OAuth state parameter.
@@ -426,7 +430,7 @@ func (a *AuthService) storeOAuthState(state, verifier string) error {
 //   - error: Any errors during validation or removal
 func (a *AuthService) consumeOAuthState(state string) (*auth.OAuthState, error) {
 	// Check if state exists
-	stateRecord, err := a.sessionStorage.GetOAuthState(state)
+	stateRecord, err := a.oauthStateStorage.GetOAuthState(state)
 	if err != nil {
 		return nil, err
 	}
@@ -438,12 +442,12 @@ func (a *AuthService) consumeOAuthState(state string) (*auth.OAuthState, error) 
 	// Check if state is expired
 	if time.Now().UTC().After(stateRecord.ExpiresAt) {
 		// Clean up expired state
-		a.sessionStorage.DeleteOAuthState(state)
+		a.oauthStateStorage.DeleteOAuthState(state)
 		return nil, nil
 	}
 	
 	// Remove the state to prevent reuse
-	if err := a.sessionStorage.DeleteOAuthState(state); err != nil {
+	if err := a.oauthStateStorage.DeleteOAuthState(state); err != nil {
 		return nil, fmt.Errorf("failed to consume OAuth state: %w", err)
 	}
 	

@@ -9,12 +9,10 @@ import (
 	"testing"
 
 	"github.com/aws/aws-lambda-go/events"
+	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/request"
 	"github.com/aws/aws-sdk-go/service/dynamodb"
-	"github.com/aws/aws-sdk-go/service/dynamodb/dynamodbiface"
-	"github.com/aws/aws-sdk-go/service/s3"
-	"github.com/aws/aws-sdk-go/service/s3/s3iface"
 	"github.com/cucumber/godog"
-	"github.com/stretchr/testify/mock"
 
 	"photo-backend/internal/config"
 	"photo-backend/internal/handler"
@@ -23,6 +21,7 @@ import (
 	"photo-backend/internal/processor"
 	"photo-backend/internal/service"
 	"photo-backend/internal/storage"
+	"photo-backend/internal/testutil"
 )
 
 // TestContext holds the test state between steps
@@ -36,8 +35,8 @@ type TestContext struct {
 	albums       map[string]string // name -> ID mapping
 	photos       map[string]string // name -> ID mapping
 	mockDynamoDB *MockDynamoDBAPI
-	mockS3       *MockS3API
-	imageData    string            // For photo upload tests
+	mockS3       *testutil.MockS3API
+	imageData    string // For photo upload tests
 }
 
 // Global test context
@@ -731,7 +730,7 @@ func iHavePhotosInMultipleAlbums(table *godog.Table) error {
 		_ = row.Cells[1].Value // photoCount - not used in mock but available
 		albumID := fmt.Sprintf("album-%d", i+1)
 		testCtx.albums[albumName] = albumID
-		
+
 		// Create mock photos for this album
 		for j := 0; j < 3; j++ { // Create some photos
 			photoID := fmt.Sprintf("photo-%s-%d", albumID, j+1)
@@ -890,16 +889,17 @@ func iShouldReceiveAValidationErrorAboutMissingAlbumID() error {
 
 func setupTestEnvironment() {
 	envVars := map[string]string{
-		"S3_BUCKET":             "test-bucket",
-		"DYNAMODB_TABLE":        "test-photos-table",
-		"SESSIONS_TABLE":        "test-sessions-table",
-		"ALBUMS_TABLE":          "test-albums-table",
-		"GOOGLE_CLIENT_ID":      "test-client-id",
-		"GOOGLE_CLIENT_SECRET":  "test-client-secret",
-		"GOOGLE_REDIRECT_URL":   "https://example.com/callback",
-		"AUTHORIZED_EMAIL":      "lanctotsm@gmail.com",
-		"AWS_REGION":            "us-east-1",
-		"ENVIRONMENT":           "test",
+		"S3_BUCKET":            "test-bucket",
+		"DYNAMODB_TABLE":       "test-photos-table",
+		"SESSIONS_TABLE":       "test-sessions-table",
+		"ALBUMS_TABLE":         "test-albums-table",
+		"OAUTH_STATES_TABLE":   "test-oauth-states-table",
+		"GOOGLE_CLIENT_ID":     "test-client-id",
+		"GOOGLE_CLIENT_SECRET": "test-client-secret",
+		"GOOGLE_REDIRECT_URL":  "https://example.com/callback",
+		"AUTHORIZED_EMAIL":     "lanctotsm@gmail.com",
+		"AWS_REGION":           "us-east-1",
+		"ENVIRONMENT":          "test",
 	}
 
 	for key, value := range envVars {
@@ -914,12 +914,13 @@ func createTestHandler() (*handler.Handler, error) {
 	}
 
 	// Create mock storage layers
-	testCtx.mockDynamoDB = &MockDynamoDBAPI{}
-	testCtx.mockS3 = &MockS3API{}
+	testCtx.mockDynamoDB = NewMockDynamoDBAPI()
+	testCtx.mockS3 = &testutil.MockS3API{}
 
 	albumStorage := storage.NewAlbumStorage(testCtx.mockDynamoDB, cfg.AlbumsTable)
 	photoStorage := storage.NewPhotoStorage(testCtx.mockDynamoDB, cfg.DynamoTable)
 	sessionStorage := storage.NewSessionStorage(testCtx.mockDynamoDB, cfg.SessionsTable)
+	oauthStateStorage := storage.NewOAuthStateStorage(testCtx.mockDynamoDB, cfg.OAuthStatesTable)
 	s3Storage := storage.NewS3Storage(testCtx.mockS3, cfg.S3Bucket)
 
 	// Initialize processing layer
@@ -927,7 +928,7 @@ func createTestHandler() (*handler.Handler, error) {
 
 	// Initialize business services
 	albumService := service.NewAlbumService(albumStorage, photoStorage)
-	authService := service.NewAuthService(cfg, sessionStorage)
+	authService := service.NewAuthService(cfg, sessionStorage, oauthStateStorage)
 	photoService, err := service.NewPhotoService(s3Storage, photoStorage, imageProcessor, albumService)
 	if err != nil {
 		return nil, err
@@ -940,12 +941,17 @@ func createTestHandler() (*handler.Handler, error) {
 	return handler.NewHandler(photoService, authService, albumService, authMiddleware)
 }
 
-// Mock implementations
-
+// Mock implementations - use common mocks from testutil with feature-specific behavior
 type MockDynamoDBAPI struct {
-	dynamodbiface.DynamoDBAPI
-	mock.Mock
+	*testutil.MockDynamoDBAPI
 	sessions map[string]map[string]interface{} // session_token -> session data
+}
+
+func NewMockDynamoDBAPI() *MockDynamoDBAPI {
+	return &MockDynamoDBAPI{
+		MockDynamoDBAPI: &testutil.MockDynamoDBAPI{},
+		sessions:        make(map[string]map[string]interface{}),
+	}
 }
 
 func (m *MockDynamoDBAPI) PutItem(input *dynamodb.PutItemInput) (*dynamodb.PutItemOutput, error) {
@@ -993,14 +999,14 @@ func (m *MockDynamoDBAPI) GetItem(input *dynamodb.GetItemInput) (*dynamodb.GetIt
 					expiresAt := "9999999999" // Far future timestamp
 					createdAt := "2023-01-01T00:00:00Z"
 					lastActivity := "2023-01-01T00:00:00Z"
-					
+
 					return &dynamodb.GetItemOutput{
 						Item: map[string]*dynamodb.AttributeValue{
-							"session_token":  {S: sessionToken.S},
-							"user_email":     {S: &testCtx.currentUser.Email},
-							"expires_at":     {N: &expiresAt},
-							"created_at":     {S: &createdAt},
-							"last_activity":  {S: &lastActivity},
+							"session_token": {S: sessionToken.S},
+							"user_email":    {S: &testCtx.currentUser.Email},
+							"expires_at":    {N: &expiresAt},
+							"created_at":    {S: &createdAt},
+							"last_activity": {S: &lastActivity},
 						},
 					}, nil
 				}
@@ -1015,6 +1021,11 @@ func (m *MockDynamoDBAPI) GetItem(input *dynamodb.GetItemInput) (*dynamodb.GetIt
 
 	// Return empty for other cases (not found)
 	return &dynamodb.GetItemOutput{}, nil
+}
+
+func (m *MockDynamoDBAPI) GetItemWithContext(ctx aws.Context, input *dynamodb.GetItemInput, opts ...request.Option) (*dynamodb.GetItemOutput, error) {
+	// Delegate to the regular GetItem method for consistent behavior
+	return m.GetItem(input)
 }
 
 func (m *MockDynamoDBAPI) Scan(input *dynamodb.ScanInput) (*dynamodb.ScanOutput, error) {
@@ -1033,18 +1044,7 @@ func (m *MockDynamoDBAPI) UpdateItem(input *dynamodb.UpdateItemInput) (*dynamodb
 	return &dynamodb.UpdateItemOutput{}, nil
 }
 
-type MockS3API struct {
-	s3iface.S3API
-	mock.Mock
-}
-
-func (m *MockS3API) PutObject(input *s3.PutObjectInput) (*s3.PutObjectOutput, error) {
-	return &s3.PutObjectOutput{}, nil
-}
-
-func (m *MockS3API) DeleteObject(input *s3.DeleteObjectInput) (*s3.DeleteObjectOutput, error) {
-	return &s3.DeleteObjectOutput{}, nil
-}
+// MockS3API uses the common implementation from testutil
 
 // Test runner function
 func TestFeatures(t *testing.T) {

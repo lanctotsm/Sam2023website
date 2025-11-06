@@ -13,20 +13,21 @@ import (
 // to ensure all required settings are present.
 type Config struct {
 	// AWS Configuration
-	S3Bucket      string // S3 bucket for photo storage
-	DynamoTable   string // DynamoDB table for photo metadata
-	SessionsTable string // DynamoDB table for user sessions
-	AlbumsTable   string // DynamoDB table for album data
-	AWSRegion     string // AWS region for services
-	
+	S3Bucket         string // S3 bucket for photo storage
+	DynamoTable      string // DynamoDB table for photo metadata
+	SessionsTable    string // DynamoDB table for user sessions
+	AlbumsTable      string // DynamoDB table for album data
+	OAuthStatesTable string // DynamoDB table for OAuth state storage
+	AWSRegion        string // AWS region for services
+
 	// Application Configuration
 	Environment string // Deployment environment (dev/staging/prod)
-	
+
 	// OAuth Configuration
 	GoogleClientID     string // Google OAuth client ID
 	GoogleClientSecret string // Google OAuth client secret
 	GoogleRedirectURL  string // OAuth callback URL
-	
+
 	// Authorization Configuration
 	AuthorizedEmail string // Email address authorized to use the application
 }
@@ -44,6 +45,7 @@ func LoadConfig() (*Config, error) {
 		DynamoTable:        os.Getenv("DYNAMODB_TABLE"),
 		SessionsTable:      os.Getenv("SESSIONS_TABLE"),
 		AlbumsTable:        os.Getenv("ALBUMS_TABLE"),
+		OAuthStatesTable:   os.Getenv("OAUTH_STATES_TABLE"),
 		AWSRegion:          getEnvWithDefault("AWS_REGION", "us-east-1"),
 		Environment:        getEnvWithDefault("ENVIRONMENT", "dev"),
 		GoogleClientID:     os.Getenv("GOOGLE_CLIENT_ID"),
@@ -69,6 +71,7 @@ func (c *Config) validate() error {
 		{c.DynamoTable, "DYNAMODB_TABLE"},
 		{c.SessionsTable, "SESSIONS_TABLE"},
 		{c.AlbumsTable, "ALBUMS_TABLE"},
+		{c.OAuthStatesTable, "OAUTH_STATES_TABLE"},
 		{c.GoogleClientID, "GOOGLE_CLIENT_ID"},
 		{c.GoogleClientSecret, "GOOGLE_CLIENT_SECRET"},
 		{c.GoogleRedirectURL, "GOOGLE_REDIRECT_URL"},
