@@ -5,6 +5,9 @@ param(
     [Parameter(Mandatory=$true)]
     [string]$Environment,
     
+    [Parameter(Mandatory=$true)]
+    [string]$AuthorizedUserEmail,
+    
     [Parameter(Mandatory=$false)]
     [string]$Region = "us-east-1",
     
@@ -51,7 +54,6 @@ try {
 
 # Generate default album ID
 $DefaultAlbumId = [System.Guid]::NewGuid().ToString()
-$AuthorizedUserEmail = "lanctotsm@gmail.com"
 $CurrentTime = Get-Date -Format "yyyy-MM-ddTHH:mm:ss.fffZ"
 
 Write-Host "Creating default album: $DefaultAlbumName (ID: $DefaultAlbumId)" -ForegroundColor Blue
