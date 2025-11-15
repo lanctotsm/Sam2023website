@@ -142,14 +142,17 @@ Resources:
               AWS: !Sub "arn:aws:iam::${AWS::AccountId}:root"
             Action: "kms:*"
             Resource: "*"
-          - Sid: Allow Lambda Function
+          - Sid: Allow Lambda Function via IAM
             Effect: Allow
             Principal:
-              AWS: !Sub "arn:aws:iam::${AWS::AccountId}:role/${AWS::StackName}-photo-processor-${Environment}-*"
+              AWS: !Sub "arn:aws:iam::${AWS::AccountId}:root"
             Action:
               - kms:Decrypt
               - kms:GenerateDataKey
             Resource: "*"
+            Condition:
+              StringEquals:
+                kms:ViaService: !Sub "lambda.${AWS::Region}.amazonaws.com"
 
   PhotoKMSKeyAlias:
     Type: AWS::KMS::Alias
