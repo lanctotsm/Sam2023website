@@ -526,7 +526,6 @@ Resources:
     Properties:
       LogGroupName: !Sub "/aws/lambda/${AWS::StackName}-photo-processor-${Environment}"
       RetentionInDays: !If [IsProduction, 30, 7]
-
   # CloudWatch Alarms
   LambdaErrorAlarm:
     Type: AWS::CloudWatch::Alarm
