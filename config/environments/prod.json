@@ -3,7 +3,7 @@
     "Environment": "prod",
     "EnableLogging": "true",
     "EnableXRay": "true",
-    "CorsOrigin": "https://yourdomain.com",
+    "CorsOrigin": "https://samlanctot.com",
     "ImageMaxSize": "10485760",
     "ThumbnailSize": "200",
     "MediumSize": "800",
@@ -11,6 +11,6 @@
     "LambdaTimeout": "60",
     "EnableEncryption": "true",
     "EnableVersioning": "true",
-    "NotificationEmail": "admin@yourdomain.com"
+    "NotificationEmail": "lanctotsm@gmail.com"
   }
 }
