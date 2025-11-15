@@ -145,7 +145,7 @@ Resources:
           - Sid: Allow Lambda Function
             Effect: Allow
             Principal:
-              AWS: !GetAtt PhotoProcessorFunctionRole.Arn
+              AWS: !Sub "arn:aws:iam::${AWS::AccountId}:role/${AWS::StackName}-photo-processor-${Environment}-*"
             Action:
               - kms:Decrypt
               - kms:GenerateDataKey
