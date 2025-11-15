@@ -11,8 +11,8 @@ param(
     [Parameter(Mandatory=$false)]
     [string]$DefaultAlbumName = "Default Album",
     
-    [Parameter(Mandatory=$false)]
-    [string]$UserEmail = "lanctotsm@gmail.com"
+    [Parameter(Mandatory=$true)]
+    [string]$UserEmail
 )
 
 Write-Host "Starting photo migration for stack: $StackName" -ForegroundColor Green
