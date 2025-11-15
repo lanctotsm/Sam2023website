@@ -128,10 +128,11 @@ jobs:
         working-directory: ./photo-backend
         run: |
           STACK_NAME="${{ github.event.inputs.stack_name || 'photo-backend-prod' }}"
+          PARAM_OVERRIDES=$(jq -r '.Parameters | to_entries | map("\(.key)=\(.value)") | join(" ")' ../config/environments/prod.json)
           sam deploy \
             --template-file template.yaml \
             --stack-name $STACK_NAME \
-            --parameter-overrides file://config/environments/prod.json \
+            --parameter-overrides $PARAM_OVERRIDES \
             --capabilities CAPABILITY_IAM CAPABILITY_NAMED_IAM \
             --region ${{ env.AWS_REGION }} \
             --no-confirm-changeset \
