@@ -52,7 +52,7 @@ vendor/
 *.swo
 
 # Cursor IDE (exclude MCP config if it contains real tokens/keys)
- .cursor/mcp.json
+.cursor/mcp.json
 
 # OS files
 .DS_Store
