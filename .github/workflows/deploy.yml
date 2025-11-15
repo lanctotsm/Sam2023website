@@ -146,7 +146,12 @@ jobs:
         working-directory: ./photo-backend
         run: |
           STACK_NAME="${{ github.event.inputs.stack_name || 'photo-backend-prod' }}"
+          # Get base parameters from prod.json
           PARAM_OVERRIDES=$(jq -r '.Parameters | to_entries | map("\(.key)=\(.value)") | join(" ")' ../config/environments/prod.json)
+          # Add OAuth parameters from GitHub secrets
+          PARAM_OVERRIDES="$PARAM_OVERRIDES GoogleOAuthClientId=${{ secrets.GOOGLE_OAUTH_CLIENT_ID }}"
+          PARAM_OVERRIDES="$PARAM_OVERRIDES GoogleOAuthClientSecret=${{ secrets.GOOGLE_OAUTH_CLIENT_SECRET }}"
+          PARAM_OVERRIDES="$PARAM_OVERRIDES GoogleOAuthRedirectURL=${{ secrets.GOOGLE_OAUTH_REDIRECT_URL }}"
           sam deploy \
             --template-file template.yaml \
             --stack-name $STACK_NAME \
