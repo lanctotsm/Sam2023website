@@ -1,0 +1,35 @@
+Project rules and steering for Cursor
+
+Windows Command Guidelines (always apply)
+- Use PowerShell or CMD commands only.
+- Do not use Unix/Linux commands like `ls`, `grep`, `cat`, `find`, etc.
+- Use Windows equivalents:
+  - `dir` instead of `ls`
+  - `type` instead of `cat`
+  - `findstr` instead of `grep`
+  - Prefer PowerShell cmdlets like `Get-ChildItem`, `Get-Content`, etc.
+- Use Windows path separators (`\`) when needed and be mindful of Windows filesystem constraints.
+- Development environment assumptions:
+  - Operating System: Windows
+  - Platform: win32
+  - Shell: cmd/PowerShell
+
+Architecture and Requirements References
+- Backend specs and plan live under `.kiro/specs/authenticated-album-management/`:
+  - Design: `.kiro/specs/authenticated-album-management/design.md`
+  - Requirements: `.kiro/specs/authenticated-album-management/requirements.md`
+  - Implementation tasks/progress: `.kiro/specs/authenticated-album-management/tasks.md`
+- Frontend requirements live under:
+  - `.kiro/specs/nextjs-frontend-album-auth/requirements.md`
+
+How to use these references
+- When adding or modifying backend endpoints, data models, or auth/session behavior, align with the documents under `.kiro/specs/authenticated-album-management/`.
+- When working on frontend auth, albums grid, upload UI, or adaptive layouts, follow `.kiro/specs/nextjs-frontend-album-auth/requirements.md`.
+- Prefer small, incremental edits and keep behavior consistent with the acceptance criteria in the referenced requirements.
+
+General guidance
+- Prioritize clarity and maintainability; match existing code style.
+- Prefer multi-line readability over dense one-liners.
+- Avoid introducing deep nesting; use early returns where appropriate.
+
+
