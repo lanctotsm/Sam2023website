@@ -123,6 +123,24 @@ jobs:
         working-directory: ./photo-backend
         run: sam validate --template template.yaml
 
+      - name: Ensure S3 bucket exists for SAM deployments
+        working-directory: ./photo-backend
+        run: |
+          S3_BUCKET="photo-backend-sam-deployments-${{ env.AWS_REGION }}"
+          # Check if bucket exists, create if it doesn't
+          if ! aws s3 ls "s3://$S3_BUCKET" 2>/dev/null; then
+            echo "Creating S3 bucket for SAM deployments: $S3_BUCKET"
+            aws s3 mb "s3://$S3_BUCKET" --region ${{ env.AWS_REGION }}
+            # Enable versioning for the bucket
+            aws s3api put-bucket-versioning \
+              --bucket "$S3_BUCKET" \
+              --versioning-configuration Status=Enabled \
+              --region ${{ env.AWS_REGION }}
+          else
+            echo "S3 bucket already exists: $S3_BUCKET"
+          fi
+          echo "S3_BUCKET=$S3_BUCKET" >> $GITHUB_ENV
+
       - name: Deploy with SAM
         id: deploy
         working-directory: ./photo-backend
@@ -135,9 +153,10 @@ jobs:
             --parameter-overrides $PARAM_OVERRIDES \
             --capabilities CAPABILITY_IAM CAPABILITY_NAMED_IAM \
             --region ${{ env.AWS_REGION }} \
+            --s3-bucket $S3_BUCKET \
+            --s3-prefix $STACK_NAME \
             --no-confirm-changeset \
-            --no-fail-on-empty-changeset \
-            --resolve-s3
+            --no-fail-on-empty-changeset
 
       - name: Get stack outputs
         id: outputs
