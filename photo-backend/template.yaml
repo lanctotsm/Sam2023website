@@ -99,6 +99,7 @@ Parameters:
 
 Conditions:
   IsProduction: !Equals [!Ref Environment, 'prod']
+  EnableLoggingCondition: !Equals [!Ref EnableLogging, 'true']
   EnableEncryptionCondition: !Equals [!Ref EnableEncryption, 'true']
   EnableXRayCondition: !Equals [!Ref EnableXRay, 'true']
   EnableVersioningCondition: !Equals [!Ref EnableVersioning, 'true']
@@ -576,8 +577,8 @@ Resources:
       MethodSettings:
         - ResourcePath: "/*"
           HttpMethod: "*"
-          LoggingLevel: !If [EnableLogging, INFO, "OFF"]
-          DataTraceEnabled: !If [EnableLogging, true, false]
+          LoggingLevel: !If [EnableLoggingCondition, INFO, "OFF"]
+          DataTraceEnabled: !If [EnableLoggingCondition, true, false]
           MetricsEnabled: true
           ThrottlingRateLimit: 100
           ThrottlingBurstLimit: 200
