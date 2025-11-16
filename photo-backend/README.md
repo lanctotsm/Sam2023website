@@ -20,7 +20,6 @@ photo-backend/
 ├── template.yaml              # SAM CloudFormation template
 ├── Makefile                   # Build and deployment commands
 ├── Dockerfile                 # Container definition
-├── deploy.sh                  # Deployment script
 ├── README.md                  # This file
 ├── features/                  # BDD test specifications
 │   ├── *.feature            # Gherkin feature files
@@ -178,12 +177,6 @@ make lint
 ```
 
 ## Deployment
-
-### Quick Deploy
-```bash
-chmod +x deploy.sh
-./deploy.sh [stack-name] [environment] [region]
-```
 
 ### Manual Deploy
 ```bash

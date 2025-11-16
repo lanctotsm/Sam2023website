@@ -99,31 +99,6 @@ This guide covers the best practices for deploying your AWS stack (Lambda, Dynam
    GitHub (Source) → CodeBuild (Build & Test) → CodeBuild (Deploy) → AWS Resources
    ```
 
-### Option 3: Manual Deployment Scripts
-
-**Best for:** Quick deployments, local development, one-off updates
-
-**Pros:**
-- Full control over deployment process
-- Good for debugging
-- No CI/CD overhead
-
-**Cons:**
-- Manual process
-- No automated testing
-- Easy to forget steps
-
-#### Usage
-
-```powershell
-# Development
-cd photo-backend
-.\deploy.ps1 -StackName photo-backend-dev -Environment dev -Region us-east-1
-
-# Production
-.\deploy.ps1 -StackName photo-backend-prod -Environment prod -Region us-east-1
-```
-
 ## Comparison Matrix
 
 | Feature | GitHub Actions | CodePipeline | Manual Scripts |

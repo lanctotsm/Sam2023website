@@ -19,12 +19,12 @@ else
     MKDIR := mkdir -p
 endif
 
-# Build the Go binary for Lambda
+# Build the Go binary for Lambda (provided.al2 runtime requires bootstrap)
 build:
 ifeq ($(OS),Windows_NT)
-	$env:GOOS="linux"; $env:GOARCH="amd64"; $env:CGO_ENABLED="0"; go build -ldflags="-s -w" -o main .
+	$env:GOOS="linux"; $env:GOARCH="amd64"; $env:CGO_ENABLED="0"; go build -ldflags="-s -w" -o bootstrap main.go
 else
-	GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-s -w" -o main .
+	GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-s -w" -o bootstrap main.go
 endif
 
 # Run tests
@@ -82,13 +82,9 @@ else
 	./deploy-with-secrets.sh $(STACK_NAME) $(ENVIRONMENT) $(REGION)
 endif
 
-# Quick deploy (uses PowerShell on Windows, Bash elsewhere)
+# Quick deploy (deprecated - use GitHub Actions or sam deploy directly)
 deploy-quick: build
-ifeq ($(OS),Windows_NT)
-	powershell.exe -ExecutionPolicy Bypass -File .\deploy.ps1 $(STACK_NAME) $(ENVIRONMENT) $(REGION)
-else
-	./deploy.sh $(STACK_NAME) $(ENVIRONMENT) $(REGION)
-endif
+	@echo "Quick deploy scripts have been removed. Use GitHub Actions for automated deployments or 'sam deploy' for manual deployment."
 
 # Monitor stack
 monitor:
@@ -108,11 +104,12 @@ package: build
 # Clean build artifacts
 clean:
 ifeq ($(OS),Windows_NT)
+	if exist bootstrap $(RM) bootstrap
 	if exist main $(RM) main
 	if exist packaged-template.yaml $(RM) packaged-template.yaml
 	if exist coverage.out $(RM) coverage.out
 else
-	$(RM) main packaged-template.yaml coverage.out
+	$(RM) bootstrap main packaged-template.yaml coverage.out
 endif
 
 # Run locally with SAM
