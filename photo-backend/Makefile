@@ -82,13 +82,9 @@ else
 	./deploy-with-secrets.sh $(STACK_NAME) $(ENVIRONMENT) $(REGION)
 endif
 
-# Quick deploy (uses PowerShell on Windows, Bash elsewhere)
+# Quick deploy (deprecated - use GitHub Actions or sam deploy directly)
 deploy-quick: build
-ifeq ($(OS),Windows_NT)
-	powershell.exe -ExecutionPolicy Bypass -File .\deploy.ps1 $(STACK_NAME) $(ENVIRONMENT) $(REGION)
-else
-	./deploy.sh $(STACK_NAME) $(ENVIRONMENT) $(REGION)
-endif
+	@echo "Quick deploy scripts have been removed. Use GitHub Actions for automated deployments or 'sam deploy' for manual deployment."
 
 # Monitor stack
 monitor:
