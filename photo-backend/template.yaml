@@ -315,6 +315,7 @@ Resources:
         PointInTimeRecoveryEnabled: !If [IsProduction, true, false]
       SSESpecification:
         SSEEnabled: !If [EnableEncryptionCondition, true, false]
+        SSEType: !If [EnableEncryptionCondition, KMS, AES256]
         KMSMasterKeyId: !If [EnableEncryptionCondition, !Ref PhotoKMSKey, !Ref AWS::NoValue]
       Tags:
         - Key: Environment
@@ -356,6 +357,7 @@ Resources:
         PointInTimeRecoveryEnabled: !If [IsProduction, true, false]
       SSESpecification:
         SSEEnabled: !If [EnableEncryptionCondition, true, false]
+        SSEType: !If [EnableEncryptionCondition, KMS, AES256]
         KMSMasterKeyId: !If [EnableEncryptionCondition, !Ref PhotoKMSKey, !Ref AWS::NoValue]
       Tags:
         - Key: Environment
@@ -394,6 +396,7 @@ Resources:
         PointInTimeRecoveryEnabled: !If [IsProduction, true, false]
       SSESpecification:
         SSEEnabled: !If [EnableEncryptionCondition, true, false]
+        SSEType: !If [EnableEncryptionCondition, KMS, AES256]
         KMSMasterKeyId: !If [EnableEncryptionCondition, !Ref PhotoKMSKey, !Ref AWS::NoValue]
       Tags:
         - Key: Environment
