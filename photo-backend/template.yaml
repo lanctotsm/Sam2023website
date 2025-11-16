@@ -435,7 +435,7 @@ Resources:
                   - s3:DeleteObjectVersion
                   - s3:ListMultipartUploadParts
                   - s3:AbortMultipartUpload
-                Resource: !Sub "${PhotoBucket}/*"
+                Resource: !Join ["", [!GetAtt PhotoBucket.Arn, "/*"]]
               - Sid: S3PhotoBucketListPermissions
                 Effect: Allow
                 Action:
