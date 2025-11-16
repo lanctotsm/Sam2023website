@@ -197,7 +197,7 @@ Resources:
               Service: logging.s3.amazonaws.com
             Action:
               - s3:PutObject
-            Resource: !Sub "${S3AccessLogBucket.Arn}/photo-bucket-logs/*"
+            Resource: !Join ["", [!GetAtt S3AccessLogBucket.Arn, "/photo-bucket-logs/*"]]
             Condition:
               StringEquals:
                 aws:SourceAccount: !Ref AWS::AccountId
@@ -256,14 +256,14 @@ Resources:
             Effect: Allow
             Principal: "*"
             Action: s3:GetObject
-            Resource: !Sub "${PhotoBucket}/photos/*"
+            Resource: !Join ["", [!GetAtt PhotoBucket.Arn, "/photos/*"]]
           - Sid: DenyInsecureConnections
             Effect: Deny
             Principal: "*"
             Action: s3:*
             Resource:
-              - !Sub "${PhotoBucket}/*"
-              - !Ref PhotoBucket
+              - !Join ["", [!GetAtt PhotoBucket.Arn, "/*"]]
+              - !GetAtt PhotoBucket.Arn
             Condition:
               Bool:
                 "aws:SecureTransport": "false"
@@ -450,7 +450,7 @@ Resources:
                   - s3:GetObject
                   - s3:ListBucket
                 Resource:
-                  - !Sub "${S3AccessLogBucket}/*"
+                  - !Join ["", [!GetAtt S3AccessLogBucket.Arn, "/*"]]
                   - !GetAtt S3AccessLogBucket.Arn
               # DynamoDB Permissions for Photo Metadata Table
               - Sid: DynamoDBPhotoMetadataPermissions
@@ -467,7 +467,7 @@ Resources:
                   - dynamodb:DescribeTable
                 Resource:
                   - !GetAtt PhotoMetadataTable.Arn
-                  - !Sub "${PhotoMetadataTable.Arn}/index/*"
+                  - !Join ["", [!GetAtt PhotoMetadataTable.Arn, "/index/*"]]
               # DynamoDB Permissions for Sessions Table
               - Sid: DynamoDBSessionsPermissions
                 Effect: Allow
@@ -483,7 +483,7 @@ Resources:
                   - dynamodb:DescribeTable
                 Resource:
                   - !GetAtt SessionsTable.Arn
-                  - !Sub "${SessionsTable.Arn}/index/*"
+                  - !Join ["", [!GetAtt SessionsTable.Arn, "/index/*"]]
               # DynamoDB Permissions for Albums Table
               - Sid: DynamoDBAlbumsPermissions
                 Effect: Allow
@@ -499,7 +499,7 @@ Resources:
                   - dynamodb:DescribeTable
                 Resource:
                   - !GetAtt AlbumsTable.Arn
-                  - !Sub "${AlbumsTable.Arn}/index/*"
+                  - !Join ["", [!GetAtt AlbumsTable.Arn, "/index/*"]]
               # KMS Permissions (if encryption is enabled)
               - !If
                 - EnableEncryptionCondition
