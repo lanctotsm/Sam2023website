@@ -109,7 +109,7 @@ Globals:
   Function:
     Timeout: !Ref LambdaTimeout
     MemorySize: !Ref LambdaMemorySize
-    Runtime: go1.x
+    Runtime: provided.al2
     Tracing: !If [EnableXRayCondition, Active, PassThrough]
     Environment:
       Variables:
@@ -538,7 +538,7 @@ Resources:
     Properties:
       FunctionName: !Sub "${AWS::StackName}-photo-processor-${Environment}"
       CodeUri: .
-      Handler: main
+      Handler: bootstrap
       Role: !GetAtt PhotoProcessorFunctionRole.Arn
       Events:
         PhotoAPI:

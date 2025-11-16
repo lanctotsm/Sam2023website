@@ -19,12 +19,12 @@ else
     MKDIR := mkdir -p
 endif
 
-# Build the Go binary for Lambda
+# Build the Go binary for Lambda (provided.al2 runtime requires bootstrap)
 build:
 ifeq ($(OS),Windows_NT)
-	$env:GOOS="linux"; $env:GOARCH="amd64"; $env:CGO_ENABLED="0"; go build -ldflags="-s -w" -o main .
+	$env:GOOS="linux"; $env:GOARCH="amd64"; $env:CGO_ENABLED="0"; go build -ldflags="-s -w" -o bootstrap main.go
 else
-	GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-s -w" -o main .
+	GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-s -w" -o bootstrap main.go
 endif
 
 # Run tests
@@ -108,11 +108,12 @@ package: build
 # Clean build artifacts
 clean:
 ifeq ($(OS),Windows_NT)
+	if exist bootstrap $(RM) bootstrap
 	if exist main $(RM) main
 	if exist packaged-template.yaml $(RM) packaged-template.yaml
 	if exist coverage.out $(RM) coverage.out
 else
-	$(RM) main packaged-template.yaml coverage.out
+	$(RM) bootstrap main packaged-template.yaml coverage.out
 endif
 
 # Run locally with SAM
