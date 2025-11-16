@@ -536,7 +536,7 @@ Resources:
   PhotoProcessorFunction:
     Type: AWS::Serverless::Function
     Properties:
-      FunctionName: !Sub "${AWS::StackName}-photo-processor-${Environment}"
+      FunctionName: !Sub "${AWS::StackName}-processor"
       CodeUri: .
       Handler: bootstrap
       Role: !GetAtt PhotoProcessorFunctionRole.Arn
@@ -593,7 +593,7 @@ Resources:
   LambdaLogGroup:
     Type: AWS::Logs::LogGroup
     Properties:
-      LogGroupName: !Sub "/aws/lambda/${AWS::StackName}-photo-processor-${Environment}"
+      LogGroupName: !Sub "/aws/lambda/${AWS::StackName}-processor"
       RetentionInDays: !If [IsProduction, 30, 7]
   # CloudWatch Alarms
   LambdaErrorAlarm:
