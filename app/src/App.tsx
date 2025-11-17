@@ -2,26 +2,29 @@
 
 import React from 'react';
 import './styles/app.scss';
-import {BrowserRouter as Router, Route, Routes} from 'react-router-dom';
-import Switch from 'react-bootstrap/esm/Switch';
+import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
+import { Box, Container } from '@chakra-ui/react';
 import MyNav from './components/MyNav';
 import routes from './routes';
-import { Container } from 'react-bootstrap';
 import Footer from './components/Footer';
-const App: React.FC = () => {
 
+const App: React.FC = () => {
   return (
-   <Router>
-      <MyNav />
-      <Container>
-        <Routes>
-          {routes.map((route, index) => (
-            <Route key={index} path={route.path} element={route.component } />
-          ))}
-        </Routes>
-      </Container>
-      <Footer></Footer>
-   </Router>   
+    <Router>
+      <Box minH="100vh" bg="gray.900" color="gray.100" display="flex" flexDirection="column">
+        <MyNav />
+        <Box flex="1">
+          <Container maxW="6xl" py={10}>
+            <Routes>
+              {routes.map((route) => (
+                <Route key={route.path} path={route.path} element={route.element} />
+              ))}
+            </Routes>
+          </Container>
+        </Box>
+        <Footer />
+      </Box>
+    </Router>
   );
 };
 
