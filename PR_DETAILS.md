@@ -133,7 +133,34 @@ The following GitHub secrets need to be configured for deployment:
 3. The GitHub Actions workflow will automatically deploy on merge to main
 4. Access the frontend at the S3 static website URL output by the deployment
 
+## CloudFront CDN Integration
+
+✅ **Added in this PR**: Images are now served via CloudFront for improved performance and security
+
+### Benefits
+- **HTTPS Support** - All images served over HTTPS (S3 only supports HTTP)
+- **Global Edge Caching** - Faster image loads from 300+ edge locations
+- **Better Security** - Private S3 bucket with CloudFront-only access
+- **Cost Savings** - Reduced S3 data transfer costs
+- **DDoS Protection** - AWS Shield Standard included
+
+### How It Works
+- CloudFront distribution automatically created during deployment
+- Backend automatically detects and uses CloudFront URLs
+- Falls back to direct S3 URLs if CloudFront not configured
+- See `CLOUDFRONT_CONFIGURATION.md` for full details
+
+### Deployment Impact
+- Initial CloudFront distribution creation takes 10-15 minutes
+- Zero downtime deployment
+- Fully backward compatible
+
 ## Branch Information
 - **Branch**: `feature/frontend-album-integration`
-- **Commits**: 1 commit with comprehensive changes
-- **Files Changed**: 16 files (2,348 insertions, 52 deletions)
+- **Commits**: 3 commits with comprehensive changes
+  1. Frontend integration with Material-UI and OAuth
+  2. CloudFront distribution for image delivery
+  3. CloudFront documentation
+- **Files Changed**: 
+  - Frontend: 16 files (2,348 insertions, 52 deletions)
+  - Backend/Infrastructure: 5 files (379 insertions, 15 deletions)
