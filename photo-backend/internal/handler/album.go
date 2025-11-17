@@ -41,19 +41,15 @@ func (h *Handler) handleCreateAlbumAuthenticated(ctx context.Context, request ev
 	return h.responseBuilder.Success(albumData), nil
 }
 
-// ProtectedListAlbumsHandler handles GET /albums requests for authenticated album listing.
-type ProtectedListAlbumsHandler struct {
+// ListAlbumsHandler handles GET /albums requests for public album listing.
+type ListAlbumsHandler struct {
 	*Handler
 }
 
-// Handle processes authenticated album listing requests.
-func (h *ProtectedListAlbumsHandler) Handle(ctx context.Context, request events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
-	return h.authMiddleware.RequireAuth(h.handleListAlbumsAuthenticated)(ctx, request)
-}
-
-// handleListAlbumsAuthenticated processes album listing for authenticated users.
-func (h *Handler) handleListAlbumsAuthenticated(ctx context.Context, request events.APIGatewayProxyRequest, user *auth.User) (events.APIGatewayProxyResponse, error) {
-	albums, err := h.albumService.ListAlbumsWithThumbnails(user.Email)
+// Handle processes album listing requests and falls back to authorized user when unauthenticated.
+func (h *ListAlbumsHandler) Handle(ctx context.Context, request events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
+	viewerEmail := h.resolveViewerEmail(request)
+	albums, err := h.albumService.ListAlbumsWithThumbnails(viewerEmail)
 	if err != nil {
 		return h.responseBuilder.Error(http.StatusInternalServerError, fmt.Errorf("listing albums: %w", err).Error()), nil
 	}
@@ -149,24 +145,25 @@ func (h *Handler) handleDeleteAlbumAuthenticated(ctx context.Context, request ev
 	return h.responseBuilder.Success(map[string]string{"message": "album deleted successfully"}), nil
 }
 
-// ProtectedListAlbumPhotosHandler handles authenticated GET /albums/{albumId}/photos requests.
-type ProtectedListAlbumPhotosHandler struct {
+// ListAlbumPhotosHandler handles GET /albums/{albumId}/photos requests for public viewing.
+type ListAlbumPhotosHandler struct {
 	*Handler
 }
 
-// Handle processes authenticated album-specific photo listing requests.
-func (h *ProtectedListAlbumPhotosHandler) Handle(ctx context.Context, request events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
-	return h.authMiddleware.RequireAuth(h.handleListAlbumPhotosAuthenticated)(ctx, request)
-}
-
-// handleListAlbumPhotosAuthenticated processes album photo listing for authenticated users.
-func (h *Handler) handleListAlbumPhotosAuthenticated(ctx context.Context, request events.APIGatewayProxyRequest, user *auth.User) (events.APIGatewayProxyResponse, error) {
+// Handle processes album photo listing for any viewer while ensuring ownership checks.
+func (h *ListAlbumPhotosHandler) Handle(ctx context.Context, request events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
 	albumID := h.validationService.ExtractIDFromPath(request.Path, "/albums/")
 	if albumID == "" {
 		return h.responseBuilder.Error(http.StatusBadRequest, "album ID is required"), nil
 	}
 
 	albumID = h.validationService.CleanPathSuffix(albumID, "/photos")
+	viewerEmail := h.resolveViewerEmail(request)
+
+	if _, err := h.albumService.GetAlbum(albumID, viewerEmail); err != nil {
+		statusCode := h.validationService.MapServiceErrorToHTTPStatus(err)
+		return h.responseBuilder.Error(statusCode, fmt.Errorf("getting album: %w", err).Error()), nil
+	}
 
 	response, err := h.photoService.ListPhotosByAlbum(albumID)
 	if err != nil {
@@ -175,4 +172,20 @@ func (h *Handler) handleListAlbumPhotosAuthenticated(ctx context.Context, reques
 	}
 
 	return h.responseBuilder.Success(response), nil
+}
+
+// resolveViewerEmail determines which user email should be used for read-only operations.
+// Unauthenticated viewers are mapped to the configured authorized email.
+func (h *Handler) resolveViewerEmail(request events.APIGatewayProxyRequest) string {
+	sessionToken := h.sessionExtractor.ExtractToken(request)
+	if sessionToken == "" {
+		return h.authService.AuthorizedEmail()
+	}
+
+	result, err := h.authService.ValidateSession(sessionToken)
+	if err != nil || result == nil || !result.Valid || result.User == nil || result.User.Email == "" {
+		return h.authService.AuthorizedEmail()
+	}
+
+	return result.User.Email
 }

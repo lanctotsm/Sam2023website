@@ -96,7 +96,7 @@ func (h *Handler) setupRoutes() {
 	
 	// Album management endpoints
 	h.router.AddRoute("POST", "/albums", &ProtectedCreateAlbumHandler{h})
-	h.router.AddRoute("GET", "/albums", &ProtectedListAlbumsHandler{h})
+	h.router.AddRoute("GET", "/albums", &ListAlbumsHandler{h})
 	h.router.AddRoute("PUT", "/albums/{albumId}/thumbnail", &ProtectedSetAlbumThumbnailHandler{h})
 	h.router.AddRoute("DELETE", "/albums/{albumId}", &ProtectedDeleteAlbumHandler{h})
 	
@@ -105,7 +105,7 @@ func (h *Handler) setupRoutes() {
 	h.router.AddRoute("GET", "/photos", &ProtectedListPhotosHandler{h})
 	h.router.AddRoute("GET", "/photos/{id}", &ProtectedGetPhotoHandler{h})
 	h.router.AddRoute("DELETE", "/photos/{id}", &ProtectedDeletePhotoHandler{h})
-	h.router.AddRoute("GET", "/albums/{albumId}/photos", &ProtectedListAlbumPhotosHandler{h})
+	h.router.AddRoute("GET", "/albums/{albumId}/photos", &ListAlbumPhotosHandler{h})
 }
 
 // HandleRequest is the main entry point for AWS Lambda invocations.
