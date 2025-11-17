@@ -1,0 +1,168 @@
+name: Deploy Frontend
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'app/**'
+      - '.github/workflows/deploy-frontend.yml'
+  pull_request:
+    branches:
+      - main
+    paths:
+      - 'app/**'
+  workflow_dispatch:
+
+env:
+  AWS_REGION: us-east-1
+  NODE_VERSION: '18'
+
+jobs:
+  test:
+    name: Test and Lint
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./app
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: ./app/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run tests
+        run: npm test -- --watchAll=false --passWithNoTests
+
+      - name: Run lint
+        run: npm run build --if-present
+        continue-on-error: true
+
+  build:
+    name: Build Frontend
+    runs-on: ubuntu-latest
+    needs: test
+    defaults:
+      run:
+        working-directory: ./app
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: ./app/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build application
+        env:
+          REACT_APP_API_URL: ${{ secrets.REACT_APP_API_URL }}
+          CI: false
+        run: npm run build
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-build
+          path: app/build
+          retention-days: 1
+
+  deploy-prod:
+    name: Deploy to Production
+    runs-on: ubuntu-latest
+    needs: build
+    if: github.ref == 'refs/heads/main' || github.event_name == 'workflow_dispatch'
+    environment:
+      name: frontend-production
+      url: ${{ steps.deploy.outputs.website_url }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Download build artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: frontend-build
+          path: build
+
+      - name: Ensure S3 bucket exists for static website
+        id: deploy
+        run: |
+          S3_BUCKET="${{ secrets.FRONTEND_S3_BUCKET || 'photo-gallery-frontend' }}"
+          
+          # Check if bucket exists, create if it doesn't
+          if ! aws s3 ls "s3://$S3_BUCKET" 2>/dev/null; then
+            echo "Creating S3 bucket for frontend: $S3_BUCKET"
+            aws s3 mb "s3://$S3_BUCKET" --region ${{ env.AWS_REGION }}
+            
+            # Configure bucket for static website hosting
+            aws s3 website "s3://$S3_BUCKET" \
+              --index-document index.html \
+              --error-document index.html
+            
+            # Set bucket policy for public read access
+            cat > bucket-policy.json <<EOF
+          {
+            "Version": "2012-10-17",
+            "Statement": [
+              {
+                "Sid": "PublicReadGetObject",
+                "Effect": "Allow",
+                "Principal": "*",
+                "Action": "s3:GetObject",
+                "Resource": "arn:aws:s3:::$S3_BUCKET/*"
+              }
+            ]
+          }
+          EOF
+            aws s3api put-bucket-policy --bucket "$S3_BUCKET" --policy file://bucket-policy.json
+            
+            # Disable Block Public Access
+            aws s3api put-public-access-block \
+              --bucket "$S3_BUCKET" \
+              --public-access-block-configuration \
+              "BlockPublicAcls=false,IgnorePublicAcls=false,BlockPublicPolicy=false,RestrictPublicBuckets=false"
+          else
+            echo "S3 bucket already exists: $S3_BUCKET"
+          fi
+          
+          echo "S3_BUCKET=$S3_BUCKET" >> $GITHUB_ENV
+          echo "website_url=http://$S3_BUCKET.s3-website-${{ env.AWS_REGION }}.amazonaws.com" >> $GITHUB_OUTPUT
+
+      - name: Sync files to S3
+        run: |
+          aws s3 sync build/ "s3://$S3_BUCKET" \
+            --delete \
+            --cache-control "public, max-age=31536000" \
+            --exclude "index.html" \
+            --exclude "*.html"
+          
+          # Upload HTML files separately with no-cache
+          aws s3 sync build/ "s3://$S3_BUCKET" \
+            --exclude "*" \
+            --include "*.html" \
+            --cache-control "no-cache, no-store, must-revalidate"
+
+      - name: Output deployment URL
+        run: |
+          echo "Frontend deployed to: http://$S3_BUCKET.s3-website-${{ env.AWS_REGION }}.amazonaws.com"

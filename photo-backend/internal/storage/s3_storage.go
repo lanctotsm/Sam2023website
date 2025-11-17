@@ -15,15 +15,26 @@ import (
 
 // S3Storage handles S3 operations for photo storage
 type S3Storage struct {
-	client s3iface.S3API
-	bucket string
+	client           s3iface.S3API
+	bucket           string
+	cloudFrontDomain string
 }
 
 // NewS3Storage creates a new S3Storage instance
 func NewS3Storage(client s3iface.S3API, bucket string) *S3Storage {
 	return &S3Storage{
-		client: client,
-		bucket: bucket,
+		client:           client,
+		bucket:           bucket,
+		cloudFrontDomain: "",
+	}
+}
+
+// NewS3StorageWithCloudFront creates a new S3Storage instance with CloudFront support
+func NewS3StorageWithCloudFront(client s3iface.S3API, bucket string, cloudFrontDomain string) *S3Storage {
+	return &S3Storage{
+		client:           client,
+		bucket:           bucket,
+		cloudFrontDomain: cloudFrontDomain,
 	}
 }
 
@@ -157,8 +168,12 @@ func (s *S3Storage) GetFileSize(key string) (int64, error) {
 	return *result.ContentLength, nil
 }
 
-// GetFileURL returns the public URL for a file in S3
+// GetFileURL returns the public URL for a file
+// If CloudFront is configured, returns CloudFront URL, otherwise returns direct S3 URL
 func (s *S3Storage) GetFileURL(key string) string {
+	if s.cloudFrontDomain != "" {
+		return fmt.Sprintf("https://%s/%s", s.cloudFrontDomain, key)
+	}
 	return fmt.Sprintf("https://%s.s3.amazonaws.com/%s", s.bucket, key)
 }
 

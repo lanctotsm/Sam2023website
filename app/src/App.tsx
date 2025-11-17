@@ -3,15 +3,16 @@
 import React from 'react';
 import './styles/app.scss';
 import {BrowserRouter as Router, Route, Routes} from 'react-router-dom';
-import Switch from 'react-bootstrap/esm/Switch';
 import MyNav from './components/MyNav';
 import routes from './routes';
 import { Container } from 'react-bootstrap';
 import Footer from './components/Footer';
+import { AuthProvider } from './contexts/AuthContext';
 const App: React.FC = () => {
 
   return (
    <Router>
+     <AuthProvider>
       <MyNav />
       <Container>
         <Routes>
@@ -21,6 +22,7 @@ const App: React.FC = () => {
         </Routes>
       </Container>
       <Footer></Footer>
+     </AuthProvider>
    </Router>   
   );
 };

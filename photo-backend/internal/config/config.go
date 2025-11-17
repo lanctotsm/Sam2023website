@@ -19,6 +19,7 @@ type Config struct {
 	AlbumsTable      string // DynamoDB table for album data
 	OAuthStatesTable string // DynamoDB table for OAuth state storage
 	AWSRegion        string // AWS region for services
+	CloudFrontDomain string // CloudFront domain for photo delivery
 
 	// Application Configuration
 	Environment string // Deployment environment (dev/staging/prod)
@@ -47,6 +48,7 @@ func LoadConfig() (*Config, error) {
 		AlbumsTable:        os.Getenv("ALBUMS_TABLE"),
 		OAuthStatesTable:   os.Getenv("OAUTH_STATES_TABLE"),
 		AWSRegion:          getEnvWithDefault("AWS_REGION", "us-east-1"),
+		CloudFrontDomain:   os.Getenv("CLOUDFRONT_DOMAIN"),
 		Environment:        getEnvWithDefault("ENVIRONMENT", "dev"),
 		GoogleClientID:     os.Getenv("GOOGLE_CLIENT_ID"),
 		GoogleClientSecret: os.Getenv("GOOGLE_CLIENT_SECRET"),
