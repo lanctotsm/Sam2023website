@@ -50,7 +50,15 @@ func main() {
 	dynamoClient := dynamodb.New(sess)
 
 	// Initialize storage layer
-	s3Storage := storage.NewS3Storage(s3Client, cfg.S3Bucket)
+	var s3Storage *storage.S3Storage
+	if cfg.CloudFrontDomain != "" {
+		s3Storage = storage.NewS3StorageWithCloudFront(s3Client, cfg.S3Bucket, cfg.CloudFrontDomain)
+		log.Printf("Using CloudFront for image delivery: %s", cfg.CloudFrontDomain)
+	} else {
+		s3Storage = storage.NewS3Storage(s3Client, cfg.S3Bucket)
+		log.Printf("Using direct S3 URLs for image delivery")
+	}
+	
 	photoStorage := storage.NewPhotoStorage(dynamoClient, cfg.DynamoTable)
 	albumStorage := storage.NewAlbumStorage(dynamoClient, cfg.AlbumsTable)
 	sessionStorage := storage.NewSessionStorage(dynamoClient, cfg.SessionsTable)

@@ -126,6 +126,7 @@ Globals:
         GOOGLE_OAUTH_REDIRECT_URL: !Ref GoogleOAuthRedirectURL
         AUTHORIZED_USER_EMAIL: !Ref AuthorizedUserEmail
         SESSION_TIMEOUT_HOURS: !Ref SessionTimeoutHours
+        CLOUDFRONT_DOMAIN: !GetAtt PhotoCloudFrontDistribution.DomainName
 
 Resources:
   # KMS Key for encryption (if enabled)
@@ -218,10 +219,10 @@ Resources:
               KMSMasterKeyID: !If [EnableEncryptionCondition, !Ref PhotoKMSKey, !Ref AWS::NoValue]
             BucketKeyEnabled: !If [EnableEncryptionCondition, true, false]
       PublicAccessBlockConfiguration:
-        BlockPublicAcls: false
-        BlockPublicPolicy: false
-        IgnorePublicAcls: false
-        RestrictPublicBuckets: false
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
       CorsConfiguration:
         CorsRules:
           - AllowedHeaders: ["*"]
@@ -245,18 +246,68 @@ Resources:
         DestinationBucketName: !Ref S3AccessLogBucket
         LogFilePrefix: photo-bucket-logs/
 
-  # S3 Bucket Policy for public read access to photos
+  # CloudFront Origin Access Control for secure S3 access
+  PhotoCloudFrontOAC:
+    Type: AWS::CloudFront::OriginAccessControl
+    Properties:
+      OriginAccessControlConfig:
+        Name: !Sub "${AWS::StackName}-photos-oac-${Environment}"
+        OriginAccessControlOriginType: s3
+        SigningBehavior: always
+        SigningProtocol: sigv4
+
+  # CloudFront Distribution for photo delivery
+  PhotoCloudFrontDistribution:
+    Type: AWS::CloudFront::Distribution
+    Properties:
+      DistributionConfig:
+        Comment: !Sub "CloudFront distribution for ${AWS::StackName} photos"
+        Enabled: true
+        HttpVersion: http2and3
+        PriceClass: PriceClass_100
+        Origins:
+          - Id: S3-PhotoBucket
+            DomainName: !GetAtt PhotoBucket.RegionalDomainName
+            OriginAccessControlId: !GetAtt PhotoCloudFrontOAC.Id
+            S3OriginConfig: {}
+        DefaultCacheBehavior:
+          TargetOriginId: S3-PhotoBucket
+          ViewerProtocolPolicy: redirect-to-https
+          AllowedMethods:
+            - GET
+            - HEAD
+            - OPTIONS
+          CachedMethods:
+            - GET
+            - HEAD
+            - OPTIONS
+          Compress: true
+          CachePolicyId: 658327ea-f89d-4fab-a63d-7e88639e58f6  # CachingOptimized
+          OriginRequestPolicyId: 88a5eaf4-2fd4-4709-b370-b4c650ea3fcf  # CORS-S3Origin
+          ResponseHeadersPolicyId: 5cc3b908-e619-4b99-88e5-2cf7f45965bd  # CORS-With-Preflight
+        ViewerCertificate:
+          CloudFrontDefaultCertificate: true
+        Logging:
+          Bucket: !GetAtt S3AccessLogBucket.DomainName
+          Prefix: cloudfront-logs/
+          IncludeCookies: false
+
+  # S3 Bucket Policy for CloudFront access
   PhotoBucketPolicy:
     Type: AWS::S3::BucketPolicy
     Properties:
       Bucket: !Ref PhotoBucket
       PolicyDocument:
         Statement:
-          - Sid: PublicReadGetObject
+          - Sid: AllowCloudFrontServicePrincipal
             Effect: Allow
-            Principal: "*"
+            Principal:
+              Service: cloudfront.amazonaws.com
             Action: s3:GetObject
-            Resource: !Join ["", [!GetAtt PhotoBucket.Arn, "/photos/*"]]
+            Resource: !Join ["", [!GetAtt PhotoBucket.Arn, "/*"]]
+            Condition:
+              StringEquals:
+                AWS:SourceArn: !Sub "arn:aws:cloudfront::${AWS::AccountId}:distribution/${PhotoCloudFrontDistribution}"
           - Sid: DenyInsecureConnections
             Effect: Deny
             Principal: "*"
@@ -691,3 +742,15 @@ Outputs:
     Value: !Ref PhotoKMSKey
     Export:
       Name: !Sub "${AWS::StackName}-KMSKeyId"
+
+  CloudFrontDomain:
+    Description: "CloudFront distribution domain name for photos"
+    Value: !GetAtt PhotoCloudFrontDistribution.DomainName
+    Export:
+      Name: !Sub "${AWS::StackName}-CloudFrontDomain"
+
+  CloudFrontDistributionId:
+    Description: "CloudFront distribution ID"
+    Value: !Ref PhotoCloudFrontDistribution
+    Export:
+      Name: !Sub "${AWS::StackName}-CloudFrontDistributionId"
