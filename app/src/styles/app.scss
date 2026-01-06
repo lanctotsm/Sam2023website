@@ -1,26 +1,18 @@
-//App custom theme attributes
-$body-bg: #969088;
-$theme-colors: (
-  "primary": #969088,
-  "secondary": #bd5d38,
-  "success": #28a745,
-  "info": #17a2b8,
-  "warning": #ffc107,
-  "danger": #dc3545,
-  "light": #f8f9fa,
-  "dark": #343a40
-);
+// Import Bootstrap CSS (pre-compiled)
+@import 'bootstrap/dist/css/bootstrap.min.css';
+@import 'font-awesome/css/font-awesome.min.css';
+
+// Custom theme overrides
+:root {
+  --bs-body-bg: #969088;
+  --bs-primary: #969088;
+  --bs-secondary: #bd5d38;
+}
+
 body {
   font-family: 'Gotham', sans-serif !important;
+  background-color: #969088;
 }
-// These are the defaults, but you can override any values
-$font-family-sans-serif: -apple-system, system-ui, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif !default;
-$font-family-serif:      Georgia, "Times New Roman", Times, serif !default;
-$font-family-monospace:  Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace !default;
-$font-family-base:       $font-family-sans-serif !default;
-
-@import '~bootstrap/scss/bootstrap';
-@import '~font-awesome/scss/font-awesome.scss';
 
 .navLink {
   color: #c9c1c1;
@@ -46,9 +38,11 @@ $font-family-base:       $font-family-sans-serif !default;
   font-size: 2rem;
   margin-right: 1.5rem;
 }
+
 .social-icons .social-icon:last-child {
   margin-right: 0;
 }
+
 .social-icons .social-icon:hover {
   background-color: #bd5d38;
 }
@@ -57,17 +51,19 @@ a {
   color: var(--bs-link-color);
   text-decoration: none;
 }
+
 h1 {
-  font-weight: bolder ;
+  font-weight: bolder;
 }
 
 .img-thumbnail {
-  padding:0px;
-
+  padding: 0px;
 }
+
 .white-text {
   color: white;
 }
+
 .section-divider {
   margin: 1.25rem 0 1.5rem;
   width: 100%;
@@ -79,14 +75,16 @@ h1 {
 .section-divider .divider-line:first-child {
   margin-right: 1rem;
 }
+
 .section-divider .divider-line {
-    width: 100%;
-    max-width: 7rem;
-    height: 0.25rem;
-    background-color: whitesmoke;
-    border-radius: 1rem;
-    border-color: whitesmoke;
+  width: 100%;
+  max-width: 7rem;
+  height: 0.25rem;
+  background-color: whitesmoke;
+  border-radius: 1rem;
+  border-color: whitesmoke;
 }
+
 .section-divider .divider-icon {
   color: whitesmoke;
   font-size: 2rem;

@@ -1,0 +1,16 @@
+#!/bin/sh
+
+# Quick smoke test for pre-commit
+# Runs basic tests to verify app renders - full test suite runs in CI
+
+cd app
+
+echo "🔥 Running smoke test..."
+npx vitest run 2>&1
+
+if [ $? -ne 0 ]; then
+    echo "❌ Smoke test failed. Please fix before committing."
+    exit 1
+fi
+
+echo "✅ Smoke test passed!"

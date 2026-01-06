@@ -16,7 +16,7 @@ on:
 
 env:
   AWS_REGION: us-east-1
-  NODE_VERSION: '18'
+  NODE_VERSION: '22'
 
 jobs:
   test:
@@ -40,10 +40,10 @@ jobs:
         run: npm ci
 
       - name: Run tests
-        run: npm test -- --watchAll=false --passWithNoTests
+        run: npm test
 
       - name: Run lint
-        run: npm run build --if-present
+        run: npm run lint
         continue-on-error: true
 
   build:
@@ -69,8 +69,7 @@ jobs:
 
       - name: Build application
         env:
-          REACT_APP_API_URL: ${{ secrets.REACT_APP_API_URL }}
-          CI: false
+          VITE_API_URL: ${{ secrets.VITE_API_URL }}
         run: npm run build
 
       - name: Upload build artifact

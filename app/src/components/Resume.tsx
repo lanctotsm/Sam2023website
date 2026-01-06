@@ -1,12 +1,11 @@
 import React from 'react';
 import Container from 'react-bootstrap/Container';
 import { Col,Image,Row } from 'react-bootstrap';
-import SectionTitle from './SectionTitle';
+
 export interface ResumeProps {
     resume: any;
-    style: any
 }
-const Resume: React.FC<ResumeProps> = ({resume, style}) => {
+const Resume: React.FC<ResumeProps> = ({resume}) => {
     let localResume = resume.resume;
     console.log(localResume);
     return (

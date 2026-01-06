@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Container,
@@ -32,9 +32,17 @@ const Upload: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
   const navigate = useNavigate();
+  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     loadAlbums();
+    
+    // Cleanup timeout on unmount
+    return () => {
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+      }
+    };
   }, []);
 
   const loadAlbums = async () => {
@@ -121,8 +129,11 @@ const Upload: React.FC = () => {
           setTags('');
 
           // Redirect to album after short delay
-          setTimeout(() => {
-            navigate(`/albums/${selectedAlbumId}`);
+          // Store timeout ID so we can clean it up if component unmounts
+          const albumId = selectedAlbumId; // Capture value for closure
+          timeoutRef.current = setTimeout(() => {
+            navigate(`/albums/${albumId}`);
+            timeoutRef.current = null;
           }, 1500);
         } catch (err: any) {
           console.error('Upload failed:', err);
