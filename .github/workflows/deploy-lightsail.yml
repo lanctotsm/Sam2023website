@@ -1,0 +1,49 @@
+name: Deploy Lightsail CMS
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Deploy CloudFormation
+        run: |
+          aws cloudformation deploy \
+            --stack-name ${{ secrets.LIGHTSAIL_STACK_NAME }} \
+            --template-file infra/lightsail-cms.yaml \
+            --capabilities CAPABILITY_IAM \
+            --parameter-overrides BucketName=${{ secrets.CMS_BUCKET_NAME }}
+
+      - name: Sync app to Lightsail
+        env:
+          LIGHTSAIL_HOST: ${{ secrets.LIGHTSAIL_HOST }}
+          LIGHTSAIL_SSH_KEY: ${{ secrets.LIGHTSAIL_SSH_KEY }}
+        run: |
+          echo "$LIGHTSAIL_SSH_KEY" > lightsail.key
+          chmod 600 lightsail.key
+          rsync -avz --delete -e "ssh -i lightsail.key -o StrictHostKeyChecking=no" \
+            cms-backend cms-frontend docker-compose.yml \
+            ubuntu@$LIGHTSAIL_HOST:/opt/sam-cms
+
+      - name: Restart services
+        env:
+          LIGHTSAIL_HOST: ${{ secrets.LIGHTSAIL_HOST }}
+        run: |
+          ssh -i lightsail.key -o StrictHostKeyChecking=no ubuntu@$LIGHTSAIL_HOST \
+            "cd /opt/sam-cms && docker compose pull && docker compose up -d --build"

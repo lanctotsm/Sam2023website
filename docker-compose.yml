@@ -1,0 +1,51 @@
+version: "3.9"
+
+services:
+  postgres:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_USER: cms
+      POSTGRES_PASSWORD: cms
+      POSTGRES_DB: cms
+    ports:
+      - "5432:5432"
+    volumes:
+      - cms_postgres:/var/lib/postgresql/data
+
+  cms-backend:
+    build:
+      context: ./cms-backend
+    environment:
+      PORT: 8080
+      DATABASE_URL: postgres://cms:cms@postgres:5432/cms?sslmode=disable
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET}
+      GOOGLE_REDIRECT_URL: ${GOOGLE_REDIRECT_URL}
+      SESSION_DURATION: 24h
+      COOKIE_SECURE: "false"
+      S3_REGION: ${S3_REGION}
+      S3_BUCKET: ${S3_BUCKET}
+      S3_PUBLIC_BASE_URL: ${S3_PUBLIC_BASE_URL}
+      AWS_USE_STATIC_CREDS: ${AWS_USE_STATIC_CREDS}
+      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID}
+      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY}
+      ALLOWED_ORIGINS: ${ALLOWED_ORIGINS}
+    ports:
+      - "8080:8080"
+    depends_on:
+      - postgres
+
+  cms-frontend:
+    build:
+      context: ./cms-frontend
+    environment:
+      NEXT_PUBLIC_API_BASE_URL: http://localhost:8080
+      API_INTERNAL_URL: http://cms-backend:8080
+      NEXT_PUBLIC_IMAGE_BASE_URL: ${S3_PUBLIC_BASE_URL}
+    ports:
+      - "3000:3000"
+    depends_on:
+      - cms-backend
+
+volumes:
+  cms_postgres:
