@@ -45,12 +45,12 @@ func TestLinkStoreListImagesForAlbum(t *testing.T) {
 	store := &LinkStore{db: db}
 	now := time.Now()
 	rows := sqlmock.NewRows([]string{
-		"id", "s3_key", "width", "height", "caption", "alt_text", "created_at",
-	}).AddRow(1, "uploads/one.jpg", 1200, 800, "One", "One alt", now).
-		AddRow(2, "uploads/two.jpg", 800, 600, "Two", "Two alt", now)
+		"id", "s3_key", "width", "height", "caption", "alt_text", "created_by", "created_at",
+	}).AddRow(1, "uploads/one.jpg", 1200, 800, "One", "One alt", nil, now).
+		AddRow(2, "uploads/two.jpg", 800, 600, "Two", "Two alt", nil, now)
 
 	mock.ExpectQuery(regexp.QuoteMeta(`
-		SELECT i.id, i.s3_key, i.width, i.height, i.caption, i.alt_text, i.created_at
+		SELECT i.id, i.s3_key, i.width, i.height, i.caption, i.alt_text, i.created_by, i.created_at
 		FROM images i
 		INNER JOIN album_images ai ON ai.image_id = i.id
 		WHERE ai.album_id = $1

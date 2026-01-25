@@ -25,7 +25,7 @@ func (s *LinkStore) LinkPostToAlbum(ctx context.Context, postID, albumID int64) 
 
 func (s *LinkStore) ListAlbumsForPost(ctx context.Context, postID int64) ([]Album, error) {
 	rows, err := s.db.QueryContext(ctx, `
-		SELECT a.id, a.title, a.slug, a.description, a.created_at, a.updated_at
+		SELECT a.id, a.title, a.slug, a.description, a.created_by, a.created_at, a.updated_at
 		FROM albums a
 		INNER JOIN post_album_links l ON l.album_id = a.id
 		WHERE l.post_id = $1
@@ -57,7 +57,7 @@ func (s *LinkStore) LinkImageToAlbum(ctx context.Context, albumID, imageID int64
 
 func (s *LinkStore) ListImagesForAlbum(ctx context.Context, albumID int64) ([]Image, error) {
 	rows, err := s.db.QueryContext(ctx, `
-		SELECT i.id, i.s3_key, i.width, i.height, i.caption, i.alt_text, i.created_at
+		SELECT i.id, i.s3_key, i.width, i.height, i.caption, i.alt_text, i.created_by, i.created_at
 		FROM images i
 		INNER JOIN album_images ai ON ai.image_id = i.id
 		WHERE ai.album_id = $1
