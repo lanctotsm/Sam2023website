@@ -33,6 +33,7 @@ Resources:
 
   CmsBucketPolicy:
     Type: AWS::S3::BucketPolicy
+    DependsOn: CmsDistribution
     Properties:
       Bucket: !Ref CmsBucket
       PolicyDocument:
