@@ -1,0 +1,13 @@
+<CORSConfiguration>
+  <CORSRule>
+    <AllowedOrigin>http://localhost:3000</AllowedOrigin>
+    <AllowedOrigin>http://127.0.0.1:3000</AllowedOrigin>
+    <AllowedMethod>GET</AllowedMethod>
+    <AllowedMethod>PUT</AllowedMethod>
+    <AllowedMethod>POST</AllowedMethod>
+    <AllowedMethod>HEAD</AllowedMethod>
+    <AllowedHeader>*</AllowedHeader>
+    <ExposeHeader>ETag</ExposeHeader>
+    <MaxAgeSeconds>3000</MaxAgeSeconds>
+  </CORSRule>
+</CORSConfiguration>

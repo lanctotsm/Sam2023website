@@ -1,0 +1,17 @@
+{
+  "Parameters": {
+    "Environment": "staging",
+    "EnableLogging": "true",
+    "EnableXRay": "false",
+    "CorsOrigin": "*",
+    "ImageMaxSize": "10485760",
+    "ThumbnailSize": "200",
+    "MediumSize": "800",
+    "LambdaMemorySize": "512",
+    "LambdaTimeout": "30",
+    "EnableEncryption": "false",
+    "EnableVersioning": "true",
+    "NotificationEmail": ""
+  }
+}
+

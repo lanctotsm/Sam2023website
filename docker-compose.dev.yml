@@ -1,0 +1,107 @@
+# Local dev additions/overrides for docker-compose.yml
+services:
+  minio:
+    image: minio/minio:latest
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-minioadmin}
+    command: server /data --console-address ":9001"
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - cms_minio:/data
+
+  minio-init:
+    image: minio/mc:latest
+    depends_on:
+      - minio
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-minioadmin}
+      S3_BUCKET: ${S3_BUCKET:-cms}
+    entrypoint:
+      - /bin/sh
+      - -c
+      - |
+        echo "Waiting for MinIO..."
+        until mc alias set local http://minio:9000 "$$MINIO_ROOT_USER" "$$MINIO_ROOT_PASSWORD" >/dev/null 2>&1; do
+          sleep 1
+        done
+        BUCKET="$${S3_BUCKET:-cms}"
+        echo "Ensuring bucket exists: $${BUCKET}"
+        mc mb -p "local/$${BUCKET}" >/dev/null 2>&1 || true
+        echo "Setting bucket policy (anonymous download)"
+        mc anonymous set download "local/$${BUCKET}" >/dev/null 2>&1 || true
+        echo "Setting bucket CORS"
+        cat > /tmp/cors.xml << 'CORSEOF'
+        <CORSConfiguration>
+          <CORSRule>
+            <AllowedOrigin>http://localhost:3000</AllowedOrigin>
+            <AllowedOrigin>http://127.0.0.1:3000</AllowedOrigin>
+            <AllowedMethod>GET</AllowedMethod>
+            <AllowedMethod>PUT</AllowedMethod>
+            <AllowedMethod>POST</AllowedMethod>
+            <AllowedMethod>HEAD</AllowedMethod>
+            <AllowedHeader>*</AllowedHeader>
+            <ExposeHeader>ETag</ExposeHeader>
+            <MaxAgeSeconds>3000</MaxAgeSeconds>
+          </CORSRule>
+        </CORSConfiguration>
+        CORSEOF
+        mc cors set "local/$${BUCKET}" /tmp/cors.xml >/dev/null 2>&1 || true
+        echo "MinIO ready."
+
+  db-seed:
+    image: postgres:15-alpine
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      PGPASSWORD: cms
+    volumes:
+      - ./scripts/seed-local.sql:/seed-local.sql:ro
+    entrypoint:
+      - /bin/sh
+      - -c
+      - |
+        until pg_isready -h postgres -U cms -d cms >/dev/null 2>&1; do
+          sleep 1
+        done
+        # Wait for migrations to complete (albums table exists)
+        echo "Waiting for migrations to complete..."
+        until psql -h postgres -U cms -d cms -tAc "SELECT EXISTS (SELECT FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'albums');" | grep -q t; do
+          sleep 1
+        done
+        echo "Running seed data..."
+        psql -h postgres -U cms -d cms -f /seed-local.sql >/dev/null 2>&1 || true
+
+  cms-frontend:
+    build:
+      context: ./cms-frontend
+      args:
+        NEXT_PUBLIC_IMAGE_BASE_URL: ${S3_PUBLIC_BASE_URL:-http://localhost:9000/cms}
+    environment:
+      NEXT_PUBLIC_IMAGE_BASE_URL: ${S3_PUBLIC_BASE_URL:-http://localhost:9000/cms}
+
+  cms-backend:
+    environment:
+      # Local MinIO settings for presigned browser uploads
+      S3_REGION: ${S3_REGION:-us-east-1}
+      S3_BUCKET: ${S3_BUCKET:-cms}
+      S3_PUBLIC_BASE_URL: ${S3_PUBLIC_BASE_URL:-http://localhost:9000/cms}
+      S3_ENDPOINT_URL: ${S3_ENDPOINT_URL:-http://minio:9000}
+      S3_PRESIGN_ENDPOINT_URL: ${S3_PRESIGN_ENDPOINT_URL:-http://localhost:9000}
+      S3_FORCE_PATH_STYLE: ${S3_FORCE_PATH_STYLE:-true}
+      AWS_USE_STATIC_CREDS: ${AWS_USE_STATIC_CREDS:-true}
+      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID:-minioadmin}
+      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:-minioadmin}
+      DEV_AUTH_BYPASS: ${DEV_AUTH_BYPASS:-true}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      minio-init:
+        condition: service_completed_successfully
+
+volumes:
+  cms_minio:

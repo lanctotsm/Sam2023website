@@ -1,0 +1,129 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: Lightsail CMS (VM + S3 + CloudFront)
+
+Parameters:
+  LightsailInstanceName:
+    Type: String
+    Default: sam-cms
+  LightsailBlueprintId:
+    Type: String
+    Default: ubuntu_22_04
+  LightsailBundleId:
+    Type: String
+    Default: nano_3_0
+  StaticIpName:
+    Type: String
+    Default: sam-cms-ip
+  BucketName:
+    Type: String
+  CloudFrontPriceClass:
+    Type: String
+    Default: PriceClass_100
+
+Resources:
+  CmsBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Ref BucketName
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+
+  CmsBucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket: !Ref CmsBucket
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Sid: AllowCloudFrontRead
+            Effect: Allow
+            Principal:
+              Service: cloudfront.amazonaws.com
+            Action: "s3:GetObject"
+            Resource: !Sub "${CmsBucket.Arn}/*"
+            Condition:
+              StringEquals:
+                AWS:SourceArn: !Sub "arn:aws:cloudfront::${AWS::AccountId}:distribution/${CmsDistribution}"
+
+  CmsOAC:
+    Type: AWS::CloudFront::OriginAccessControl
+    Properties:
+      OriginAccessControlConfig:
+        Name: !Sub "${AWS::StackName}-oac"
+        OriginAccessControlOriginType: s3
+        SigningBehavior: always
+        SigningProtocol: sigv4
+
+  CmsDistribution:
+    Type: AWS::CloudFront::Distribution
+    Properties:
+      DistributionConfig:
+        Enabled: true
+        PriceClass: !Ref CloudFrontPriceClass
+        Origins:
+          - Id: CmsS3Origin
+            DomainName: !GetAtt CmsBucket.RegionalDomainName
+            S3OriginConfig: {}
+            OriginAccessControlId: !Ref CmsOAC
+        DefaultCacheBehavior:
+          TargetOriginId: CmsS3Origin
+          ViewerProtocolPolicy: redirect-to-https
+          AllowedMethods: [GET, HEAD, OPTIONS]
+          CachedMethods: [GET, HEAD, OPTIONS]
+          ForwardedValues:
+            QueryString: false
+            Cookies:
+              Forward: none
+        DefaultRootObject: ""
+
+  CmsInstance:
+    Type: AWS::Lightsail::Instance
+    Properties:
+      InstanceName: !Ref LightsailInstanceName
+      BlueprintId: !Ref LightsailBlueprintId
+      BundleId: !Ref LightsailBundleId
+      UserData: |
+        #!/bin/bash
+        set -euo pipefail
+
+        # Install prerequisites for the deployment workflow:
+        # - docker + compose plugin (for `docker compose up`)
+        # - rsync (for GitHub Actions sync step)
+        # - /opt/sam-cms directory owned by ubuntu
+        export DEBIAN_FRONTEND=noninteractive
+        apt-get update -y
+        apt-get install -y docker.io docker-compose-plugin rsync
+
+        if command -v systemctl >/dev/null 2>&1; then
+          systemctl enable --now docker >/dev/null 2>&1 || true
+        fi
+
+        mkdir -p /opt/sam-cms
+        chown -R ubuntu:ubuntu /opt/sam-cms
+
+        # Optional: allow ubuntu to run docker without sudo after re-login.
+        usermod -aG docker ubuntu || true
+
+  CmsStaticIp:
+    Type: AWS::Lightsail::StaticIp
+    Properties:
+      StaticIpName: !Ref StaticIpName
+
+  CmsStaticIpAttachment:
+    Type: AWS::Lightsail::StaticIpAttachment
+    Properties:
+      StaticIpName: !Ref CmsStaticIp
+      InstanceName: !Ref CmsInstance
+
+Outputs:
+  CloudFrontDomain:
+    Value: !GetAtt CmsDistribution.DomainName
+  S3PublicBaseURL:
+    Value: !Sub "https://${CmsDistribution.DomainName}"
+  LightsailStaticIp:
+    Value: !Ref CmsStaticIp
+  S3Bucket:
+    Value: !Ref CmsBucket
