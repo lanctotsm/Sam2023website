@@ -118,9 +118,9 @@ jobs:
           S3_REGION=${{ secrets.AWS_REGION }}
           S3_BUCKET=${{ secrets.CMS_BUCKET_NAME }}
           S3_PUBLIC_BASE_URL=${{ secrets.S3_PUBLIC_BASE_URL }}
-          AWS_USE_STATIC_CREDS=${{ secrets.AWS_USE_STATIC_CREDS }}
-          AWS_ACCESS_KEY_ID=${{ secrets.AWS_ACCESS_KEY_ID }}
-          AWS_SECRET_ACCESS_KEY=${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_USE_STATIC_CREDS=${{ secrets.APP_AWS_USE_STATIC_CREDS || 'true' }}
+          AWS_ACCESS_KEY_ID=${{ secrets.APP_AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY=${{ secrets.APP_AWS_SECRET_ACCESS_KEY }}
           ALLOWED_ORIGINS=${{ secrets.ALLOWED_ORIGINS }}
           COOKIE_SECURE=true
           EOF
