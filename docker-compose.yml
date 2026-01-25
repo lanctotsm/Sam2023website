@@ -54,8 +54,11 @@ services:
   cms-frontend:
     build:
       context: ./cms-frontend
+      args:
+        NEXT_PUBLIC_API_BASE_URL: ${NEXT_PUBLIC_API_BASE_URL:-http://localhost:8080}
+        NEXT_PUBLIC_IMAGE_BASE_URL: ${S3_PUBLIC_BASE_URL}
     environment:
-      NEXT_PUBLIC_API_BASE_URL: http://localhost:8080
+      NEXT_PUBLIC_API_BASE_URL: ${NEXT_PUBLIC_API_BASE_URL:-http://localhost:8080}
       API_INTERNAL_URL: http://cms-backend:8080
       NEXT_PUBLIC_IMAGE_BASE_URL: ${S3_PUBLIC_BASE_URL}
     ports:
