@@ -29,6 +29,14 @@ export type Image = {
   created_at: string;
 };
 
+export type User = {
+  id: number;
+  email: string;
+  role: string;
+  google_id?: string;
+  created_at?: string;
+};
+
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8080";
 
 export async function apiFetch<T>(path: string, options?: RequestInit): Promise<T> {
@@ -71,6 +79,15 @@ export async function getAlbumImages(albumId: number): Promise<Image[]> {
 
 export async function getImages(): Promise<Image[]> {
   return apiFetch<Image[]>("/images");
+}
+
+export async function getAuthStatus(): Promise<User> {
+  const response = await apiFetch<{ user: User }>("/auth/status");
+  return response.user;
+}
+
+export async function logout(): Promise<void> {
+  await apiFetch("/auth/logout", { method: "POST" });
 }
 
 export async function createPost(payload: Partial<Post>): Promise<Post> {

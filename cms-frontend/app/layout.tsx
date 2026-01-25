@@ -1,6 +1,6 @@
 import "./globals.css";
-import Link from "next/link";
 import type { ReactNode } from "react";
+import Navigation from "@/components/Navigation";
 
 export const metadata = {
   title: "Sam's CMS",
@@ -11,12 +11,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="en">
       <body>
-        <nav className="navbar">
-          <Link href="/">Home</Link>
-          <Link href="/posts">Posts</Link>
-          <Link href="/albums">Albums</Link>
-          <Link href="/admin/posts">Admin</Link>
-        </nav>
+        <Navigation />
         <main>{children}</main>
       </body>
     </html>

@@ -18,6 +18,7 @@ Optional:
 - `SESSION_COOKIE_NAME` (default `cms_session`)
 - `COOKIE_SECURE` (default `false`)
 - `ALLOWED_ORIGINS` (comma-separated)
+- `FRONTEND_BASE_URL` (redirect after login)
 - `AWS_USE_STATIC_CREDS` (`true` to use access keys)
 - `AWS_ACCESS_KEY_ID`
 - `AWS_SECRET_ACCESS_KEY`

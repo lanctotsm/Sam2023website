@@ -4,6 +4,7 @@ import { useState } from "react";
 import Image from "next/image";
 import type { Image as ImageMeta } from "@/lib/api";
 import { createImage, presignImage } from "@/lib/api";
+import { buildImageUrl } from "@/lib/images";
 
 export default function AdminMediaPage() {
   const [file, setFile] = useState<File | null>(null);
@@ -57,7 +58,7 @@ export default function AdminMediaPage() {
         <section className="card stack">
           <h3>Latest Upload</h3>
           <Image
-            src={`${process.env.NEXT_PUBLIC_IMAGE_BASE_URL}/${uploaded.s3_key}`}
+            src={buildImageUrl(uploaded.s3_key)}
             alt={uploaded.alt_text || uploaded.caption || "Uploaded image"}
             width={uploaded.width || 600}
             height={uploaded.height || 400}

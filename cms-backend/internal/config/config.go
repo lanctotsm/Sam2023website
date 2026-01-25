@@ -18,6 +18,7 @@ type Config struct {
 	SessionCookieName   string
 	CookieSecure        bool
 	AllowedOrigins      []string
+	FrontendBaseURL     string
 	S3Region            string
 	S3Bucket            string
 	S3PublicBaseURL     string
@@ -36,6 +37,7 @@ func Load() (Config, error) {
 		SessionCookieName: getEnv("SESSION_COOKIE_NAME", "cms_session"),
 		SessionDuration:   getEnvDuration("SESSION_DURATION", 24*time.Hour),
 		CookieSecure:      getEnvBool("COOKIE_SECURE", false),
+		FrontendBaseURL:   os.Getenv("FRONTEND_BASE_URL"),
 		S3Region:          os.Getenv("S3_REGION"),
 		S3Bucket:          os.Getenv("S3_BUCKET"),
 		S3PublicBaseURL:   os.Getenv("S3_PUBLIC_BASE_URL"),

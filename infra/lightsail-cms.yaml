@@ -100,6 +100,8 @@ Resources:
 Outputs:
   CloudFrontDomain:
     Value: !GetAtt CmsDistribution.DomainName
+  S3PublicBaseURL:
+    Value: !Sub "https://${CmsDistribution.DomainName}"
   LightsailStaticIp:
     Value: !Ref CmsStaticIp
   S3Bucket:

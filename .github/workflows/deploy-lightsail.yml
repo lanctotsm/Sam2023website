@@ -28,7 +28,18 @@ jobs:
             --stack-name ${{ secrets.LIGHTSAIL_STACK_NAME }} \
             --template-file infra/lightsail-cms.yaml \
             --capabilities CAPABILITY_IAM \
-            --parameter-overrides BucketName=${{ secrets.CMS_BUCKET_NAME }}
+            --parameter-overrides \
+              BucketName=${{ secrets.CMS_BUCKET_NAME }} \
+              LightsailInstanceName=${{ secrets.LIGHTSAIL_INSTANCE_NAME || 'sam-cms' }} \
+              StaticIpName=${{ secrets.LIGHTSAIL_STATIC_IP_NAME || 'sam-cms-ip' }} \
+              CloudFrontPriceClass=${{ secrets.CLOUDFRONT_PRICE_CLASS || 'PriceClass_100' }}
+
+      - name: Show CloudFormation outputs
+        run: |
+          aws cloudformation describe-stacks \
+            --stack-name ${{ secrets.LIGHTSAIL_STACK_NAME }} \
+            --query "Stacks[0].Outputs" \
+            --output table
 
       - name: Sync app to Lightsail
         env:

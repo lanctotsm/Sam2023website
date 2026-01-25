@@ -84,9 +84,12 @@ func (a *API) handleCallback(w http.ResponseWriter, r *http.Request) {
 	}
 
 	a.setSessionCookie(w, sessionToken)
-	writeJSON(w, http.StatusOK, map[string]any{
-		"user": user,
-	})
+	if a.cfg.FrontendBaseURL != "" {
+		http.Redirect(w, r, a.cfg.FrontendBaseURL, http.StatusFound)
+		return
+	}
+
+	writeJSON(w, http.StatusOK, map[string]any{"user": user})
 }
 
 func (a *API) handleLogout(w http.ResponseWriter, r *http.Request) {
