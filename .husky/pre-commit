@@ -1,16 +1,28 @@
 #!/bin/sh
 
-# Quick smoke test for pre-commit
-# Runs basic tests to verify app renders - full test suite runs in CI
+# Quick smoke checks for the Lightsail CMS rewrite
+# Full test suite runs in CI
 
-cd app
+set -e
 
-echo "🔥 Running smoke test..."
-npx vitest run 2>&1
+echo "🔍 Running pre-commit checks..."
 
-if [ $? -ne 0 ]; then
-    echo "❌ Smoke test failed. Please fix before committing."
-    exit 1
+if [ -d "cms-backend" ]; then
+  echo "🐹 Go tests (cms-backend)"
+  (cd cms-backend && go test ./...)
+else
+  echo "⚠️  cms-backend not found, skipping Go tests"
 fi
 
-echo "✅ Smoke test passed!"
+if [ -d "cms-frontend" ]; then
+  echo "🧪 Next.js lint (cms-frontend)"
+  if [ -d "cms-frontend/node_modules" ]; then
+    (cd cms-frontend && npm run lint)
+  else
+    echo "⚠️  cms-frontend/node_modules missing, run npm install"
+  fi
+else
+  echo "⚠️  cms-frontend not found, skipping frontend lint"
+fi
+
+echo "✅ Pre-commit checks complete"
