@@ -1,7 +1,5 @@
 # Test Coverage Report
 
-Generated: $(date)
-
 ## Summary
 
 - **Total Coverage**: 19.2% of statements
