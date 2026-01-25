@@ -20,17 +20,18 @@ func TestImageStoreCreate(t *testing.T) {
 	now := time.Now()
 	width := 1600
 	height := 1067
+	userID := int64(1)
 
 	rows := sqlmock.NewRows([]string{
-		"id", "s3_key", "width", "height", "caption", "alt_text", "created_at",
-	}).AddRow(3, "uploads/sample.jpg", width, height, "Caption", "Alt text", now)
+		"id", "s3_key", "width", "height", "caption", "alt_text", "created_by", "created_at",
+	}).AddRow(3, "uploads/sample.jpg", width, height, "Caption", "Alt text", userID, now)
 
 	mock.ExpectQuery(regexp.QuoteMeta(`
-		INSERT INTO images (s3_key, width, height, caption, alt_text)
-		VALUES ($1, $2, $3, $4, $5)
-		RETURNING id, s3_key, width, height, caption, alt_text, created_at;
+		INSERT INTO images (s3_key, width, height, caption, alt_text, created_by)
+		VALUES ($1, $2, $3, $4, $5, $6)
+		RETURNING id, s3_key, width, height, caption, alt_text, created_by, created_at;
 	`)).
-		WithArgs("uploads/sample.jpg", &width, &height, "Caption", "Alt text").
+		WithArgs("uploads/sample.jpg", &width, &height, "Caption", "Alt text", &userID).
 		WillReturnRows(rows)
 
 	created, err := store.Create(context.Background(), Image{
@@ -39,7 +40,7 @@ func TestImageStoreCreate(t *testing.T) {
 		Height:  &height,
 		Caption: "Caption",
 		AltText: "Alt text",
-	})
+	}, &userID)
 	if err != nil {
 		t.Fatalf("create image: %v", err)
 	}

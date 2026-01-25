@@ -33,7 +33,12 @@ func (a *API) handleCreateAlbum(w http.ResponseWriter, r *http.Request) {
 		Description: strings.TrimSpace(payload.Description),
 	}
 
-	created, err := a.store.Albums.Create(r.Context(), album)
+	var userID *int64
+	if user := userFromContext(r.Context()); user != nil {
+		userID = &user.ID
+	}
+
+	created, err := a.store.Albums.Create(r.Context(), album, userID)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "failed to create album")
 		return

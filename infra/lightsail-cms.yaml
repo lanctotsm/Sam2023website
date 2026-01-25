@@ -85,6 +85,27 @@ Resources:
       InstanceName: !Ref LightsailInstanceName
       BlueprintId: !Ref LightsailBlueprintId
       BundleId: !Ref LightsailBundleId
+      UserData: |
+        #!/bin/bash
+        set -euo pipefail
+
+        # Install prerequisites for the deployment workflow:
+        # - docker + compose plugin (for `docker compose up`)
+        # - rsync (for GitHub Actions sync step)
+        # - /opt/sam-cms directory owned by ubuntu
+        export DEBIAN_FRONTEND=noninteractive
+        apt-get update -y
+        apt-get install -y docker.io docker-compose-plugin rsync
+
+        if command -v systemctl >/dev/null 2>&1; then
+          systemctl enable --now docker >/dev/null 2>&1 || true
+        fi
+
+        mkdir -p /opt/sam-cms
+        chown -R ubuntu:ubuntu /opt/sam-cms
+
+        # Optional: allow ubuntu to run docker without sudo after re-login.
+        usermod -aG docker ubuntu || true
 
   CmsStaticIp:
     Type: AWS::Lightsail::StaticIp

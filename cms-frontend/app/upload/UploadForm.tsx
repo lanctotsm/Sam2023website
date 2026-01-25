@@ -40,7 +40,7 @@ export default function UploadForm() {
 
   useEffect(() => {
     apiFetch<Album[]>("/albums")
-      .then(setAlbums)
+      .then((data) => setAlbums(data || []))
       .catch(() => setAlbums([]));
   }, []);
 
@@ -100,7 +100,12 @@ export default function UploadForm() {
 
       setUploaded(metadata);
       setStatus("done");
-      router.push(`/albums/${albums.find((album) => album.id === Number(albumId))?.slug}`);
+      const album = albums.find((a) => a.id === Number(albumId));
+      if (album?.slug) {
+        router.push(`/albums/${album.slug}`);
+      } else {
+        router.push("/albums");
+      }
     } catch (err) {
       setStatus("error");
       setError(err instanceof Error ? err.message : "Upload failed.");
@@ -143,6 +148,7 @@ export default function UploadForm() {
             width={uploaded?.width || 600}
             height={uploaded?.height || 400}
             style={{ width: "100%", height: "auto" }}
+            unoptimized
           />
           {uploaded?.caption && <p>{uploaded.caption}</p>}
         </section>

@@ -13,9 +13,12 @@ type NavItem = {
 };
 
 const navItems: NavItem[] = [
-  { href: "/", label: "Home" },
+  { href: "/", label: "About" },
+  { href: "/resume", label: "Resume" },
+  { href: "/posts", label: "Posts" },
   { href: "/albums", label: "Albums" },
-  { href: "/upload", label: "Upload", authOnly: true }
+  { href: "/upload", label: "Upload", authOnly: true },
+  { href: "/admin", label: "Admin", authOnly: true }
 ];
 
 export default function Navigation() {

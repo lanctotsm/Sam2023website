@@ -29,6 +29,38 @@ func (a *API) handleLogin(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, loginResponse{AuthURL: authURL})
 }
 
+func (a *API) handleDevLogin(w http.ResponseWriter, r *http.Request) {
+	if !a.cfg.DevAuthBypass {
+		writeError(w, http.StatusNotFound, "not found")
+		return
+	}
+
+	user, err := a.store.Users.UpsertByGoogle(r.Context(), "dev-local", "dev@local.test")
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "user upsert failed")
+		return
+	}
+
+	sessionToken, err := randomToken(32)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "failed to create session")
+		return
+	}
+
+	session := store.Session{
+		UserID:    user.ID,
+		Token:     sessionToken,
+		ExpiresAt: time.Now().Add(a.cfg.SessionDuration),
+	}
+	if err := a.store.Sessions.Create(r.Context(), session); err != nil {
+		writeError(w, http.StatusInternalServerError, "failed to persist session")
+		return
+	}
+
+	a.setSessionCookie(w, sessionToken)
+	writeJSON(w, http.StatusOK, map[string]any{"user": user})
+}
+
 func (a *API) handleCallback(w http.ResponseWriter, r *http.Request) {
 	code := r.URL.Query().Get("code")
 	state := r.URL.Query().Get("state")
@@ -58,6 +90,16 @@ func (a *API) handleCallback(w http.ResponseWriter, r *http.Request) {
 	claims, err := a.oauth.VerifyIDToken(r.Context(), rawIDToken)
 	if err != nil {
 		writeError(w, http.StatusUnauthorized, "invalid id token")
+		return
+	}
+
+	allowed, err := a.store.AllowedEmails.IsAllowed(r.Context(), claims.Email)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "failed to check email authorization")
+		return
+	}
+	if !allowed {
+		writeError(w, http.StatusForbidden, "email not authorized")
 		return
 	}
 

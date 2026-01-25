@@ -18,16 +18,17 @@ func TestPostStoreCreate(t *testing.T) {
 
 	store := &PostStore{db: db}
 	now := time.Now()
+	userID := int64(1)
 	rows := sqlmock.NewRows([]string{
-		"id", "title", "slug", "summary", "markdown", "status", "published_at", "created_at", "updated_at",
-	}).AddRow(1, "Title", "title", "Summary", "Body", "draft", nil, now, now)
+		"id", "title", "slug", "summary", "markdown", "status", "published_at", "created_by", "created_at", "updated_at",
+	}).AddRow(1, "Title", "title", "Summary", "Body", "draft", nil, userID, now, now)
 
 	mock.ExpectQuery(regexp.QuoteMeta(`
-		INSERT INTO posts (title, slug, summary, markdown, status, published_at)
-		VALUES ($1, $2, $3, $4, $5, $6)
-		RETURNING id, title, slug, summary, markdown, status, published_at, created_at, updated_at;
+		INSERT INTO posts (title, slug, summary, markdown, status, published_at, created_by)
+		VALUES ($1, $2, $3, $4, $5, $6, $7)
+		RETURNING id, title, slug, summary, markdown, status, published_at, created_by, created_at, updated_at;
 	`)).
-		WithArgs("Title", "title", "Summary", "Body", "draft", (*time.Time)(nil)).
+		WithArgs("Title", "title", "Summary", "Body", "draft", (*time.Time)(nil), &userID).
 		WillReturnRows(rows)
 
 	created, err := store.Create(context.Background(), Post{
@@ -36,7 +37,7 @@ func TestPostStoreCreate(t *testing.T) {
 		Summary:  "Summary",
 		Markdown: "Body",
 		Status:   "draft",
-	})
+	}, &userID)
 	if err != nil {
 		t.Fatalf("create post: %v", err)
 	}

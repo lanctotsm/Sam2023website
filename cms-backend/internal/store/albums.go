@@ -8,25 +8,26 @@ import (
 )
 
 type Album struct {
-	ID          int64
-	Title       string
-	Slug        string
-	Description string
-	CreatedAt   time.Time
-	UpdatedAt   time.Time
+	ID          int64     `json:"id"`
+	Title       string    `json:"title"`
+	Slug        string    `json:"slug"`
+	Description string    `json:"description"`
+	CreatedBy   *int64    `json:"created_by,omitempty"`
+	CreatedAt   time.Time `json:"created_at"`
+	UpdatedAt   time.Time `json:"updated_at"`
 }
 
 type AlbumStore struct {
 	db *sql.DB
 }
 
-func (s *AlbumStore) Create(ctx context.Context, album Album) (*Album, error) {
+func (s *AlbumStore) Create(ctx context.Context, album Album, userID *int64) (*Album, error) {
 	query := `
-		INSERT INTO albums (title, slug, description)
-		VALUES ($1, $2, $3)
-		RETURNING id, title, slug, description, created_at, updated_at;
+		INSERT INTO albums (title, slug, description, created_by)
+		VALUES ($1, $2, $3, $4)
+		RETURNING id, title, slug, description, created_by, created_at, updated_at;
 	`
-	row := s.db.QueryRowContext(ctx, query, album.Title, album.Slug, album.Description)
+	row := s.db.QueryRowContext(ctx, query, album.Title, album.Slug, album.Description, userID)
 	return scanAlbum(row)
 }
 
@@ -38,7 +39,7 @@ func (s *AlbumStore) Update(ctx context.Context, id int64, album Album) (*Album,
 			description = $3,
 			updated_at = NOW()
 		WHERE id = $4
-		RETURNING id, title, slug, description, created_at, updated_at;
+		RETURNING id, title, slug, description, created_by, created_at, updated_at;
 	`
 	row := s.db.QueryRowContext(ctx, query, album.Title, album.Slug, album.Description, id)
 	return scanAlbum(row)
@@ -51,14 +52,14 @@ func (s *AlbumStore) Delete(ctx context.Context, id int64) error {
 
 func (s *AlbumStore) List(ctx context.Context) ([]Album, error) {
 	rows, err := s.db.QueryContext(ctx, `
-		SELECT id, title, slug, description, created_at, updated_at
+		SELECT id, title, slug, description, created_by, created_at, updated_at
 		FROM albums ORDER BY created_at DESC;`)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
 
-	var albums []Album
+	albums := []Album{}
 	for rows.Next() {
 		album, err := scanAlbum(rows)
 		if err != nil {
@@ -71,14 +72,14 @@ func (s *AlbumStore) List(ctx context.Context) ([]Album, error) {
 
 func (s *AlbumStore) GetByID(ctx context.Context, id int64) (*Album, error) {
 	row := s.db.QueryRowContext(ctx, `
-		SELECT id, title, slug, description, created_at, updated_at
+		SELECT id, title, slug, description, created_by, created_at, updated_at
 		FROM albums WHERE id = $1;`, id)
 	return scanAlbum(row)
 }
 
 func (s *AlbumStore) GetBySlug(ctx context.Context, slug string) (*Album, error) {
 	row := s.db.QueryRowContext(ctx, `
-		SELECT id, title, slug, description, created_at, updated_at
+		SELECT id, title, slug, description, created_by, created_at, updated_at
 		FROM albums WHERE slug = $1;`, slug)
 	return scanAlbum(row)
 }
@@ -92,6 +93,7 @@ func scanAlbum(row interface {
 		&album.Title,
 		&album.Slug,
 		&album.Description,
+		&album.CreatedBy,
 		&album.CreatedAt,
 		&album.UpdatedAt,
 	)

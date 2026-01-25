@@ -35,7 +35,7 @@ func (s *LinkStore) ListAlbumsForPost(ctx context.Context, postID int64) ([]Albu
 	}
 	defer rows.Close()
 
-	var albums []Album
+	albums := []Album{}
 	for rows.Next() {
 		album, err := scanAlbum(rows)
 		if err != nil {
@@ -67,7 +67,7 @@ func (s *LinkStore) ListImagesForAlbum(ctx context.Context, albumID int64) ([]Im
 	}
 	defer rows.Close()
 
-	var images []Image
+	images := []Image{}
 	for rows.Next() {
 		image, err := scanImage(rows)
 		if err != nil {

@@ -6,13 +6,16 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
   return (
     <div className="stack">
       <header className="card">
-        <h1>Admin</h1>
-        <nav className="stack">
+        <div className="admin-header">
+          <h1>Admin Dashboard</h1>
+          <AdminLoginButton />
+        </div>
+        <nav className="admin-nav">
           <Link href="/admin/posts">Posts</Link>
           <Link href="/admin/albums">Albums</Link>
-          <Link href="/admin/media">Media</Link>
+          <Link href="/admin/media">Media Library</Link>
+          <Link href="/upload">Upload Photos</Link>
         </nav>
-        <AdminLoginButton />
       </header>
       {children}
     </div>

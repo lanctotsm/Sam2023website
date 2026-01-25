@@ -18,23 +18,24 @@ func TestAlbumStoreCreate(t *testing.T) {
 
 	store := &AlbumStore{db: db}
 	now := time.Now()
+	userID := int64(1)
 	rows := sqlmock.NewRows([]string{
-		"id", "title", "slug", "description", "created_at", "updated_at",
-	}).AddRow(2, "Album", "album", "Desc", now, now)
+		"id", "title", "slug", "description", "created_by", "created_at", "updated_at",
+	}).AddRow(2, "Album", "album", "Desc", userID, now, now)
 
 	mock.ExpectQuery(regexp.QuoteMeta(`
-		INSERT INTO albums (title, slug, description)
-		VALUES ($1, $2, $3)
-		RETURNING id, title, slug, description, created_at, updated_at;
+		INSERT INTO albums (title, slug, description, created_by)
+		VALUES ($1, $2, $3, $4)
+		RETURNING id, title, slug, description, created_by, created_at, updated_at;
 	`)).
-		WithArgs("Album", "album", "Desc").
+		WithArgs("Album", "album", "Desc", &userID).
 		WillReturnRows(rows)
 
 	created, err := store.Create(context.Background(), Album{
 		Title:       "Album",
 		Slug:        "album",
 		Description: "Desc",
-	})
+	}, &userID)
 	if err != nil {
 		t.Fatalf("create album: %v", err)
 	}

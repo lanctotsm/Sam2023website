@@ -4,12 +4,16 @@ import type { Album, Image } from "@/lib/api";
 import CreateAlbumForm from "@/components/CreateAlbumForm";
 import { buildImageUrl } from "@/lib/images";
 
+export const dynamic = "force-dynamic";
+
 export default async function AlbumsPage() {
-  const albums = await serverFetch<Album[]>("/albums");
+  const albumsData = await serverFetch<Album[]>("/albums");
+  const albums = albumsData || [];
   const user = await getServerUser();
   const albumCards = await Promise.all(
     albums.map(async (album) => {
-      const images = await serverFetch<Image[]>(`/albums/${album.id}/images`);
+      const imagesData = await serverFetch<Image[]>(`/albums/${album.id}/images`);
+      const images = imagesData || [];
       return {
         album,
         images,

@@ -2,8 +2,11 @@ import Link from "next/link";
 import { serverFetch } from "@/lib/server";
 import type { Post } from "@/lib/api";
 
+export const dynamic = "force-dynamic";
+
 export default async function PostsPage() {
-  const posts = await serverFetch<Post[]>("/posts");
+  const postsData = await serverFetch<Post[]>("/posts");
+  const posts = postsData || [];
 
   return (
     <div className="stack">

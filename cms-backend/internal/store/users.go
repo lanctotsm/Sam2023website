@@ -8,11 +8,11 @@ import (
 )
 
 type User struct {
-	ID        int64
-	GoogleID  string
-	Email     string
-	Role      string
-	CreatedAt time.Time
+	ID        int64     `json:"id"`
+	GoogleID  string    `json:"google_id,omitempty"`
+	Email     string    `json:"email"`
+	Role      string    `json:"role"`
+	CreatedAt time.Time `json:"created_at"`
 }
 
 type UserStore struct {

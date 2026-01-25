@@ -35,6 +35,15 @@ func main() {
 	}
 
 	stores := store.New(dbConn)
+
+	// Seed base admin email if configured
+	if cfg.BaseAdminEmail != "" {
+		if err := stores.AllowedEmails.EnsureBaseAdmin(ctx, cfg.BaseAdminEmail); err != nil {
+			log.Printf("warning: failed to seed base admin email: %v", err)
+		} else {
+			log.Printf("base admin email configured: %s", cfg.BaseAdminEmail)
+		}
+	}
 	oauthClient := auth.NewOAuthClient(cfg)
 	s3Client, err := auth.NewS3PresignClient(ctx, cfg)
 	if err != nil {

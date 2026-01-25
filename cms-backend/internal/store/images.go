@@ -8,26 +8,27 @@ import (
 )
 
 type Image struct {
-	ID        int64
-	S3Key     string
-	Width     *int
-	Height    *int
-	Caption   string
-	AltText   string
-	CreatedAt time.Time
+	ID        int64     `json:"id"`
+	S3Key     string    `json:"s3_key"`
+	Width     *int      `json:"width"`
+	Height    *int      `json:"height"`
+	Caption   string    `json:"caption"`
+	AltText   string    `json:"alt_text"`
+	CreatedBy *int64    `json:"created_by,omitempty"`
+	CreatedAt time.Time `json:"created_at"`
 }
 
 type ImageStore struct {
 	db *sql.DB
 }
 
-func (s *ImageStore) Create(ctx context.Context, image Image) (*Image, error) {
+func (s *ImageStore) Create(ctx context.Context, image Image, userID *int64) (*Image, error) {
 	query := `
-		INSERT INTO images (s3_key, width, height, caption, alt_text)
-		VALUES ($1, $2, $3, $4, $5)
-		RETURNING id, s3_key, width, height, caption, alt_text, created_at;
+		INSERT INTO images (s3_key, width, height, caption, alt_text, created_by)
+		VALUES ($1, $2, $3, $4, $5, $6)
+		RETURNING id, s3_key, width, height, caption, alt_text, created_by, created_at;
 	`
-	row := s.db.QueryRowContext(ctx, query, image.S3Key, image.Width, image.Height, image.Caption, image.AltText)
+	row := s.db.QueryRowContext(ctx, query, image.S3Key, image.Width, image.Height, image.Caption, image.AltText, userID)
 	return scanImage(row)
 }
 
@@ -40,7 +41,7 @@ func (s *ImageStore) Update(ctx context.Context, id int64, image Image) (*Image,
 			caption = $4,
 			alt_text = $5
 		WHERE id = $6
-		RETURNING id, s3_key, width, height, caption, alt_text, created_at;
+		RETURNING id, s3_key, width, height, caption, alt_text, created_by, created_at;
 	`
 	row := s.db.QueryRowContext(ctx, query, image.S3Key, image.Width, image.Height, image.Caption, image.AltText, id)
 	return scanImage(row)
@@ -53,14 +54,14 @@ func (s *ImageStore) Delete(ctx context.Context, id int64) error {
 
 func (s *ImageStore) List(ctx context.Context) ([]Image, error) {
 	rows, err := s.db.QueryContext(ctx, `
-		SELECT id, s3_key, width, height, caption, alt_text, created_at
+		SELECT id, s3_key, width, height, caption, alt_text, created_by, created_at
 		FROM images ORDER BY created_at DESC;`)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
 
-	var images []Image
+	images := []Image{}
 	for rows.Next() {
 		image, err := scanImage(rows)
 		if err != nil {
@@ -73,7 +74,7 @@ func (s *ImageStore) List(ctx context.Context) ([]Image, error) {
 
 func (s *ImageStore) GetByID(ctx context.Context, id int64) (*Image, error) {
 	row := s.db.QueryRowContext(ctx, `
-		SELECT id, s3_key, width, height, caption, alt_text, created_at
+		SELECT id, s3_key, width, height, caption, alt_text, created_by, created_at
 		FROM images WHERE id = $1;`, id)
 	return scanImage(row)
 }
@@ -89,6 +90,7 @@ func scanImage(row interface {
 		&image.Height,
 		&image.Caption,
 		&image.AltText,
+		&image.CreatedBy,
 		&image.CreatedAt,
 	)
 	if err != nil {

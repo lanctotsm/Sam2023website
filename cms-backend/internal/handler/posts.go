@@ -41,7 +41,12 @@ func (a *API) handleCreatePost(w http.ResponseWriter, r *http.Request) {
 		PublishedAt: payload.PublishedAt,
 	}
 
-	created, err := a.store.Posts.Create(r.Context(), post)
+	var userID *int64
+	if user := userFromContext(r.Context()); user != nil {
+		userID = &user.ID
+	}
+
+	created, err := a.store.Posts.Create(r.Context(), post, userID)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "failed to create post")
 		return

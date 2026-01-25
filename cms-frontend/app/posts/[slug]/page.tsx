@@ -8,6 +8,8 @@ type PageProps = {
   params: { slug: string };
 };
 
+export const dynamic = "force-dynamic";
+
 export default async function PostDetailPage({ params }: PageProps) {
   try {
     const post = await serverFetch<Post>(`/posts/slug/${params.slug}`);

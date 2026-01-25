@@ -34,6 +34,9 @@ func (a *API) Routes() http.Handler {
 
 	r.Route("/auth", func(r chi.Router) {
 		r.Post("/login", a.handleLogin)
+		if a.cfg.DevAuthBypass {
+			r.Post("/dev-login", a.handleDevLogin)
+		}
 		r.Get("/callback", a.handleCallback)
 		r.Post("/logout", a.handleLogout)
 		r.Get("/status", a.requireAuth(a.handleStatus))
@@ -74,6 +77,12 @@ func (a *API) Routes() http.Handler {
 			r.Put("/", a.requireAuth(a.handleUpdateImage))
 			r.Delete("/", a.requireAuth(a.handleDeleteImage))
 		})
+	})
+
+	r.Route("/admin/users", func(r chi.Router) {
+		r.Get("/", a.requireAuth(a.handleListAdminUsers))
+		r.Post("/", a.requireAuth(a.handleAddAdminUser))
+		r.Delete("/{userID}", a.requireAuth(a.handleRemoveAdminUser))
 	})
 
 	return r

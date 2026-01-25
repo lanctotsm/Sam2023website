@@ -1,5 +1,3 @@
-version: "3.9"
-
 services:
   postgres:
     image: postgres:15-alpine
@@ -11,6 +9,11 @@ services:
       - "5432:5432"
     volumes:
       - cms_postgres:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U cms -d cms"]
+      interval: 2s
+      timeout: 5s
+      retries: 10
 
   cms-backend:
     build:
@@ -21,20 +24,32 @@ services:
       GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID}
       GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET}
       GOOGLE_REDIRECT_URL: ${GOOGLE_REDIRECT_URL}
+      BASE_ADMIN_EMAIL: ${BASE_ADMIN_EMAIL}
       FRONTEND_BASE_URL: ${FRONTEND_BASE_URL}
       SESSION_DURATION: 24h
       COOKIE_SECURE: "false"
       S3_REGION: ${S3_REGION}
       S3_BUCKET: ${S3_BUCKET}
       S3_PUBLIC_BASE_URL: ${S3_PUBLIC_BASE_URL}
+      S3_ENDPOINT_URL: ${S3_ENDPOINT_URL}
+      S3_PRESIGN_ENDPOINT_URL: ${S3_PRESIGN_ENDPOINT_URL}
+      S3_FORCE_PATH_STYLE: ${S3_FORCE_PATH_STYLE}
       AWS_USE_STATIC_CREDS: ${AWS_USE_STATIC_CREDS}
       AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID}
       AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY}
       ALLOWED_ORIGINS: ${ALLOWED_ORIGINS}
+      DEV_AUTH_BYPASS: ${DEV_AUTH_BYPASS}
     ports:
       - "8080:8080"
     depends_on:
-      - postgres
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "-", "http://localhost:8080/health"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
 
   cms-frontend:
     build:
@@ -46,7 +61,8 @@ services:
     ports:
       - "3000:3000"
     depends_on:
-      - cms-backend
+      cms-backend:
+        condition: service_healthy
 
 volumes:
   cms_postgres:

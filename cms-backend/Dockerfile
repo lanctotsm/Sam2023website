@@ -1,4 +1,4 @@
-FROM golang:1.21-alpine AS builder
+FROM golang:1.22-alpine AS builder
 
 WORKDIR /app
 COPY go.mod ./
@@ -7,7 +7,7 @@ COPY . .
 RUN CGO_ENABLED=0 GOOS=linux go build -o cms-backend .
 
 FROM alpine:3.19
-RUN adduser -D cms
+RUN apk add --no-cache wget && adduser -D cms
 WORKDIR /app
 COPY --from=builder /app/cms-backend /app/cms-backend
 COPY internal/db/migrations /app/internal/db/migrations

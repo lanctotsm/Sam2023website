@@ -80,7 +80,12 @@ func (a *API) handleCreateImage(w http.ResponseWriter, r *http.Request) {
 		AltText: strings.TrimSpace(payload.AltText),
 	}
 
-	created, err := a.store.Images.Create(r.Context(), image)
+	var userID *int64
+	if user := userFromContext(r.Context()); user != nil {
+		userID = &user.ID
+	}
+
+	created, err := a.store.Images.Create(r.Context(), image, userID)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "failed to create image")
 		return

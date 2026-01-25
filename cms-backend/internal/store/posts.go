@@ -8,28 +8,29 @@ import (
 )
 
 type Post struct {
-	ID          int64
-	Title       string
-	Slug        string
-	Summary     string
-	Markdown    string
-	Status      string
-	PublishedAt *time.Time
-	CreatedAt   time.Time
-	UpdatedAt   time.Time
+	ID          int64      `json:"id"`
+	Title       string     `json:"title"`
+	Slug        string     `json:"slug"`
+	Summary     string     `json:"summary"`
+	Markdown    string     `json:"markdown"`
+	Status      string     `json:"status"`
+	PublishedAt *time.Time `json:"published_at"`
+	CreatedBy   *int64     `json:"created_by,omitempty"`
+	CreatedAt   time.Time  `json:"created_at"`
+	UpdatedAt   time.Time  `json:"updated_at"`
 }
 
 type PostStore struct {
 	db *sql.DB
 }
 
-func (s *PostStore) Create(ctx context.Context, post Post) (*Post, error) {
+func (s *PostStore) Create(ctx context.Context, post Post, userID *int64) (*Post, error) {
 	query := `
-		INSERT INTO posts (title, slug, summary, markdown, status, published_at)
-		VALUES ($1, $2, $3, $4, $5, $6)
-		RETURNING id, title, slug, summary, markdown, status, published_at, created_at, updated_at;
+		INSERT INTO posts (title, slug, summary, markdown, status, published_at, created_by)
+		VALUES ($1, $2, $3, $4, $5, $6, $7)
+		RETURNING id, title, slug, summary, markdown, status, published_at, created_by, created_at, updated_at;
 	`
-	row := s.db.QueryRowContext(ctx, query, post.Title, post.Slug, post.Summary, post.Markdown, post.Status, post.PublishedAt)
+	row := s.db.QueryRowContext(ctx, query, post.Title, post.Slug, post.Summary, post.Markdown, post.Status, post.PublishedAt, userID)
 	return scanPost(row)
 }
 
@@ -44,7 +45,7 @@ func (s *PostStore) Update(ctx context.Context, id int64, post Post) (*Post, err
 			published_at = $6,
 			updated_at = NOW()
 		WHERE id = $7
-		RETURNING id, title, slug, summary, markdown, status, published_at, created_at, updated_at;
+		RETURNING id, title, slug, summary, markdown, status, published_at, created_by, created_at, updated_at;
 	`
 	row := s.db.QueryRowContext(ctx, query, post.Title, post.Slug, post.Summary, post.Markdown, post.Status, post.PublishedAt, id)
 	return scanPost(row)
@@ -56,7 +57,7 @@ func (s *PostStore) Delete(ctx context.Context, id int64) error {
 }
 
 func (s *PostStore) List(ctx context.Context, status string) ([]Post, error) {
-	query := `SELECT id, title, slug, summary, markdown, status, published_at, created_at, updated_at FROM posts`
+	query := `SELECT id, title, slug, summary, markdown, status, published_at, created_by, created_at, updated_at FROM posts`
 	var args []any
 	if status != "" {
 		query += ` WHERE status = $1`
@@ -70,7 +71,7 @@ func (s *PostStore) List(ctx context.Context, status string) ([]Post, error) {
 	}
 	defer rows.Close()
 
-	var posts []Post
+	posts := []Post{}
 	for rows.Next() {
 		post, err := scanPost(rows)
 		if err != nil {
@@ -83,14 +84,14 @@ func (s *PostStore) List(ctx context.Context, status string) ([]Post, error) {
 
 func (s *PostStore) GetByID(ctx context.Context, id int64) (*Post, error) {
 	row := s.db.QueryRowContext(ctx, `
-		SELECT id, title, slug, summary, markdown, status, published_at, created_at, updated_at
+		SELECT id, title, slug, summary, markdown, status, published_at, created_by, created_at, updated_at
 		FROM posts WHERE id = $1;`, id)
 	return scanPost(row)
 }
 
 func (s *PostStore) GetBySlug(ctx context.Context, slug string) (*Post, error) {
 	row := s.db.QueryRowContext(ctx, `
-		SELECT id, title, slug, summary, markdown, status, published_at, created_at, updated_at
+		SELECT id, title, slug, summary, markdown, status, published_at, created_by, created_at, updated_at
 		FROM posts WHERE slug = $1;`, slug)
 	return scanPost(row)
 }
@@ -107,6 +108,7 @@ func scanPost(row interface {
 		&post.Markdown,
 		&post.Status,
 		&post.PublishedAt,
+		&post.CreatedBy,
 		&post.CreatedAt,
 		&post.UpdatedAt,
 	)

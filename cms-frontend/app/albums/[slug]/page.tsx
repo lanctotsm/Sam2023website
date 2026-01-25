@@ -8,10 +8,13 @@ type PageProps = {
   params: { slug: string };
 };
 
+export const dynamic = "force-dynamic";
+
 export default async function AlbumDetailPage({ params }: PageProps) {
   try {
     const album = await serverFetch<Album>(`/albums/slug/${params.slug}`);
-    const images = await serverFetch<AlbumImage[]>(`/albums/${album.id}/images`);
+    const imagesData = await serverFetch<AlbumImage[]>(`/albums/${album.id}/images`);
+    const images = imagesData || [];
     const user = await getServerUser();
 
     return (
@@ -38,6 +41,7 @@ export default async function AlbumDetailPage({ params }: PageProps) {
                     width={image.width || 600}
                     height={image.height || 400}
                     style={{ width: "100%", height: "auto" }}
+                    unoptimized
                   />
                 </a>
                 {image.caption && <figcaption>{image.caption}</figcaption>}
