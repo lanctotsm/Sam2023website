@@ -66,7 +66,8 @@ Resources:
         Origins:
           - Id: CmsS3Origin
             DomainName: !GetAtt CmsBucket.RegionalDomainName
-            S3OriginConfig: {}
+            S3OriginConfig:
+              OriginAccessIdentity: ""
             OriginAccessControlId: !Ref CmsOAC
         DefaultCacheBehavior:
           TargetOriginId: CmsS3Origin
@@ -109,14 +110,10 @@ Resources:
 
   CmsStaticIp:
     Type: AWS::Lightsail::StaticIp
+    DependsOn: CmsInstance
     Properties:
       StaticIpName: !Ref StaticIpName
-
-  CmsStaticIpAttachment:
-    Type: AWS::Lightsail::StaticIpAttachment
-    Properties:
-      StaticIpName: !Ref CmsStaticIp
-      InstanceName: !Ref CmsInstance
+      AttachedTo: !Ref CmsInstance
 
 Outputs:
   CloudFrontDomain:
