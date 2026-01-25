@@ -108,7 +108,7 @@ jobs:
         env:
           LIGHTSAIL_HOST: ${{ secrets.LIGHTSAIL_HOST }}
         run: |
-          ssh -i lightsail.key -o StrictHostKeyChecking=no ubuntu@$LIGHTSAIL_HOST "cat > /opt/sam-cms/.env" <<EOF
+          ssh -i lightsail.key -o StrictHostKeyChecking=no ubuntu@$LIGHTSAIL_HOST "cat > /opt/sam-cms/.env" <<'EOF'
           GOOGLE_CLIENT_ID=${{ secrets.GOOGLE_CLIENT_ID }}
           GOOGLE_CLIENT_SECRET=${{ secrets.GOOGLE_CLIENT_SECRET }}
           GOOGLE_REDIRECT_URL=${{ secrets.GOOGLE_REDIRECT_URL }}
