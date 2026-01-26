@@ -68,10 +68,10 @@ jobs:
           ACTIONS_IPV4=$(echo "$GITHUB_META" | jq -r '.actions[]' | grep -E '^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+' || echo "")
           
           if [ -z "$ACTIONS_IPV4" ]; then
-            echo "⚠️  Warning: Could not fetch GitHub Actions IP ranges"
-            echo "Falling back to allowing SSH from anywhere (0.0.0.0/0)"
-            echo "You should manually configure firewall in Lightsail console for better security"
-            ACTIONS_IPV4="0.0.0.0/0"
+            echo "❌ Error: Could not fetch GitHub Actions IP ranges from GitHub Meta API."
+            echo "For security, the workflow will not modify the Lightsail firewall or open SSH to 0.0.0.0/0."
+            echo "Please try rerunning the workflow or configure the firewall manually in the Lightsail console."
+            exit 1
           else
             echo "✓ Found GitHub Actions IPv4 ranges:"
             echo "$ACTIONS_IPV4" | while read -r cidr; do
