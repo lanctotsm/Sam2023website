@@ -83,7 +83,13 @@ jobs:
           echo "Getting current Lightsail firewall rules..."
           
           # Get current instance details
-          INSTANCE_INFO=$(aws lightsail get-instance --instance-name "$INSTANCE_NAME" --output json)
+          INSTANCE_INFO=$(aws lightsail get-instance --instance-name "$INSTANCE_NAME" --output json 2>&1)
+          if [ $? -ne 0 ]; then
+            echo "❌ Failed to retrieve Lightsail instance details for '$INSTANCE_NAME'."
+            echo "AWS CLI output:"
+            echo "$INSTANCE_INFO"
+            exit 1
+          fi
           CURRENT_PORTS=$(echo "$INSTANCE_INFO" | jq -r '.instance.networking.ports // []')
           
           echo "Current firewall rules:"
