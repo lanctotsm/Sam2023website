@@ -98,54 +98,47 @@ jobs:
           echo ""
           echo "Configuring SSH (port 22) to allow GitHub Actions IPs..."
           
-          # Convert IP ranges to JSON array (all CIDRs in one array)
-          CIDR_ARRAY=$(echo "$ACTIONS_IPV4" | grep -v '^$' | jq -R . | jq -s .)
-
           # Filter to only valid IPv4 CIDR blocks
           # Normalize and validate CIDR entries; ignore empty/invalid lines
-          VALID_CIDRS=$(printf '%s\n' "$ACTIONS_IPV4" | tr ' ' '\n' | grep -E '^[0-9]{1,3}(\.[0-9]{1,3}){3}/[0-9]{1,2}$' || true)
+          VALID_CIDRS=$(printf '%s\n' "$ACTIONS_IPV4" | grep -v '^$' | grep -E '^[0-9]{1,3}(\.[0-9]{1,3}){3}/[0-9]{1,2}$' || true)
           
           if [ -z "$VALID_CIDRS" ]; then
-            echo "⚠️  No valid CIDR ranges found in ACTIONS_IPV4; using fallback 0.0.0.0/0"
-            VALID_CIDRS="0.0.0.0/0"
+            echo "⚠️  Warning: No valid CIDR ranges found, skipping firewall update"
+            echo "You may need to configure firewall manually in Lightsail console"
+            exit 0  # Don't fail, just skip
           fi
           
+          # Convert valid CIDRs to JSON array
           CIDR_ARRAY=$(printf '%s\n' "$VALID_CIDRS" | jq -R . | jq -s .)
           
-          # If no valid CIDRs, skip firewall update to avoid removing existing rules
-          if [ "$(echo "$VALID_CIDR_ARRAY" | jq 'length')" -eq 0 ]; then
-            echo "⚠️  No valid GitHub Actions IPv4 CIDR blocks found."
-            echo "⚠️  Skipping Lightsail firewall update to avoid unintentionally removing existing rules."
-          else
-            # Build port info - preserve existing non-SSH rules, update SSH rule with valid CIDRs
-            PORT_INFO=$(echo "$CURRENT_PORTS" | jq -c --argjson cidrs "$VALID_CIDR_ARRAY" '
-              # Keep non-SSH rules, replace SSH rule with new CIDRs
-              (map(select(.fromPort != 22 or .protocol != "tcp")) + 
-               [{fromPort: 22, toPort: 22, protocol: "tcp", cidrs: $cidrs}])
-            ')
-            
-            echo "Updating firewall rules..."
-            echo "SSH will allow these CIDR blocks:"
-            echo "$VALID_CIDR_ARRAY" | jq -r '.[]'
-            
-            aws lightsail put-instance-public-ports \
-              --instance-name "$INSTANCE_NAME" \
-              --port-infos "$PORT_INFO" \
-              --output json || {
-                echo ""
-                echo "⚠️  Warning: Failed to update firewall via API"
-                echo "This might be because:"
-                echo "  1. Instance is still starting up"
-                echo "  2. API permissions issue"
-                echo ""
-                echo "You can configure firewall manually:"
-                echo "  - Go to: Lightsail Console > $INSTANCE_NAME > Networking tab"
-                echo "  - Add SSH rule allowing GitHub Actions IPs"
-                echo "  - Or temporarily allow 0.0.0.0/0 for deployment"
-                echo ""
-                # Don't fail deployment - firewall can be configured manually
-              }
-          fi
+          # Build port info - preserve existing non-SSH rules, update SSH rule with valid CIDRs
+          PORT_INFO=$(echo "$CURRENT_PORTS" | jq -c --argjson cidrs "$CIDR_ARRAY" '
+            # Keep non-SSH rules, replace SSH rule with new CIDRs
+            (map(select(.fromPort != 22 or .protocol != "tcp")) + 
+             [{fromPort: 22, toPort: 22, protocol: "tcp", cidrs: $cidrs}])
+          ')
+          
+          echo "Updating firewall rules..."
+          echo "SSH will allow these CIDR blocks:"
+          echo "$CIDR_ARRAY" | jq -r '.[]'
+          
+          aws lightsail put-instance-public-ports \
+            --instance-name "$INSTANCE_NAME" \
+            --port-infos "$PORT_INFO" \
+            --output json || {
+              echo ""
+              echo "⚠️  Warning: Failed to update firewall via API"
+              echo "This might be because:"
+              echo "  1. Instance is still starting up"
+              echo "  2. API permissions issue"
+              echo ""
+              echo "You can configure firewall manually:"
+              echo "  - Go to: Lightsail Console > $INSTANCE_NAME > Networking tab"
+              echo "  - Add SSH rule allowing GitHub Actions IPs"
+              echo "  - Or temporarily allow 0.0.0.0/0 for deployment"
+              echo ""
+              # Don't fail deployment - firewall can be configured manually
+            }
           
           echo ""
           echo "✓ Firewall configuration step completed"
