@@ -179,32 +179,23 @@ jobs:
           echo "GitHub Actions runner IP: $(get_runner_ip)"
           
           # Check if we can reach the host
+          # Check if we can reach the host using nc (netcat)
           echo ""
-          echo "Testing port 22 connectivity..."
-          if timeout 5 bash -c "echo > /dev/tcp/$LIGHTSAIL_HOST/22" 2>/dev/null; then
-            echo "✓ Port 22 is reachable"
-          else
-            echo "✗ Port 22 is NOT reachable - this suggests a firewall/network issue"
-            echo ""
-            echo "TROUBLESHOOTING:"
-            echo "1. Verify Lightsail firewall rules allow SSH (port 22) from the current GitHub Actions IP ranges."
-            echo "   - See: https://docs.github.com/en/actions/security-guides/security-hardening-for-github-actions#github-hosted-runners for runner IP ranges."
-            echo "2. In Lightsail Console > Networking > Firewall, confirm an SSH rule exists for those IP ranges on port 22."
-            echo "3. As a last-resort temporary debugging step ONLY, you may open SSH to Anywhere (0.0.0.0/0); this is insecure and must be reverted immediately after testing."
-            echo ""
-          fi
-          
-          # Try telnet-style connection test
-          echo ""
-          echo "Testing SSH port with nc (netcat)..."
+          echo "Testing SSH port 22 connectivity with nc (netcat)..."
           if command -v nc >/dev/null 2>&1; then
-            if nc -zv -w 5 $LIGHTSAIL_HOST 22 2>&1; then
+            if nc -zv -w 5 "$LIGHTSAIL_HOST" 22 2>&1; then
               echo "✓ Port 22 is open and accepting connections"
             else
-              echo "✗ Cannot connect to port 22"
+              echo "✗ Port 22 is NOT reachable - this suggests a firewall/network issue"
+              echo ""
+              echo "TROUBLESHOOTING:"
+              echo "1. Check Lightsail firewall rules - SSH (port 22) must allow connections from 0.0.0.0/0"
+              echo "2. Go to Lightsail Console > Networking > Firewall"
+              echo "3. Ensure 'SSH' rule allows 'Anywhere (0.0.0.0/0)'"
+              echo ""
             fi
           else
-            echo "nc not available, skipping port test"
+            echo "nc not available, skipping port 22 connectivity test"
           fi
 
       - name: Wait for SSH to be ready
