@@ -36,26 +36,16 @@ jobs:
               KeyPairName=${{ secrets.LIGHTSAIL_KEY_PAIR_NAME }} \
               CloudFrontPriceClass=${{ secrets.CLOUDFRONT_PRICE_CLASS || 'PriceClass_100' }}
 
-      - name: Get Lightsail instance details
+      - name: Get Lightsail static IP
         id: lightsail-info
         run: |
-          OUTPUTS=$(aws cloudformation describe-stacks \
+          STATIC_IP=$(aws cloudformation describe-stacks \
             --stack-name ${{ secrets.LIGHTSAIL_STACK_NAME }} \
-            --query "Stacks[0].Outputs" \
-            --output json)
-          
-          echo "$OUTPUTS"
-          
-          # Extract static IP from outputs
-          STATIC_IP=$(echo "$OUTPUTS" | jq -r '.[] | select(.OutputKey=="LightsailStaticIp") | .OutputValue')
-          echo "public_ip=$STATIC_IP" >> $GITHUB_OUTPUT
-          
-          # Get instance name
-          INSTANCE_NAME=${{ secrets.LIGHTSAIL_INSTANCE_NAME || 'sam-cms' }}
-          echo "instance_name=$INSTANCE_NAME" >> $GITHUB_OUTPUT
+            --query "Stacks[0].Outputs[?OutputKey=='LightsailStaticIp'].OutputValue" \
+            --output text)
           
           echo "Lightsail Static IP: $STATIC_IP"
-          echo "Lightsail Instance Name: $INSTANCE_NAME"
+          echo "public_ip=$STATIC_IP" >> $GITHUB_OUTPUT
 
       - name: Prepare SSH key
         run: |
