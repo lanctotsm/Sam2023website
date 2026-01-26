@@ -35,38 +35,66 @@ jobs:
               StaticIpName=${{ secrets.LIGHTSAIL_STATIC_IP_NAME || 'sam-cms-ip' }} \
               CloudFrontPriceClass=${{ secrets.CLOUDFRONT_PRICE_CLASS || 'PriceClass_100' }}
 
-      - name: Show CloudFormation outputs
+      - name: Get Lightsail instance details
+        id: lightsail-info
         run: |
-          aws cloudformation describe-stacks \
+          OUTPUTS=$(aws cloudformation describe-stacks \
             --stack-name ${{ secrets.LIGHTSAIL_STACK_NAME }} \
             --query "Stacks[0].Outputs" \
-            --output table
+            --output json)
+          
+          echo "$OUTPUTS"
+          
+          # Extract static IP from outputs
+          STATIC_IP=$(echo "$OUTPUTS" | jq -r '.[] | select(.OutputKey=="LightsailStaticIp") | .OutputValue')
+          echo "public_ip=$STATIC_IP" >> $GITHUB_OUTPUT
+          
+          echo "Lightsail Static IP: $STATIC_IP"
 
       - name: Prepare SSH key
-        env:
-          LIGHTSAIL_SSH_KEY: ${{ secrets.LIGHTSAIL_SSH_KEY }}
+        id: ssh-key
         run: |
-          echo "$LIGHTSAIL_SSH_KEY" > lightsail.key
+          if [ -z "${{ secrets.LIGHTSAIL_SSH_KEY_SECRET_NAME }}" ]; then
+            echo "Error: LIGHTSAIL_SSH_KEY_SECRET_NAME must be set in GitHub secrets"
+            exit 1
+          fi
+          
+          echo "Fetching SSH key from AWS Secrets Manager: ${{ secrets.LIGHTSAIL_SSH_KEY_SECRET_NAME }}"
+          SECRET_VALUE=$(aws secretsmanager get-secret-value \
+            --secret-id "${{ secrets.LIGHTSAIL_SSH_KEY_SECRET_NAME }}" \
+            --query SecretString \
+            --output text)
+          
+          # Handle both plain text and JSON formats
+          if echo "$SECRET_VALUE" | jq -e . >/dev/null 2>&1; then
+            # If it's JSON, try to extract the key (common keys: privateKey, ssh_key, key)
+            echo "$SECRET_VALUE" | jq -r '.privateKey // .ssh_key // .key // .' > lightsail.key
+          else
+            # Plain text, use as-is
+            echo "$SECRET_VALUE" > lightsail.key
+          fi
           chmod 600 lightsail.key
+          echo "SSH key retrieved from AWS Secrets Manager"
 
       - name: Wait for SSH to be ready
-        env:
-          LIGHTSAIL_HOST: ${{ secrets.LIGHTSAIL_HOST }}
         run: |
           set -e
+          LIGHTSAIL_HOST="${{ steps.lightsail-info.outputs.public_ip }}"
+          echo "Waiting for SSH to be ready on $LIGHTSAIL_HOST..."
           for i in {1..30}; do
             if ssh -i lightsail.key -o StrictHostKeyChecking=no -o ConnectTimeout=5 ubuntu@$LIGHTSAIL_HOST "echo ssh-ready" >/dev/null 2>&1; then
+              echo "SSH is ready!"
               exit 0
             fi
+            echo "Attempt $i/30: SSH not ready yet, waiting 10 seconds..."
             sleep 10
           done
           echo "SSH did not become ready in time" >&2
           exit 1
 
       - name: Bootstrap instance prerequisites (docker, compose, rsync, /opt/sam-cms)
-        env:
-          LIGHTSAIL_HOST: ${{ secrets.LIGHTSAIL_HOST }}
         run: |
+          LIGHTSAIL_HOST="${{ steps.lightsail-info.outputs.public_ip }}"
           ssh -i lightsail.key -o StrictHostKeyChecking=no ubuntu@$LIGHTSAIL_HOST "bash -se" <<'EOF'
           set -euo pipefail
 
@@ -98,17 +126,15 @@ jobs:
           EOF
 
       - name: Sync app to Lightsail
-        env:
-          LIGHTSAIL_HOST: ${{ secrets.LIGHTSAIL_HOST }}
         run: |
+          LIGHTSAIL_HOST="${{ steps.lightsail-info.outputs.public_ip }}"
           rsync -avz --delete -e "ssh -i lightsail.key -o StrictHostKeyChecking=no" \
             cms-backend cms-frontend docker-compose.yml \
             ubuntu@$LIGHTSAIL_HOST:/opt/sam-cms
 
       - name: Write .env file on instance
-        env:
-          LIGHTSAIL_HOST: ${{ secrets.LIGHTSAIL_HOST }}
         run: |
+          LIGHTSAIL_HOST="${{ steps.lightsail-info.outputs.public_ip }}"
           ssh -i lightsail.key -o StrictHostKeyChecking=no ubuntu@$LIGHTSAIL_HOST "cat > /opt/sam-cms/.env" <<'EOF'
           GOOGLE_CLIENT_ID=${{ secrets.GOOGLE_CLIENT_ID }}
           GOOGLE_CLIENT_SECRET=${{ secrets.GOOGLE_CLIENT_SECRET }}
@@ -121,13 +147,11 @@ jobs:
           AWS_USE_STATIC_CREDS=${{ secrets.APP_AWS_USE_STATIC_CREDS || 'true' }}
           AWS_ACCESS_KEY_ID=${{ secrets.APP_AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY=${{ secrets.APP_AWS_SECRET_ACCESS_KEY }}
-          ALLOWED_ORIGINS=${{ secrets.ALLOWED_ORIGINS }}
           COOKIE_SECURE=true
           EOF
 
       - name: Restart services
-        env:
-          LIGHTSAIL_HOST: ${{ secrets.LIGHTSAIL_HOST }}
         run: |
+          LIGHTSAIL_HOST="${{ steps.lightsail-info.outputs.public_ip }}"
           ssh -i lightsail.key -o StrictHostKeyChecking=no ubuntu@$LIGHTSAIL_HOST \
             "cd /opt/sam-cms && sudo docker compose pull && sudo docker compose up -d --build"
