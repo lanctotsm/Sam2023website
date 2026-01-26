@@ -16,6 +16,9 @@ Parameters:
     Default: sam-cms-ip
   BucketName:
     Type: String
+  KeyPairName:
+    Type: String
+    Description: Name of the Lightsail SSH key pair to use for the instance
   CloudFrontPriceClass:
     Type: String
     Default: PriceClass_100
@@ -87,6 +90,7 @@ Resources:
       InstanceName: !Ref LightsailInstanceName
       BlueprintId: !Ref LightsailBlueprintId
       BundleId: !Ref LightsailBundleId
+      KeyPairName: !Ref KeyPairName
       UserData: |
         #!/bin/bash
         set -euo pipefail

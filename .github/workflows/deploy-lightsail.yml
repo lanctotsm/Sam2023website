@@ -33,6 +33,7 @@ jobs:
               BucketName=${{ secrets.CMS_BUCKET_NAME }} \
               LightsailInstanceName=${{ secrets.LIGHTSAIL_INSTANCE_NAME || 'sam-cms' }} \
               StaticIpName=${{ secrets.LIGHTSAIL_STATIC_IP_NAME || 'sam-cms-ip' }} \
+              KeyPairName=${{ secrets.LIGHTSAIL_KEY_PAIR_NAME }} \
               CloudFrontPriceClass=${{ secrets.CLOUDFRONT_PRICE_CLASS || 'PriceClass_100' }}
 
       - name: Get Lightsail instance details
