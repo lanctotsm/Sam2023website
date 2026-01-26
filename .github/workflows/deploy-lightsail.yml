@@ -50,7 +50,82 @@ jobs:
           STATIC_IP=$(echo "$OUTPUTS" | jq -r '.[] | select(.OutputKey=="LightsailStaticIp") | .OutputValue')
           echo "public_ip=$STATIC_IP" >> $GITHUB_OUTPUT
           
+          # Get instance name
+          INSTANCE_NAME=${{ secrets.LIGHTSAIL_INSTANCE_NAME || 'sam-cms' }}
+          echo "instance_name=$INSTANCE_NAME" >> $GITHUB_OUTPUT
+          
           echo "Lightsail Static IP: $STATIC_IP"
+          echo "Lightsail Instance Name: $INSTANCE_NAME"
+
+      - name: Configure Lightsail firewall for GitHub Actions
+        run: |
+          INSTANCE_NAME="${{ steps.lightsail-info.outputs.instance_name }}"
+          
+          echo "Fetching GitHub Actions IP ranges from GitHub Meta API..."
+          GITHUB_META=$(curl -s https://api.github.com/meta)
+          
+          # Extract IPv4 ranges for GitHub Actions (exclude IPv6)
+          ACTIONS_IPV4=$(echo "$GITHUB_META" | jq -r '.actions[]' | grep -E '^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+' || echo "")
+          
+          if [ -z "$ACTIONS_IPV4" ]; then
+            echo "⚠️  Warning: Could not fetch GitHub Actions IP ranges"
+            echo "Falling back to allowing SSH from anywhere (0.0.0.0/0)"
+            echo "You should manually configure firewall in Lightsail console for better security"
+            ACTIONS_IPV4="0.0.0.0/0"
+          else
+            echo "✓ Found GitHub Actions IPv4 ranges:"
+            echo "$ACTIONS_IPV4" | while read -r cidr; do
+              echo "  - $cidr"
+            done
+          fi
+          
+          echo ""
+          echo "Getting current Lightsail firewall rules..."
+          
+          # Get current instance details
+          INSTANCE_INFO=$(aws lightsail get-instance --instance-name "$INSTANCE_NAME" --output json)
+          CURRENT_PORTS=$(echo "$INSTANCE_INFO" | jq -r '.instance.networking.ports // []')
+          
+          echo "Current firewall rules:"
+          echo "$CURRENT_PORTS" | jq -r '.[] | "\(.protocol) \(.fromPort)-\(.toPort): \(.cidrs | join(", "))"'
+          
+          echo ""
+          echo "Configuring SSH (port 22) to allow GitHub Actions IPs..."
+          
+          # Convert IP ranges to JSON array (all CIDRs in one array)
+          CIDR_ARRAY=$(echo "$ACTIONS_IPV4" | grep -v '^$' | jq -R . | jq -s .)
+          
+          # Build port info - preserve existing non-SSH rules, update SSH rule with all CIDRs
+          PORT_INFO=$(echo "$CURRENT_PORTS" | jq -c --argjson cidrs "$CIDR_ARRAY" '
+            # Keep non-SSH rules, replace SSH rule with new CIDRs
+            (map(select(.fromPort != 22 or .protocol != "tcp")) + 
+             [{fromPort: 22, toPort: 22, protocol: "tcp", cidrs: $cidrs}])
+          ')
+          
+          echo "Updating firewall rules..."
+          echo "SSH will allow these CIDR blocks:"
+          echo "$CIDR_ARRAY" | jq -r '.[]'
+          
+          aws lightsail put-instance-public-ports \
+            --instance-name "$INSTANCE_NAME" \
+            --port-infos "$PORT_INFO" \
+            --output json || {
+              echo ""
+              echo "⚠️  Warning: Failed to update firewall via API"
+              echo "This might be because:"
+              echo "  1. Instance is still starting up"
+              echo "  2. API permissions issue"
+              echo ""
+              echo "You can configure firewall manually:"
+              echo "  - Go to: Lightsail Console > $INSTANCE_NAME > Networking tab"
+              echo "  - Add SSH rule allowing GitHub Actions IPs"
+              echo "  - Or temporarily allow 0.0.0.0/0 for deployment"
+              echo ""
+              # Don't fail deployment - firewall can be configured manually
+            }
+          
+          echo ""
+          echo "✓ Firewall configuration step completed"
 
       - name: Prepare SSH key
         id: ssh-key
@@ -75,22 +150,120 @@ jobs:
             echo "$SECRET_VALUE" > lightsail.key
           fi
           chmod 600 lightsail.key
+          
+          # Debug: Show key file info
           echo "SSH key retrieved from AWS Secrets Manager"
+          echo "Key file exists: $(test -f lightsail.key && echo 'yes' || echo 'no')"
+          echo "Key file size: $(wc -c < lightsail.key) bytes"
+          echo "Key file permissions: $(ls -l lightsail.key | awk '{print $1}')"
+          echo "First line of key: $(head -1 lightsail.key)"
+          echo "Last line of key: $(tail -1 lightsail.key)"
+          
+          # Try to validate key format (non-blocking)
+          if ssh-keygen -l -f lightsail.key >/dev/null 2>&1; then
+            KEY_INFO=$(ssh-keygen -l -f lightsail.key)
+            echo "Key validation: SUCCESS"
+            echo "Key info: $KEY_INFO"
+          else
+            echo "Key validation: FAILED (but continuing anyway)"
+          fi
+
+      - name: Check network connectivity
+        run: |
+          LIGHTSAIL_HOST="${{ steps.lightsail-info.outputs.public_ip }}"
+          echo "Checking network connectivity to $LIGHTSAIL_HOST..."
+          echo "GitHub Actions runner IP: $(curl -s ifconfig.me || echo 'unknown')"
+          
+          # Check if we can reach the host
+          echo ""
+          echo "Testing port 22 connectivity..."
+          if timeout 5 bash -c "echo > /dev/tcp/$LIGHTSAIL_HOST/22" 2>/dev/null; then
+            echo "✓ Port 22 is reachable"
+          else
+            echo "✗ Port 22 is NOT reachable - this suggests a firewall/network issue"
+            echo ""
+            echo "TROUBLESHOOTING:"
+            echo "1. Check Lightsail firewall rules - SSH (port 22) must allow connections from 0.0.0.0/0"
+            echo "2. Go to Lightsail Console > Networking > Firewall"
+            echo "3. Ensure 'SSH' rule allows 'Anywhere (0.0.0.0/0)'"
+            echo ""
+          fi
+          
+          # Try telnet-style connection test
+          echo ""
+          echo "Testing SSH port with nc (netcat)..."
+          if command -v nc >/dev/null 2>&1; then
+            if nc -zv -w 5 $LIGHTSAIL_HOST 22 2>&1; then
+              echo "✓ Port 22 is open and accepting connections"
+            else
+              echo "✗ Cannot connect to port 22"
+            fi
+          else
+            echo "nc not available, skipping port test"
+          fi
 
       - name: Wait for SSH to be ready
         run: |
           set -e
           LIGHTSAIL_HOST="${{ steps.lightsail-info.outputs.public_ip }}"
           echo "Waiting for SSH to be ready on $LIGHTSAIL_HOST..."
+          echo "Using SSH key: lightsail.key"
+          echo "Key file exists: $(test -f lightsail.key && echo 'yes' || echo 'no')"
+          
           for i in {1..30}; do
-            if ssh -i lightsail.key -o StrictHostKeyChecking=no -o ConnectTimeout=5 ubuntu@$LIGHTSAIL_HOST "echo ssh-ready" >/dev/null 2>&1; then
-              echo "SSH is ready!"
-              exit 0
+            echo ""
+            echo "=== Attempt $i/30 ==="
+            
+            # First attempt: show verbose output
+            if [ $i -eq 1 ]; then
+              echo "Testing SSH connection with verbose output..."
+              ssh -v -i lightsail.key -o StrictHostKeyChecking=no -o ConnectTimeout=10 -o BatchMode=yes ubuntu@$LIGHTSAIL_HOST "echo ssh-ready" 2>&1 | head -40 || true
+              echo ""
             fi
-            echo "Attempt $i/30: SSH not ready yet, waiting 10 seconds..."
-            sleep 10
+            
+            # Regular connection test
+            if ssh -i lightsail.key -o StrictHostKeyChecking=no -o ConnectTimeout=10 -o BatchMode=yes ubuntu@$LIGHTSAIL_HOST "echo ssh-ready" 2>&1; then
+              echo "✓ SSH is ready!"
+              exit 0
+            else
+              SSH_EXIT_CODE=$?
+              echo "✗ SSH connection failed (exit code: $SSH_EXIT_CODE)"
+              
+              # Provide specific error guidance
+              if [ $SSH_EXIT_CODE -eq 255 ]; then
+                echo "  → Exit code 255 usually means connection refused or network unreachable"
+                echo "  → Check Lightsail firewall rules allow SSH from anywhere (0.0.0.0/0)"
+              elif [ $SSH_EXIT_CODE -eq 1 ]; then
+                echo "  → Exit code 1 usually means authentication failed"
+                echo "  → Verify the SSH key matches the instance's key pair"
+              fi
+              
+              if [ $i -lt 30 ]; then
+                echo "Waiting 10 seconds before retry..."
+                sleep 10
+              fi
+            fi
           done
-          echo "SSH did not become ready in time" >&2
+          
+          echo ""
+          echo "✗ SSH did not become ready after 30 attempts" >&2
+          echo ""
+          echo "FINAL DIAGNOSTICS:"
+          echo "==================="
+          echo "1. Check Lightsail Firewall:"
+          echo "   - Go to: Lightsail Console > Your Instance > Networking tab"
+          echo "   - Ensure 'SSH' rule allows 'Anywhere (0.0.0.0/0)'"
+          echo ""
+          echo "2. Verify Key Pair Match:"
+          echo "   - Instance key pair: ${{ secrets.LIGHTSAIL_KEY_PAIR_NAME }}"
+          echo "   - Secret contains: ${{ secrets.LIGHTSAIL_SSH_KEY_SECRET_NAME }}"
+          echo ""
+          echo "3. Test from Lightsail Console:"
+          echo "   - Use the browser-based SSH in Lightsail console"
+          echo "   - If that works, the issue is likely firewall rules"
+          echo ""
+          echo "Final connection test with full error output:"
+          ssh -v -i lightsail.key -o StrictHostKeyChecking=no -o ConnectTimeout=10 ubuntu@$LIGHTSAIL_HOST "echo ssh-ready" 2>&1 || true
           exit 1
 
       - name: Bootstrap instance prerequisites (docker, compose, rsync, /opt/sam-cms)
