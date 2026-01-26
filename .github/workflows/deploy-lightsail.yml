@@ -197,7 +197,6 @@ jobs:
 
       - name: Wait for SSH to be ready
         run: |
-          set -e
           LIGHTSAIL_HOST="${{ steps.lightsail-info.outputs.public_ip }}"
           echo "Waiting for SSH to be ready on $LIGHTSAIL_HOST..."
           echo "Using SSH key: lightsail.key"
