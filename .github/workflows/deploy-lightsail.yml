@@ -55,6 +55,7 @@ jobs:
           fi
           
           echo "Fetching SSH key from AWS Secrets Manager..."
+          echo "Fetching SSH key from AWS Secrets Manager..."
           SECRET_VALUE=$(aws secretsmanager get-secret-value \
             --secret-id "${{ secrets.LIGHTSAIL_SSH_KEY_SECRET_NAME }}" \
             --query SecretString \
@@ -77,11 +78,20 @@ jobs:
             echo "✗ SSH key validation failed - check the key format in Secrets Manager"
             exit 1
           fi
+          
+          # Validate key format
+          if ssh-keygen -l -f lightsail.key >/dev/null 2>&1; then
+            echo "✓ SSH key is valid"
+          else
+            echo "✗ SSH key validation failed - check the key format in Secrets Manager"
+            exit 1
+          fi
 
       - name: Wait for SSH to be ready
         run: |
           LIGHTSAIL_HOST="${{ steps.lightsail-info.outputs.public_ip }}"
           echo "Waiting for SSH on $LIGHTSAIL_HOST..."
+          
           
           for i in {1..30}; do
             if ssh -i lightsail.key -o StrictHostKeyChecking=no -o ConnectTimeout=10 -o BatchMode=yes ubuntu@$LIGHTSAIL_HOST "echo ssh-ready" 2>/dev/null; then
@@ -92,7 +102,10 @@ jobs:
             sleep 10
           done
           
+          
           echo "✗ SSH not ready after 30 attempts"
+          echo "Debug: Testing with verbose output..."
+          ssh -vvv -i lightsail.key -o StrictHostKeyChecking=no -o ConnectTimeout=10 ubuntu@$LIGHTSAIL_HOST "echo test" 2>&1 || true
           echo "Debug: Testing with verbose output..."
           ssh -vvv -i lightsail.key -o StrictHostKeyChecking=no -o ConnectTimeout=10 ubuntu@$LIGHTSAIL_HOST "echo test" 2>&1 || true
           exit 1
