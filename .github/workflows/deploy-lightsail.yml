@@ -55,7 +55,6 @@ jobs:
           fi
           
           echo "Fetching SSH key from AWS Secrets Manager..."
-          echo "Fetching SSH key from AWS Secrets Manager..."
           SECRET_VALUE=$(aws secretsmanager get-secret-value \
             --secret-id "${{ secrets.LIGHTSAIL_SSH_KEY_SECRET_NAME }}" \
             --query SecretString \
@@ -78,23 +77,20 @@ jobs:
             echo "✗ SSH key validation failed - check the key format in Secrets Manager"
             exit 1
           fi
-          
-          # Validate key format
-          if ssh-keygen -l -f lightsail.key >/dev/null 2>&1; then
-            echo "✓ SSH key is valid"
-          else
-            echo "✗ SSH key validation failed - check the key format in Secrets Manager"
-            exit 1
-          fi
 
       - name: Wait for SSH to be ready
         run: |
           LIGHTSAIL_HOST="${{ steps.lightsail-info.outputs.public_ip }}"
           echo "Waiting for SSH on $LIGHTSAIL_HOST..."
           
-          
           for i in {1..30}; do
-            if ssh -i lightsail.key -o StrictHostKeyChecking=no -o ConnectTimeout=10 -o BatchMode=yes ubuntu@$LIGHTSAIL_HOST "echo ssh-ready" 2>/dev/null; then
+            if ssh -i lightsail.key \
+              -o StrictHostKeyChecking=no \
+              -o ConnectTimeout=10 \
+              -o BatchMode=yes \
+              -o ServerAliveInterval=60 \
+              -o ServerAliveCountMax=3 \
+              ubuntu@$LIGHTSAIL_HOST "echo ssh-ready" 2>/dev/null; then
               echo "✓ SSH ready"
               exit 0
             fi
@@ -102,18 +98,25 @@ jobs:
             sleep 10
           done
           
-          
           echo "✗ SSH not ready after 30 attempts"
           echo "Debug: Testing with verbose output..."
-          ssh -vvv -i lightsail.key -o StrictHostKeyChecking=no -o ConnectTimeout=10 ubuntu@$LIGHTSAIL_HOST "echo test" 2>&1 || true
-          echo "Debug: Testing with verbose output..."
-          ssh -vvv -i lightsail.key -o StrictHostKeyChecking=no -o ConnectTimeout=10 ubuntu@$LIGHTSAIL_HOST "echo test" 2>&1 || true
+          ssh -vvv -i lightsail.key \
+            -o StrictHostKeyChecking=no \
+            -o ConnectTimeout=10 \
+            -o ServerAliveInterval=60 \
+            -o ServerAliveCountMax=3 \
+            ubuntu@$LIGHTSAIL_HOST "echo test" 2>&1 || true
           exit 1
 
       - name: Bootstrap instance prerequisites (docker, compose, rsync, /opt/sam-cms)
         run: |
           LIGHTSAIL_HOST="${{ steps.lightsail-info.outputs.public_ip }}"
-          ssh -i lightsail.key -o StrictHostKeyChecking=no ubuntu@$LIGHTSAIL_HOST "bash -se" <<'EOF'
+          ssh -i lightsail.key \
+            -o StrictHostKeyChecking=no \
+            -o ServerAliveInterval=60 \
+            -o ServerAliveCountMax=3 \
+            -o TCPKeepAlive=yes \
+            ubuntu@$LIGHTSAIL_HOST "bash -se" <<'EOF'
           set -euo pipefail
 
           if command -v cloud-init >/dev/null 2>&1; then
@@ -156,14 +159,19 @@ jobs:
       - name: Sync app to Lightsail
         run: |
           LIGHTSAIL_HOST="${{ steps.lightsail-info.outputs.public_ip }}"
-          rsync -avz --delete -e "ssh -i lightsail.key -o StrictHostKeyChecking=no" \
+          rsync -avz --delete \
+            -e "ssh -i lightsail.key -o StrictHostKeyChecking=no -o ServerAliveInterval=60 -o ServerAliveCountMax=3 -o TCPKeepAlive=yes" \
             cms-backend cms-frontend docker-compose.yml \
             ubuntu@$LIGHTSAIL_HOST:/opt/sam-cms
 
       - name: Write .env file on instance
         run: |
           LIGHTSAIL_HOST="${{ steps.lightsail-info.outputs.public_ip }}"
-          ssh -i lightsail.key -o StrictHostKeyChecking=no ubuntu@$LIGHTSAIL_HOST "cat > /opt/sam-cms/.env" <<'EOF'
+          ssh -i lightsail.key \
+            -o StrictHostKeyChecking=no \
+            -o ServerAliveInterval=60 \
+            -o ServerAliveCountMax=3 \
+            ubuntu@$LIGHTSAIL_HOST "cat > /opt/sam-cms/.env" <<'EOF'
           GOOGLE_CLIENT_ID=${{ secrets.GOOGLE_CLIENT_ID }}
           GOOGLE_CLIENT_SECRET=${{ secrets.GOOGLE_CLIENT_SECRET }}
           GOOGLE_REDIRECT_URL=${{ secrets.GOOGLE_REDIRECT_URL }}
@@ -182,5 +190,34 @@ jobs:
       - name: Restart services
         run: |
           LIGHTSAIL_HOST="${{ steps.lightsail-info.outputs.public_ip }}"
-          ssh -i lightsail.key -o StrictHostKeyChecking=no ubuntu@$LIGHTSAIL_HOST \
-            "cd /opt/sam-cms && sudo docker compose pull && sudo docker compose up -d --build"
+          ssh -i lightsail.key \
+            -o StrictHostKeyChecking=no \
+            -o ServerAliveInterval=60 \
+            -o ServerAliveCountMax=3 \
+            -o TCPKeepAlive=yes \
+            ubuntu@$LIGHTSAIL_HOST "bash -se" <<'EOF'
+          set -euo pipefail
+          cd /opt/sam-cms
+          
+          # Pull images with retry logic
+          echo "Pulling Docker images..."
+          for i in {1..3}; do
+            if sudo docker compose pull; then
+              echo "✓ Images pulled successfully"
+              break
+            else
+              if [ $i -eq 3 ]; then
+                echo "✗ Failed to pull images after 3 attempts"
+                exit 1
+              fi
+              echo "Attempt $i failed, retrying in 10s..."
+              sleep 10
+            fi
+          done
+          
+          # Build and start services
+          echo "Building and starting services..."
+          sudo docker compose up -d --build
+          
+          echo "✓ Services restarted successfully"
+          EOF
