@@ -163,8 +163,20 @@ jobs:
       - name: Check network connectivity
         run: |
           LIGHTSAIL_HOST="${{ steps.lightsail-info.outputs.public_ip }}"
+          
+          get_runner_ip() {
+            for service in "https://ifconfig.me" "https://api.ipify.org" "https://checkip.amazonaws.com"; do
+              ip=$(curl -fsS --max-time 3 "$service" 2>/dev/null | tr -d '[:space:]')
+              if [ -n "$ip" ]; then
+                echo "$ip"
+                return 0
+              fi
+            done
+            echo "unknown"
+          }
+          
           echo "Checking network connectivity to $LIGHTSAIL_HOST..."
-          echo "GitHub Actions runner IP: $(curl -s ifconfig.me || echo 'unknown')"
+          echo "GitHub Actions runner IP: $(get_runner_ip)"
           
           # Check if we can reach the host
           echo ""
