@@ -175,9 +175,10 @@ jobs:
             echo "✗ Port 22 is NOT reachable - this suggests a firewall/network issue"
             echo ""
             echo "TROUBLESHOOTING:"
-            echo "1. Check Lightsail firewall rules - SSH (port 22) must allow connections from 0.0.0.0/0"
-            echo "2. Go to Lightsail Console > Networking > Firewall"
-            echo "3. Ensure 'SSH' rule allows 'Anywhere (0.0.0.0/0)'"
+            echo "1. Verify Lightsail firewall rules allow SSH (port 22) from the current GitHub Actions IP ranges."
+            echo "   - See: https://docs.github.com/en/actions/security-guides/security-hardening-for-github-actions#github-hosted-runners for runner IP ranges."
+            echo "2. In Lightsail Console > Networking > Firewall, confirm an SSH rule exists for those IP ranges on port 22."
+            echo "3. As a last-resort temporary debugging step ONLY, you may open SSH to Anywhere (0.0.0.0/0); this is insecure and must be reverted immediately after testing."
             echo ""
           fi
           
