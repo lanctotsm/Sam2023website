@@ -64,8 +64,8 @@ jobs:
           echo "Fetching GitHub Actions IP ranges from GitHub Meta API..."
           GITHUB_META=$(curl -s https://api.github.com/meta)
           
-          # Extract IPv4 ranges for GitHub Actions (exclude IPv6)
-          ACTIONS_IPV4=$(echo "$GITHUB_META" | jq -r '.actions[]' | grep -E '^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+' || echo "")
+          # Extract IPv4 ranges for GitHub Actions (exclude IPv6 by filtering out entries with colons)
+          ACTIONS_IPV4=$(echo "$GITHUB_META" | jq -r '.actions[]' | grep -v ':' || echo "")
           
           if [ -z "$ACTIONS_IPV4" ]; then
             echo "❌ Error: Could not fetch GitHub Actions IP ranges from GitHub Meta API."
