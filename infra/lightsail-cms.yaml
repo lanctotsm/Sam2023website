@@ -126,6 +126,6 @@ Outputs:
   S3PublicBaseURL:
     Value: !Sub "https://${CmsDistribution.DomainName}"
   LightsailStaticIp:
-    Value: !Ref CmsStaticIp
+    Value: !GetAtt CmsStaticIp.IpAddress
   S3Bucket:
     Value: !Ref CmsBucket
