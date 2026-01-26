@@ -150,23 +150,6 @@ jobs:
             echo "$SECRET_VALUE" > lightsail.key
           fi
           chmod 600 lightsail.key
-          
-          # Debug: Show key file info
-          echo "SSH key retrieved from AWS Secrets Manager"
-          echo "Key file exists: $(test -f lightsail.key && echo 'yes' || echo 'no')"
-          echo "Key file size: $(wc -c < lightsail.key) bytes"
-          echo "Key file permissions: $(ls -l lightsail.key | awk '{print $1}')"
-          echo "First line of key: $(head -1 lightsail.key)"
-          echo "Last line of key: $(tail -1 lightsail.key)"
-          
-          # Try to validate key format (non-blocking)
-          if ssh-keygen -l -f lightsail.key >/dev/null 2>&1; then
-            KEY_INFO=$(ssh-keygen -l -f lightsail.key)
-            echo "Key validation: SUCCESS"
-            echo "Key info: $KEY_INFO"
-          else
-            echo "Key validation: FAILED (but continuing anyway)"
-          fi
 
       - name: Check network connectivity
         run: |
