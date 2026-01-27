@@ -96,20 +96,20 @@ Resources:
         set -euo pipefail
 
         # Install prerequisites for the deployment workflow:
-        # - docker + compose plugin (for `docker compose up`)
+        # - Node.js (for running the app)
+        # - pm2 (for process management)
         # - rsync (for GitHub Actions sync step)
         # - common utilities (git, jq, unzip, etc.)
         # - /opt/heron-cms directory owned by ubuntu
         export DEBIAN_FRONTEND=noninteractive
         
-        # Install Docker from Docker's official repository (includes docker-compose-plugin)
+        # Install Node.js from NodeSource
+        curl -fsSL https://deb.nodesource.com/setup_20.x | bash -
         apt-get update -y
-        apt-get install -y ca-certificates curl gnupg lsb-release
-        mkdir -p /etc/apt/keyrings
-        curl -fsSL https://download.docker.com/linux/ubuntu/gpg | gpg --dearmor -o /etc/apt/keyrings/docker.gpg
-        echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable" | tee /etc/apt/sources.list.d/docker.list > /dev/null
-        apt-get update -y
-        apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+        apt-get install -y nodejs
+
+        # Install pm2 globally
+        npm install -g pm2
 
         # Install common utilities and tools
         apt-get install -y \
@@ -123,15 +123,8 @@ Resources:
           htop \
           ufw
 
-        if command -v systemctl >/dev/null 2>&1; then
-          systemctl enable --now docker >/dev/null 2>&1 || true
-        fi
-
         mkdir -p /opt/heron-cms
         chown -R ubuntu:ubuntu /opt/heron-cms
-
-        # Optional: allow ubuntu to run docker without sudo after re-login.
-        usermod -aG docker ubuntu || true
 
   CmsStaticIp:
     Type: AWS::Lightsail::StaticIp

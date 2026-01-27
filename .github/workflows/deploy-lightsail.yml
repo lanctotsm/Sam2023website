@@ -24,25 +24,27 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ secrets.AWS_REGION }}
 
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: Log in to GHCR
-        uses: docker/login-action@v3
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
         with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
+          node-version: 20
+          cache: 'npm'
+          cache-dependency-path: heron/package-lock.json
 
-      - name: Build and push Heron image
-        uses: docker/build-push-action@v6
-        with:
-          context: ./heron
-          file: ./heron/Dockerfile
-          push: true
-          tags: ghcr.io/${{ github.repository }}/heron:latest
-          build-args: |
-            NEXT_PUBLIC_IMAGE_BASE_URL=${{ secrets.S3_PUBLIC_BASE_URL }}
+      - name: Install dependencies
+        run: |
+          cd heron
+          npm ci
+
+      - name: Build Heron app
+        env:
+          NEXT_PUBLIC_IMAGE_BASE_URL: ${{ secrets.S3_PUBLIC_BASE_URL }}
+          # These are needed during build if any pages are statically generated
+          NEXTAUTH_URL: ${{ secrets.NEXTAUTH_URL }}
+          NEXTAUTH_SECRET: ${{ secrets.NEXTAUTH_SECRET }}
+        run: |
+          cd heron
+          npm run build
 
       - name: Deploy CloudFormation
         run: |
@@ -120,70 +122,36 @@ jobs:
           done
           
           echo "✗ SSH not ready after 30 attempts"
-          echo "Debug: Testing with verbose output..."
-          ssh -vvv -i lightsail.key \
-            -o StrictHostKeyChecking=no \
-            -o ConnectTimeout=10 \
-            -o ServerAliveInterval=60 \
-            -o ServerAliveCountMax=3 \
-            ubuntu@$LIGHTSAIL_HOST "echo test" 2>&1 || true
           exit 1
-
-      - name: Bootstrap instance prerequisites (docker, compose, rsync, /opt/heron-cms)
-        run: |
-          LIGHTSAIL_HOST="${{ steps.lightsail-info.outputs.public_ip }}"
-          ssh -i lightsail.key \
-            -o StrictHostKeyChecking=no \
-            -o ServerAliveInterval=60 \
-            -o ServerAliveCountMax=3 \
-            -o TCPKeepAlive=yes \
-            ubuntu@$LIGHTSAIL_HOST "bash -se" <<'EOF'
-          set -euo pipefail
-
-          if command -v cloud-init >/dev/null 2>&1; then
-            sudo cloud-init status --wait >/dev/null 2>&1 || true
-          fi
-
-          sudo mkdir -p /opt/heron-cms
-          sudo chown ubuntu:ubuntu /opt/heron-cms
-
-          # Update package lists
-          sudo apt-get update
-
-          # Install Docker from Docker's official repository (includes docker-compose-plugin)
-          if ! command -v docker >/dev/null 2>&1; then
-            sudo apt-get install -y ca-certificates curl gnupg lsb-release
-            sudo mkdir -p /etc/apt/keyrings
-            curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /etc/apt/keyrings/docker.gpg
-            echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
-            sudo apt-get update
-            sudo apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
-          fi
-
-          if command -v systemctl >/dev/null 2>&1; then
-            sudo systemctl enable --now docker >/dev/null 2>&1 || true
-          fi
-
-          # Install common utilities and tools
-          sudo apt-get install -y \
-            rsync \
-            git \
-            unzip \
-            jq \
-            wget \
-            vim \
-            net-tools \
-            htop \
-            ufw
-          EOF
 
       - name: Sync app to Lightsail
         run: |
           LIGHTSAIL_HOST="${{ steps.lightsail-info.outputs.public_ip }}"
+          
+          # Sync standalone build files
+          # Note: standalone includes node_modules and server.js
           rsync -avz --delete \
             -e "ssh -i lightsail.key -o StrictHostKeyChecking=no -o ServerAliveInterval=60 -o ServerAliveCountMax=3 -o TCPKeepAlive=yes" \
-            docker-compose.yml \
+            heron/.next/standalone/ \
             ubuntu@$LIGHTSAIL_HOST:/opt/heron-cms
+            
+          # Sync static files
+          rsync -avz --delete \
+            -e "ssh -i lightsail.key -o StrictHostKeyChecking=no -o ServerAliveInterval=60 -o ServerAliveCountMax=3 -o TCPKeepAlive=yes" \
+            heron/.next/static/ \
+            ubuntu@$LIGHTSAIL_HOST:/opt/heron-cms/.next/static
+            
+          # Sync public files
+          rsync -avz --delete \
+            -e "ssh -i lightsail.key -o StrictHostKeyChecking=no -o ServerAliveInterval=60 -o ServerAliveCountMax=3 -o TCPKeepAlive=yes" \
+            heron/public/ \
+            ubuntu@$LIGHTSAIL_HOST:/opt/heron-cms/public
+            
+          # Sync drizzle migrations
+          rsync -avz --delete \
+            -e "ssh -i lightsail.key -o StrictHostKeyChecking=no -o ServerAliveInterval=60 -o ServerAliveCountMax=3 -o TCPKeepAlive=yes" \
+            heron/drizzle/ \
+            ubuntu@$LIGHTSAIL_HOST:/opt/heron-cms/drizzle
 
       - name: Write .env file on instance
         run: |
@@ -193,12 +161,13 @@ jobs:
             -o ServerAliveInterval=60 \
             -o ServerAliveCountMax=3 \
             ubuntu@$LIGHTSAIL_HOST "cat > /opt/heron-cms/.env" <<'EOF'
-          HERON_IMAGE=ghcr.io/${{ github.repository }}/heron:latest
+          PORT=3000
+          NODE_ENV=production
           NEXTAUTH_URL=${{ secrets.NEXTAUTH_URL }}
           NEXTAUTH_SECRET=${{ secrets.NEXTAUTH_SECRET }}
           BASE_ADMIN_EMAIL=${{ secrets.BASE_ADMIN_EMAIL }}
           DEV_AUTH_BYPASS=false
-          CMS_DB_PATH=/app/data/cms.db
+          CMS_DB_PATH=/opt/heron-cms/data/cms.db
           S3_REGION=${{ secrets.AWS_REGION }}
           S3_BUCKET=${{ secrets.CMS_BUCKET_NAME }}
           S3_PUBLIC_BASE_URL=${{ secrets.S3_PUBLIC_BASE_URL }}
@@ -220,25 +189,17 @@ jobs:
           set -euo pipefail
           cd /opt/heron-cms
           
-          # Pull images with retry logic
-          echo "Pulling Docker images..."
-          for i in {1..3}; do
-            if sudo docker compose pull; then
-              echo "✓ Images pulled successfully"
-              break
-            else
-              if [ $i -eq 3 ]; then
-                echo "✗ Failed to pull images after 3 attempts"
-                exit 1
-              fi
-              echo "Attempt $i failed, retrying in 10s..."
-              sleep 10
-            fi
-          done
+          # Start/Restart with pm2
+          if pm2 show heron-cms > /dev/null 2>&1; then
+            echo "Restarting heron-cms..."
+            pm2 restart heron-cms
+          else
+            echo "Starting heron-cms..."
+            pm2 start server.js --name heron-cms
+          fi
           
-          # Start services from pre-built images
-          echo "Starting services..."
-          sudo docker compose up -d
+          # Save pm2 list to survive reboots
+          pm2 save
           
           echo "✓ Services restarted successfully"
           EOF
