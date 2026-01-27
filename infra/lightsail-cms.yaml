@@ -1,10 +1,10 @@
 AWSTemplateFormatVersion: "2010-09-09"
-Description: Lightsail CMS (VM + S3 + CloudFront)
+Description: Heron Lightsail CMS (VM + S3 + CloudFront)
 
 Parameters:
   LightsailInstanceName:
     Type: String
-    Default: sam-cms
+    Default: heron-cms
   LightsailBlueprintId:
     Type: String
     Default: ubuntu_22_04
@@ -13,7 +13,7 @@ Parameters:
     Default: nano_3_0
   StaticIpName:
     Type: String
-    Default: sam-cms-ip
+    Default: heron-cms-ip
   BucketName:
     Type: String
   KeyPairName:
@@ -99,7 +99,7 @@ Resources:
         # - docker + compose plugin (for `docker compose up`)
         # - rsync (for GitHub Actions sync step)
         # - common utilities (git, jq, unzip, etc.)
-        # - /opt/sam-cms directory owned by ubuntu
+        # - /opt/heron-cms directory owned by ubuntu
         export DEBIAN_FRONTEND=noninteractive
         
         # Install Docker from Docker's official repository (includes docker-compose-plugin)
@@ -127,8 +127,8 @@ Resources:
           systemctl enable --now docker >/dev/null 2>&1 || true
         fi
 
-        mkdir -p /opt/sam-cms
-        chown -R ubuntu:ubuntu /opt/sam-cms
+        mkdir -p /opt/heron-cms
+        chown -R ubuntu:ubuntu /opt/heron-cms
 
         # Optional: allow ubuntu to run docker without sudo after re-login.
         usermod -aG docker ubuntu || true

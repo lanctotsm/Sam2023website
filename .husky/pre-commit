@@ -7,22 +7,15 @@ set -e
 
 echo "🔍 Running pre-commit checks..."
 
-if [ -d "cms-backend" ]; then
-  echo "🐹 Go tests (cms-backend)"
-  (cd cms-backend && go test ./...)
-else
-  echo "⚠️  cms-backend not found, skipping Go tests"
-fi
-
-if [ -d "cms-frontend" ]; then
-  echo "🧪 Next.js lint (cms-frontend)"
-  if [ -d "cms-frontend/node_modules" ]; then
-    (cd cms-frontend && npm run lint)
+if [ -d "heron" ]; then
+  echo "🧪 Next.js lint (heron)"
+  if [ -d "heron/node_modules" ]; then
+    (cd heron && npm run lint)
   else
-    echo "⚠️  cms-frontend/node_modules missing, run npm install"
+    echo "⚠️  heron/node_modules missing, run npm install"
   fi
 else
-  echo "⚠️  cms-frontend not found, skipping frontend lint"
+  echo "⚠️  heron not found, skipping frontend lint"
 fi
 
 echo "✅ Pre-commit checks complete"

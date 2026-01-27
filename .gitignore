@@ -7,7 +7,7 @@ node_modules/
 out/
 dist/
 build/
-app/build/
+heron/build/
 
 # React/TypeScript specific
 *.tsbuildinfo
@@ -20,7 +20,7 @@ app/build/
 .env.test.local
 .env.production.local
 my-nextjs-site/.env.local
-app/.env.local
+heron/.env.local
 
 # AWS Secrets and Configuration
 config/secrets.json
@@ -29,21 +29,6 @@ secrets*.json
 *.pem
 *.key
 .aws/
-
-# Go build artifacts
-photo-backend/main
-photo-backend/photo-backend.exe
-photo-backend/packaged-template.yaml
-photo-backend/coverage.out
-photo-backend/coverage.html
-*.exe
-*.test
-*.prof
-go.work
-go.work.sum
-
-# Go vendor directory
-vendor/
 
 # IDE files
 .vscode/
@@ -67,6 +52,9 @@ pids
 *.pid
 *.seed
 *.pid.lock
+*.db
+data/
+heron/data/
 
 # Coverage directory used by tools like istanbul
 coverage/
@@ -83,7 +71,7 @@ jspm_packages/
 
 # Optional eslint cache
 .eslintcache
-app/.eslintcache
+heron/.eslintcache
 
 # Microbundle cache
 .rpt2_cache/
@@ -148,7 +136,3 @@ TestResults/
 
 # Built Visual Studio Code Extensions
 *.vsix
-
-# AWS SAM
-.aws-sam/
-samconfig.toml

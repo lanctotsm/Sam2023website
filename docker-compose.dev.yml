@@ -52,56 +52,33 @@ services:
         mc cors set "local/$${BUCKET}" /tmp/cors.xml >/dev/null 2>&1 || true
         echo "MinIO ready."
 
-  db-seed:
-    image: postgres:15-alpine
-    depends_on:
-      postgres:
-        condition: service_healthy
-    environment:
-      PGPASSWORD: cms
-    volumes:
-      - ./scripts/seed-local.sql:/seed-local.sql:ro
-    entrypoint:
-      - /bin/sh
-      - -c
-      - |
-        until pg_isready -h postgres -U cms -d cms >/dev/null 2>&1; do
-          sleep 1
-        done
-        # Wait for migrations to complete (albums table exists)
-        echo "Waiting for migrations to complete..."
-        until psql -h postgres -U cms -d cms -tAc "SELECT EXISTS (SELECT FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'albums');" | grep -q t; do
-          sleep 1
-        done
-        echo "Running seed data..."
-        psql -h postgres -U cms -d cms -f /seed-local.sql >/dev/null 2>&1 || true
-
-  cms-frontend:
+  heron:
     build:
-      context: ./cms-frontend
+      context: ./heron
       args:
         NEXT_PUBLIC_IMAGE_BASE_URL: ${S3_PUBLIC_BASE_URL:-http://localhost:9000/cms}
     environment:
       NEXT_PUBLIC_IMAGE_BASE_URL: ${S3_PUBLIC_BASE_URL:-http://localhost:9000/cms}
-
-  cms-backend:
-    environment:
-      # Local MinIO settings for presigned browser uploads
+      NEXTAUTH_URL: ${NEXTAUTH_URL:-http://localhost:3000}
+      NEXTAUTH_SECRET: ${NEXTAUTH_SECRET:-dev-secret}
+      DEV_AUTH_BYPASS: ${DEV_AUTH_BYPASS:-true}
+      BASE_ADMIN_EMAIL: ${BASE_ADMIN_EMAIL:-dev@local}
+      CMS_DB_PATH: ${CMS_DB_PATH:-/app/data/cms.db}
       S3_REGION: ${S3_REGION:-us-east-1}
       S3_BUCKET: ${S3_BUCKET:-cms}
       S3_PUBLIC_BASE_URL: ${S3_PUBLIC_BASE_URL:-http://localhost:9000/cms}
       S3_ENDPOINT_URL: ${S3_ENDPOINT_URL:-http://minio:9000}
-      S3_PRESIGN_ENDPOINT_URL: ${S3_PRESIGN_ENDPOINT_URL:-http://localhost:9000}
       S3_FORCE_PATH_STYLE: ${S3_FORCE_PATH_STYLE:-true}
-      AWS_USE_STATIC_CREDS: ${AWS_USE_STATIC_CREDS:-true}
       AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID:-minioadmin}
       AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:-minioadmin}
-      DEV_AUTH_BYPASS: ${DEV_AUTH_BYPASS:-true}
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET}
+    volumes:
+      - cms_data:/app/data
     depends_on:
-      postgres:
-        condition: service_healthy
       minio-init:
         condition: service_completed_successfully
 
 volumes:
   cms_minio:
+  cms_data:

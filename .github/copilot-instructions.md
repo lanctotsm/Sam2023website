@@ -1,153 +1,89 @@
-# GitHub Copilot Instructions for Sam2023website
+# GitHub Copilot Instructions for Heron
 
 ## Project Overview
 
-This is a personal portfolio website built with React 18.2.0 and TypeScript. The site uses Create React App as its build tool and React Bootstrap for UI components.
+Heron is a modern, lightweight CMS built with Next.js, SQLite, and Drizzle ORM. It is designed for personal websites and portfolios, with integrated support for media management (S3/MinIO), blog posts, and photo albums.
 
 ## Repository Structure
 
 ```
 /
-├── app/                    # Main React application
-│   ├── src/               # Source code
-│   │   ├── components/    # React components
-│   │   ├── pages/         # Page components
-│   │   ├── styles/        # SCSS stylesheets
-│   │   ├── interfaces/    # TypeScript interfaces
-│   │   ├── App.tsx        # Main app component
-│   │   └── routes.tsx     # Route definitions
-│   ├── public/            # Static assets
-│   ├── package.json       # Dependencies and scripts
-│   ├── tsconfig.json      # TypeScript configuration
-│   └── cloudformation.yaml # AWS deployment configuration
-└── src/                   # Legacy/additional source files (currently empty)
+├── heron/                  # Main Next.js application
+│   ├── app/                # Next.js App Router (pages, API routes)
+│   ├── components/         # React components
+│   ├── drizzle/            # Database migrations
+│   ├── lib/                # Shared utilities, DB schema, S3 client
+│   ├── public/             # Static assets
+│   ├── scripts/            # Development and seeding scripts
+│   ├── types/              # TypeScript definitions
+│   ├── Dockerfile          # Production Docker image
+│   └── package.json        # Dependencies and scripts
+├── infra/                  # Infrastructure as Code (Lightsail CloudFormation)
+└── docker-compose.yml      # Local development and production orchestration
 ```
 
 ## Technology Stack
 
-- **Frontend Framework**: React 18.2.0
-- **Language**: TypeScript 4.9.5
-- **UI Library**: React Bootstrap 2.9.2
-- **Routing**: React Router DOM 6.21.1
-- **Styling**: SCSS with Bootstrap 5.3.2
-- **Build Tool**: react-scripts 5.0.1 (Create React App)
-- **Testing**: Jest with React Testing Library
+- **Framework**: Next.js 14 (App Router)
+- **Database**: SQLite (via better-sqlite3)
+- **ORM**: Drizzle ORM
+- **Authentication**: NextAuth.js (Google OAuth & local dev bypass)
+- **Storage**: S3-compatible (AWS S3 in production, MinIO in dev)
+- **Deployment**: Docker on AWS Lightsail
 
 ## Development Workflow
 
-### Setting Up the Development Environment
+### Local Development Environment
 
-1. Navigate to the app directory: `cd app`
-2. Install dependencies: `npm install`
-3. Start the development server: `npm start`
-   - Opens at http://localhost:3000
-   - Hot reloading enabled
+1. **Environment Setup**: Copy `.env.example` to `.env` in the root and configure.
+2. **Start Services**: `docker-compose -f docker-compose.dev.yml up`
+   - Runs the Next.js app in development mode
+   - Runs MinIO for local object storage
+3. **Database & Seeding**:
+   - The app automatically runs migrations on startup.
+   - Seed data: `cd heron && npm run seed:local`
 
 ### Building and Testing
 
-- **Build for production**: `cd app && npm run build`
-  - Output goes to `app/build/` directory
-  - Optimized and minified
-- **Run tests**: `cd app && npm test`
-  - Interactive test runner
-  - Uses Jest and React Testing Library
-- **Lint**: Configured via ESLint (extends react-app)
+- **Production Build**: `cd heron && npm run build`
+- **Linting**: `cd heron && npm run lint`
+- **Type Checking**: `cd heron && npm run typecheck`
 
 ## Coding Conventions
 
-### TypeScript
+### Next.js & React
 
-- Use TypeScript for all new components
-- Define interfaces in `app/src/interfaces/`
-- Use React.FC for functional components
-- Enable strict mode (already configured in tsconfig.json)
+- **App Router**: Use the `app/` directory for routing. Use Server Components by default.
+- **Components**: Place reusable components in `heron/components/`.
+- **API Routes**: Implement backend logic in `heron/app/api/`.
 
-### React Components
+### Database & ORM
 
-- Use functional components with hooks
-- Place reusable components in `app/src/components/`
-- Place page components in `app/src/pages/`
-- Follow the existing component structure pattern
+- **Schema**: Defined in `heron/lib/db/schema.ts`.
+- **Migrations**: Managed by Drizzle Kit. Run `npx drizzle-kit generate` for schema changes.
+- **Client**: Access the database via `getDb()` from `heron/lib/db/index.ts`.
 
-### Styling
+### Storage
 
-- Use SCSS for styling (files in `app/src/styles/`)
-- Import Bootstrap components from `react-bootstrap`
-- Follow Bootstrap naming conventions
-- Keep styles modular and component-specific
-
-### File Naming
-
-- Components: PascalCase (e.g., `MyNav.tsx`, `Footer.tsx`)
-- Styles: kebab-case with .scss extension (e.g., `app.scss`)
-- Interfaces: PascalCase with descriptive names
-- Tests: Component name with `.test.tsx` suffix
-
-## Testing Guidelines
-
-- Write tests for new components in the same directory as the component
-- Use React Testing Library patterns
-- Test user interactions and component rendering
-- Use `@testing-library/jest-dom` matchers for assertions
-
-## Common Tasks
-
-### Adding a New Page
-
-1. Create the page component in `app/src/pages/`
-2. Add route configuration in `app/src/routes.tsx`
-3. Update navigation in `app/src/components/MyNav.tsx` if needed
-
-### Adding a New Component
-
-1. Create the component file in `app/src/components/`
-2. Define TypeScript interface for props in `app/src/interfaces/`
-3. Create corresponding test file with `.test.tsx` suffix
-4. Import and use in parent components
-
-### Updating Styles
-
-1. Modify or create SCSS files in `app/src/styles/`
-2. Import styles in the relevant component
-3. Use Bootstrap utilities where possible
-4. Maintain responsive design principles
+- Use the S3 client in `heron/lib/s3.ts` for all media operations.
+- Images are served via presigned URLs or public base URLs configured in environment variables.
 
 ## Best Practices
 
-1. **Always work in the `app/` directory** for React-related changes
-2. **Run tests before committing** to ensure no regressions
-3. **Keep components small and focused** on a single responsibility
-4. **Use TypeScript types** to catch errors early
-5. **Follow React Bootstrap patterns** for consistency
-6. **Maintain accessibility** standards (semantic HTML, ARIA labels)
-7. **Optimize performance**: Use React.memo for expensive components, lazy loading for routes
-8. **Keep dependencies up to date** but test thoroughly after updates
+1. **Keep it Simple**: Prioritize SQLite for its simplicity and portability.
+2. **Server-Side First**: Leverage Next.js Server Components for data fetching.
+3. **Type Safety**: Use TypeScript for all new code. Ensure Drizzle schema and TypeScript types are in sync.
+4. **Local Dev Parity**: Use the provided `docker-compose.dev.yml` to ensure local dev matches production as closely as possible.
+5. **Security**: Never commit secrets. Use `.env.local` for local overrides and GitHub Secrets for CI/CD.
 
 ## Deployment
 
-The website is configured for deployment to AWS S3 static website hosting:
-- **Infrastructure**: AWS CloudFormation (configuration in `app/cloudformation.yaml`)
-- **Hosting**: AWS S3 bucket configured for static website hosting
-- **Configuration**: The CloudFormation template sets up an S3 bucket with public read access and website hosting enabled
-- **Deployment process**: 
-  1. Build the production bundle: `cd app && npm run build`
-  2. Create/update the CloudFormation stack using `app/cloudformation.yaml`
-  3. Upload the `app/build/` contents to the S3 bucket
-  4. Access the website via the S3 website URL
+- **CI/CD**: GitHub Actions (`.github/workflows/deploy-lightsail.yml`) builds the Docker image and deploys to AWS Lightsail.
+- **Infrastructure**: Managed via the CloudFormation template in `infra/lightsail-cms.yaml`.
+- **Environment**: Production environment variables are managed on the Lightsail instance.
 
 ## Important Notes
 
-- The main application code is in the `app/` directory, not the root
-- Use `npm` (not yarn) as the package manager
-- The project uses React Router v6 syntax (element prop, not component)
-- Bootstrap 5.3.2 is used, so ensure compatibility with Bootstrap 5 patterns
-- Environment-specific configurations can be added via `.env` files (see .gitignore for patterns)
-- Deployment infrastructure is defined in `app/cloudformation.yaml` for AWS S3 hosting
-
-## Resources
-
-- [React Documentation](https://reactjs.org/)
-- [TypeScript Documentation](https://www.typescriptlang.org/)
-- [React Bootstrap Documentation](https://react-bootstrap.github.io/)
-- [React Router Documentation](https://reactrouter.com/)
-- [Create React App Documentation](https://create-react-app.dev/)
+- **Working Directory**: Most development happens within the `heron/` directory.
+- **Package Manager**: Use `npm`.
+- **Database Path**: In Docker, the SQLite database is stored at `/app/data/cms.db`. Ensure this volume is persisted.
