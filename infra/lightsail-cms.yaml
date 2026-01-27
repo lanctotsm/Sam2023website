@@ -103,9 +103,12 @@ Resources:
         # - /opt/heron-cms directory owned by ubuntu
         export DEBIAN_FRONTEND=noninteractive
         
+        # Install curl and ca-certificates first (required for NodeSource setup)
+        apt-get update -y
+        apt-get install -y ca-certificates curl gnupg
+        
         # Install Node.js from NodeSource
         curl -fsSL https://deb.nodesource.com/setup_20.x | bash -
-        apt-get update -y
         apt-get install -y nodejs
 
         # Install pm2 globally
