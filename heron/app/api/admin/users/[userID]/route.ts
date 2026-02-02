@@ -5,13 +5,14 @@ import { getDb } from "@/lib/db";
 import { allowedEmails } from "@/lib/db/schema";
 import { errorResponse, getAuthUser, parseId } from "@/lib/api-utils";
 
-export async function DELETE(_: Request, { params }: { params: { userID: string } }) {
+export async function DELETE(_: Request, { params }: { params: Promise<{ userID: string }> }) {
+  const { userID } = await params;
   const user = await getAuthUser();
   if (!user) {
     return errorResponse("unauthorized", 401);
   }
 
-  const id = parseId(params.userID);
+  const id = parseId(userID);
   if (!id) {
     return errorResponse("invalid user id", 400);
   }

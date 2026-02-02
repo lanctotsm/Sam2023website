@@ -5,14 +5,15 @@ import type { Album, Image as AlbumImage } from "@/lib/api";
 import { buildImageUrl } from "@/lib/images";
 
 type PageProps = {
-  params: { slug: string };
+  params: Promise<{ slug: string }>;
 };
 
 export const dynamic = "force-dynamic";
 
 export default async function AlbumDetailPage({ params }: PageProps) {
+  const { slug } = await params;
   try {
-    const album = await serverFetch<Album>(`/albums/slug/${params.slug}`);
+    const album = await serverFetch<Album>(`/albums/slug/${slug}`);
     const imagesData = await serverFetch<AlbumImage[]>(`/albums/${album.id}/images`);
     const images = imagesData || [];
     const user = await getServerUser();

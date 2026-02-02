@@ -8,27 +8,31 @@
     "start": "next start",
     "lint": "next lint",
     "typecheck": "tsc --noEmit",
-    "seed:local": "tsx scripts/seed.ts"
+    "seed:local": "tsx scripts/seed.ts",
+    "test:e2e": "playwright test"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.975.0",
     "@aws-sdk/s3-request-presigner": "^3.975.0",
     "better-sqlite3": "^12.6.2",
     "drizzle-orm": "^0.45.1",
-    "next": "^14.2.5",
+    "next": "^16.1.6",
     "next-auth": "^4.24.13",
-    "react": "^18.3.1",
-    "react-dom": "^18.3.1",
+    "nvm": "^0.0.4",
+    "react": "^19.2.4",
+    "react-dom": "^19.2.4",
     "react-markdown": "^9.0.1",
     "remark-gfm": "^4.0.0"
   },
   "devDependencies": {
-    "drizzle-kit": "^0.31.8",
+    "@playwright/test": "^1.58.1",
+    "@types/better-sqlite3": "^7.6.13",
     "@types/node": "^20.12.12",
-    "@types/react": "^18.3.3",
-    "@types/react-dom": "^18.3.0",
-    "eslint": "^8.57.1",
-    "eslint-config-next": "^14.2.5",
+    "@types/react": "^19.2.10",
+    "@types/react-dom": "^19.2.3",
+    "drizzle-kit": "^0.31.8",
+    "eslint": "^9.39.2",
+    "eslint-config-next": "^16.1.6",
     "tsx": "^4.21.0",
     "typescript": "^5.5.4"
   }

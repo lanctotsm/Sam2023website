@@ -6,8 +6,9 @@ import { albums, postAlbumLinks } from "@/lib/db/schema";
 import { errorResponse, getAuthUser, parseId } from "@/lib/api-utils";
 import { serializeAlbum } from "@/lib/serializers";
 
-export async function GET(_: Request, { params }: { params: { postID: string } }) {
-  const id = parseId(params.postID);
+export async function GET(_: Request, { params }: { params: Promise<{ postID: string }> }) {
+  const { postID } = await params;
+  const id = parseId(postID);
   if (!id) {
     return errorResponse("invalid post id", 400);
   }
@@ -30,13 +31,14 @@ export async function GET(_: Request, { params }: { params: { postID: string } }
   return NextResponse.json(rows.map(serializeAlbum));
 }
 
-export async function POST(request: Request, { params }: { params: { postID: string } }) {
+export async function POST(request: Request, { params }: { params: Promise<{ postID: string }> }) {
+  const { postID } = await params;
   const user = await getAuthUser();
   if (!user) {
     return errorResponse("unauthorized", 401);
   }
 
-  const id = parseId(params.postID);
+  const id = parseId(postID);
   if (!id) {
     return errorResponse("invalid post id", 400);
   }

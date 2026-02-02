@@ -7,8 +7,9 @@ import { albums } from "@/lib/db/schema";
 import { errorResponse, getAuthUser, parseId } from "@/lib/api-utils";
 import { serializeAlbum } from "@/lib/serializers";
 
-export async function GET(_: Request, { params }: { params: { albumID: string } }) {
-  const id = parseId(params.albumID);
+export async function GET(_: Request, { params }: { params: Promise<{ albumID: string }> }) {
+  const { albumID } = await params;
+  const id = parseId(albumID);
   if (!id) {
     return errorResponse("invalid album id", 400);
   }
@@ -21,13 +22,14 @@ export async function GET(_: Request, { params }: { params: { albumID: string } 
   return NextResponse.json(serializeAlbum(row[0]));
 }
 
-export async function PUT(request: Request, { params }: { params: { albumID: string } }) {
+export async function PUT(request: Request, { params }: { params: Promise<{ albumID: string }> }) {
+  const { albumID } = await params;
   const user = await getAuthUser();
   if (!user) {
     return errorResponse("unauthorized", 401);
   }
 
-  const id = parseId(params.albumID);
+  const id = parseId(albumID);
   if (!id) {
     return errorResponse("invalid album id", 400);
   }
@@ -58,13 +60,14 @@ export async function PUT(request: Request, { params }: { params: { albumID: str
   return NextResponse.json(serializeAlbum(updated[0]));
 }
 
-export async function DELETE(_: Request, { params }: { params: { albumID: string } }) {
+export async function DELETE(_: Request, { params }: { params: Promise<{ albumID: string }> }) {
+  const { albumID } = await params;
   const user = await getAuthUser();
   if (!user) {
     return errorResponse("unauthorized", 401);
   }
 
-  const id = parseId(params.albumID);
+  const id = parseId(albumID);
   if (!id) {
     return errorResponse("invalid album id", 400);
   }

@@ -6,8 +6,9 @@ import { albums } from "@/lib/db/schema";
 import { errorResponse } from "@/lib/api-utils";
 import { serializeAlbum } from "@/lib/serializers";
 
-export async function GET(_: Request, { params }: { params: { slug: string } }) {
-  const slug = (params.slug || "").trim();
+export async function GET(_: Request, { params }: { params: Promise<{ slug: string }> }) {
+  const { slug: rawSlug } = await params;
+  const slug = (rawSlug || "").trim();
   if (!slug) {
     return errorResponse("missing slug", 400);
   }

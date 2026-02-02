@@ -119,6 +119,9 @@ TestResults/
 *.trx
 *.coverage
 *.coveragexml
+test-results/
+playwright-report/
+playwright/.cache/
 
 # JetBrains Rider
 .idea/
