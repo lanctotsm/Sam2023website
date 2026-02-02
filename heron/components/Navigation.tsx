@@ -59,9 +59,7 @@ export default function Navigation() {
               Logout
             </button>
           </>
-        ) : (
-          <span className="status muted">Guest</span>
-        )}
+        ) : null}
       </div>
     </nav>
   );
