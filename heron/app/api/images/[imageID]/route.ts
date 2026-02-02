@@ -1,10 +1,7 @@
 import { NextResponse } from "next/server";
-import { eq } from "drizzle-orm";
-
-import { getDb } from "@/lib/db";
-import { images } from "@/lib/db/schema";
 import { errorResponse, getAuthUser, parseId } from "@/lib/api-utils";
 import { serializeImage } from "@/lib/serializers";
+import { deleteImage, getImageById, updateImage } from "@/services/images";
 
 export async function GET(_: Request, { params }: { params: Promise<{ imageID: string }> }) {
   const { imageID } = await params;
@@ -13,12 +10,12 @@ export async function GET(_: Request, { params }: { params: Promise<{ imageID: s
     return errorResponse("invalid image id", 400);
   }
 
-  const row = await getDb().select().from(images).where(eq(images.id, id)).limit(1);
-  if (!row[0]) {
+  const row = await getImageById(id);
+  if (!row) {
     return errorResponse("image not found", 404);
   }
 
-  return NextResponse.json(serializeImage(row[0]));
+  return NextResponse.json(serializeImage(row));
 }
 
 export async function PUT(request: Request, { params }: { params: Promise<{ imageID: string }> }) {
@@ -39,23 +36,19 @@ export async function PUT(request: Request, { params }: { params: Promise<{ imag
     return errorResponse("s3_key is required", 400);
   }
 
-  const updated = await getDb()
-    .update(images)
-    .set({
-      s3Key,
-      width: payload.width ?? null,
-      height: payload.height ?? null,
-      caption: (payload.caption || "").trim(),
-      altText: (payload.alt_text || "").trim()
-    })
-    .where(eq(images.id, id))
-    .returning();
+  const updated = await updateImage(id, {
+    s3Key,
+    width: payload.width ?? null,
+    height: payload.height ?? null,
+    caption: (payload.caption || "").trim(),
+    altText: (payload.alt_text || "").trim()
+  });
 
-  if (!updated[0]) {
+  if (!updated) {
     return errorResponse("image not found", 404);
   }
 
-  return NextResponse.json(serializeImage(updated[0]));
+  return NextResponse.json(serializeImage(updated));
 }
 
 export async function DELETE(_: Request, { params }: { params: Promise<{ imageID: string }> }) {
@@ -70,6 +63,6 @@ export async function DELETE(_: Request, { params }: { params: Promise<{ imageID
     return errorResponse("invalid image id", 400);
   }
 
-  await getDb().delete(images).where(eq(images.id, id));
+  await deleteImage(id);
   return NextResponse.json({ status: "deleted" });
 }

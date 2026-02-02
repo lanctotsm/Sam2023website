@@ -1,28 +1,14 @@
 import { NextResponse } from "next/server";
-import { desc, eq } from "drizzle-orm";
-
-import { getDb } from "@/lib/db";
-import { posts } from "@/lib/db/schema";
-import { errorResponse, getAuthUser, normalizeStatus } from "@/lib/api-utils";
+import { errorResponse, getAuthUser } from "@/lib/api-utils";
 import { serializePost } from "@/lib/serializers";
+import { createPost, getAllPosts } from "@/services/posts";
 
 export async function GET(request: Request) {
   const user = await getAuthUser();
   const { searchParams } = new URL(request.url);
-  const statusParam = searchParams.get("status");
+  const statusParam = searchParams.get("status") || undefined;
 
-  const db = getDb();
-  const query = user
-    ? statusParam
-      ? db.select().from(posts).where(eq(posts.status, statusParam)).orderBy(desc(posts.createdAt))
-      : db.select().from(posts).orderBy(desc(posts.createdAt))
-    : db
-        .select()
-        .from(posts)
-        .where(eq(posts.status, "published"))
-        .orderBy(desc(posts.createdAt));
-
-  const rows = await query;
+  const rows = await getAllPosts({ user, status: statusParam });
   return NextResponse.json(rows.map(serializePost));
 }
 
@@ -41,18 +27,18 @@ export async function POST(request: Request) {
     return errorResponse("title, slug, and markdown are required", 400);
   }
 
-  const created = await getDb()
-    .insert(posts)
-    .values({
+  try {
+    const created = await createPost({
       title,
       slug,
       summary: (payload.summary || "").trim(),
-      markdown: payload.markdown,
-      status: normalizeStatus(payload.status),
+      markdown,
+      status: payload.status,
       publishedAt: payload.published_at || null,
       createdBy: user.id
-    })
-    .returning();
-
-  return NextResponse.json(serializePost(created[0]), { status: 201 });
+    });
+    return NextResponse.json(serializePost(created), { status: 201 });
+  } catch (error) {
+    return errorResponse("failed to create post", 500);
+  }
 }

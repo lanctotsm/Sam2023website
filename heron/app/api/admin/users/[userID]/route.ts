@@ -1,9 +1,6 @@
 import { NextResponse } from "next/server";
-import { eq } from "drizzle-orm";
-
-import { getDb } from "@/lib/db";
-import { allowedEmails } from "@/lib/db/schema";
 import { errorResponse, getAuthUser, parseId } from "@/lib/api-utils";
+import { removeUser } from "@/actions/admin-users";
 
 export async function DELETE(_: Request, { params }: { params: Promise<{ userID: string }> }) {
   const { userID } = await params;
@@ -17,15 +14,12 @@ export async function DELETE(_: Request, { params }: { params: Promise<{ userID:
     return errorResponse("invalid user id", 400);
   }
 
-  const row = await getDb().select().from(allowedEmails).where(eq(allowedEmails.id, id)).limit(1);
-  if (!row[0]) {
-    return errorResponse("admin user not found", 404);
+  try {
+    await removeUser(id);
+    return NextResponse.json({ status: "removed" });
+  } catch (error: any) {
+    const message = error?.message || "failed to remove user";
+    const status = message.includes("cannot remove") ? 403 : message.includes("not found") ? 404 : 400;
+    return errorResponse(message, status);
   }
-
-  if (row[0].isBaseAdmin) {
-    return errorResponse("cannot remove base admin user", 403);
-  }
-
-  await getDb().delete(allowedEmails).where(eq(allowedEmails.id, id));
-  return NextResponse.json({ status: "removed" });
 }

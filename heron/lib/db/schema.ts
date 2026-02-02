@@ -123,8 +123,8 @@ export const postAlbumLinks = sqliteTable(
   })
 );
 
-export const allowedEmails = sqliteTable(
-  "allowed_emails",
+export const adminUsers = sqliteTable(
+  "admin_users",
   {
     id: integer("id").primaryKey({ autoIncrement: true }),
     email: text("email").notNull(),
@@ -132,7 +132,7 @@ export const allowedEmails = sqliteTable(
     createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`)
   },
   (table) => ({
-    emailIdx: uniqueIndex("idx_allowed_emails_email").on(table.email),
-    baseAdminIdx: index("idx_allowed_emails_base_admin").on(table.isBaseAdmin)
+    emailIdx: uniqueIndex("idx_admin_users_email").on(table.email),
+    baseAdminIdx: index("idx_admin_users_base_admin").on(table.isBaseAdmin)
   })
 );

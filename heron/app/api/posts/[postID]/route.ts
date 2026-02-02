@@ -1,11 +1,7 @@
 import { NextResponse } from "next/server";
-import { eq } from "drizzle-orm";
-import { sql } from "drizzle-orm";
-
-import { getDb } from "@/lib/db";
-import { posts } from "@/lib/db/schema";
-import { errorResponse, getAuthUser, normalizeStatus, parseId } from "@/lib/api-utils";
+import { errorResponse, getAuthUser, parseId } from "@/lib/api-utils";
 import { serializePost } from "@/lib/serializers";
+import { deletePost, getPostById, updatePost } from "@/services/posts";
 
 export async function GET(_: Request, { params }: { params: Promise<{ postID: string }> }) {
   const { postID } = await params;
@@ -14,17 +10,17 @@ export async function GET(_: Request, { params }: { params: Promise<{ postID: st
     return errorResponse("invalid post id", 400);
   }
 
-  const row = await getDb().select().from(posts).where(eq(posts.id, id)).limit(1);
-  if (!row[0]) {
+  const row = await getPostById(id);
+  if (!row) {
     return errorResponse("post not found", 404);
   }
 
   const user = await getAuthUser();
-  if (!user && row[0].status !== "published") {
+  if (!user && row.status !== "published") {
     return errorResponse("post not found", 404);
   }
 
-  return NextResponse.json(serializePost(row[0]));
+  return NextResponse.json(serializePost(row));
 }
 
 export async function PUT(request: Request, { params }: { params: Promise<{ postID: string }> }) {
@@ -48,25 +44,20 @@ export async function PUT(request: Request, { params }: { params: Promise<{ post
     return errorResponse("title, slug, and markdown are required", 400);
   }
 
-  const updated = await getDb()
-    .update(posts)
-    .set({
-      title,
-      slug,
-      summary: (payload.summary || "").trim(),
-      markdown: payload.markdown,
-      status: normalizeStatus(payload.status),
-      publishedAt: payload.published_at || null,
-      updatedAt: sql`CURRENT_TIMESTAMP`
-    })
-    .where(eq(posts.id, id))
-    .returning();
+  const updated = await updatePost(id, {
+    title,
+    slug,
+    summary: (payload.summary || "").trim(),
+    markdown,
+    status: payload.status,
+    publishedAt: payload.published_at || null
+  });
 
-  if (!updated[0]) {
+  if (!updated) {
     return errorResponse("post not found", 404);
   }
 
-  return NextResponse.json(serializePost(updated[0]));
+  return NextResponse.json(serializePost(updated));
 }
 
 export async function DELETE(_: Request, { params }: { params: Promise<{ postID: string }> }) {
@@ -81,6 +72,6 @@ export async function DELETE(_: Request, { params }: { params: Promise<{ postID:
     return errorResponse("invalid post id", 400);
   }
 
-  await getDb().delete(posts).where(eq(posts.id, id));
+  await deletePost(id);
   return NextResponse.json({ status: "deleted" });
 }

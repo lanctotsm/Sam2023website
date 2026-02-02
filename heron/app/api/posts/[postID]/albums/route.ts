@@ -1,10 +1,8 @@
 import { NextResponse } from "next/server";
-import { desc, eq } from "drizzle-orm";
-
-import { getDb } from "@/lib/db";
-import { albums, postAlbumLinks } from "@/lib/db/schema";
 import { errorResponse, getAuthUser, parseId } from "@/lib/api-utils";
 import { serializeAlbum } from "@/lib/serializers";
+import { getAlbumsForPost } from "@/services/post-albums";
+import { linkAlbumToPost } from "@/actions/posts";
 
 export async function GET(_: Request, { params }: { params: Promise<{ postID: string }> }) {
   const { postID } = await params;
@@ -13,21 +11,7 @@ export async function GET(_: Request, { params }: { params: Promise<{ postID: st
     return errorResponse("invalid post id", 400);
   }
 
-  const rows = await getDb()
-    .select({
-      id: albums.id,
-      title: albums.title,
-      slug: albums.slug,
-      description: albums.description,
-      createdBy: albums.createdBy,
-      createdAt: albums.createdAt,
-      updatedAt: albums.updatedAt
-    })
-    .from(albums)
-    .innerJoin(postAlbumLinks, eq(postAlbumLinks.albumId, albums.id))
-    .where(eq(postAlbumLinks.postId, id))
-    .orderBy(desc(albums.createdAt));
-
+  const rows = await getAlbumsForPost(id);
   return NextResponse.json(rows.map(serializeAlbum));
 }
 
@@ -49,10 +33,10 @@ export async function POST(request: Request, { params }: { params: Promise<{ pos
     return errorResponse("album_id is required", 400);
   }
 
-  await getDb()
-    .insert(postAlbumLinks)
-    .values({ postId: id, albumId })
-    .onConflictDoNothing();
-
-  return NextResponse.json({ status: "linked" });
+  try {
+    await linkAlbumToPost({ postId: id, albumId });
+    return NextResponse.json({ status: "linked" });
+  } catch (error: any) {
+    return errorResponse(error.message || "failed to link album", 400);
+  }
 }

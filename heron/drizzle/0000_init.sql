@@ -66,7 +66,7 @@ CREATE TABLE IF NOT EXISTS post_album_links (
   PRIMARY KEY (post_id, album_id)
 );
 
-CREATE TABLE IF NOT EXISTS allowed_emails (
+CREATE TABLE IF NOT EXISTS admin_users (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   email TEXT NOT NULL UNIQUE,
   is_base_admin INTEGER NOT NULL DEFAULT 0,
@@ -76,4 +76,5 @@ CREATE TABLE IF NOT EXISTS allowed_emails (
 CREATE INDEX IF NOT EXISTS idx_posts_created_by ON posts(created_by);
 CREATE INDEX IF NOT EXISTS idx_albums_created_by ON albums(created_by);
 CREATE INDEX IF NOT EXISTS idx_images_created_by ON images(created_by);
-CREATE INDEX IF NOT EXISTS idx_allowed_emails_base_admin ON allowed_emails(is_base_admin);
+CREATE INDEX IF NOT EXISTS idx_admin_users_email ON admin_users(email);
+CREATE INDEX IF NOT EXISTS idx_admin_users_base_admin ON admin_users(is_base_admin);

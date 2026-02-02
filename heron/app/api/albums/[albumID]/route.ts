@@ -1,11 +1,7 @@
 import { NextResponse } from "next/server";
-import { eq } from "drizzle-orm";
-import { sql } from "drizzle-orm";
-
-import { getDb } from "@/lib/db";
-import { albums } from "@/lib/db/schema";
 import { errorResponse, getAuthUser, parseId } from "@/lib/api-utils";
 import { serializeAlbum } from "@/lib/serializers";
+import { deleteAlbum, getAlbumById, updateAlbum } from "@/services/albums";
 
 export async function GET(_: Request, { params }: { params: Promise<{ albumID: string }> }) {
   const { albumID } = await params;
@@ -14,12 +10,12 @@ export async function GET(_: Request, { params }: { params: Promise<{ albumID: s
     return errorResponse("invalid album id", 400);
   }
 
-  const row = await getDb().select().from(albums).where(eq(albums.id, id)).limit(1);
-  if (!row[0]) {
+  const row = await getAlbumById(id);
+  if (!row) {
     return errorResponse("album not found", 404);
   }
 
-  return NextResponse.json(serializeAlbum(row[0]));
+  return NextResponse.json(serializeAlbum(row));
 }
 
 export async function PUT(request: Request, { params }: { params: Promise<{ albumID: string }> }) {
@@ -42,22 +38,17 @@ export async function PUT(request: Request, { params }: { params: Promise<{ albu
     return errorResponse("title and slug are required", 400);
   }
 
-  const updated = await getDb()
-    .update(albums)
-    .set({
-      title,
-      slug,
-      description: (payload.description || "").trim(),
-      updatedAt: sql`CURRENT_TIMESTAMP`
-    })
-    .where(eq(albums.id, id))
-    .returning();
+  const updated = await updateAlbum(id, {
+    title,
+    slug,
+    description: (payload.description || "").trim()
+  });
 
-  if (!updated[0]) {
+  if (!updated) {
     return errorResponse("album not found", 404);
   }
 
-  return NextResponse.json(serializeAlbum(updated[0]));
+  return NextResponse.json(serializeAlbum(updated));
 }
 
 export async function DELETE(_: Request, { params }: { params: Promise<{ albumID: string }> }) {
@@ -72,6 +63,6 @@ export async function DELETE(_: Request, { params }: { params: Promise<{ albumID
     return errorResponse("invalid album id", 400);
   }
 
-  await getDb().delete(albums).where(eq(albums.id, id));
+  await deleteAlbum(id);
   return NextResponse.json({ status: "deleted" });
 }

@@ -1,10 +1,7 @@
 import { NextResponse } from "next/server";
-import { eq } from "drizzle-orm";
-
-import { getDb } from "@/lib/db";
-import { albums } from "@/lib/db/schema";
 import { errorResponse } from "@/lib/api-utils";
 import { serializeAlbum } from "@/lib/serializers";
+import { getAlbumBySlug } from "@/services/albums";
 
 export async function GET(_: Request, { params }: { params: Promise<{ slug: string }> }) {
   const { slug: rawSlug } = await params;
@@ -13,10 +10,10 @@ export async function GET(_: Request, { params }: { params: Promise<{ slug: stri
     return errorResponse("missing slug", 400);
   }
 
-  const row = await getDb().select().from(albums).where(eq(albums.slug, slug)).limit(1);
-  if (!row[0]) {
+  const row = await getAlbumBySlug(slug);
+  if (!row) {
     return errorResponse("album not found", 404);
   }
 
-  return NextResponse.json(serializeAlbum(row[0]));
+  return NextResponse.json(serializeAlbum(row));
 }

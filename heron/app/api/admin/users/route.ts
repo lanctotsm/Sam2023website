@@ -1,9 +1,6 @@
 import { NextResponse } from "next/server";
-import { asc, desc, eq } from "drizzle-orm";
-
-import { getDb } from "@/lib/db";
-import { allowedEmails } from "@/lib/db/schema";
 import { errorResponse, getAuthUser } from "@/lib/api-utils";
+import { createUser, listUsers } from "@/services/admin-users";
 
 export async function GET() {
   const user = await getAuthUser();
@@ -11,11 +8,7 @@ export async function GET() {
     return errorResponse("unauthorized", 401);
   }
 
-  const rows = await getDb()
-    .select()
-    .from(allowedEmails)
-    .orderBy(desc(allowedEmails.isBaseAdmin), asc(allowedEmails.createdAt));
-
+  const rows = await listUsers();
   return NextResponse.json(
     rows.map((row) => ({
       id: row.id,
@@ -38,22 +31,17 @@ export async function POST(request: Request) {
     return errorResponse("email is required", 400);
   }
 
-  const created = await getDb()
-    .insert(allowedEmails)
-    .values({ email, isBaseAdmin: false })
-    .onConflictDoNothing()
-    .returning();
-
-  if (!created[0]) {
-    return errorResponse("admin user already exists", 409);
+  const created = await createUser(email);
+  if (!created) {
+    return errorResponse("user already exists", 409);
   }
 
   return NextResponse.json(
     {
-      id: created[0].id,
-      email: created[0].email,
-      is_base_admin: created[0].isBaseAdmin,
-      created_at: created[0].createdAt
+      id: created.id,
+      email: created.email,
+      is_base_admin: created.isBaseAdmin,
+      created_at: created.createdAt
     },
     { status: 201 }
   );

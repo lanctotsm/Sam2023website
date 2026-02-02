@@ -1,13 +1,10 @@
 import { NextResponse } from "next/server";
-import { desc } from "drizzle-orm";
-
-import { getDb } from "@/lib/db";
-import { albums } from "@/lib/db/schema";
 import { errorResponse, getAuthUser } from "@/lib/api-utils";
 import { serializeAlbum } from "@/lib/serializers";
+import { createAlbum, getAllAlbums } from "@/services/albums";
 
 export async function GET() {
-  const rows = await getDb().select().from(albums).orderBy(desc(albums.createdAt));
+  const rows = await getAllAlbums();
   return NextResponse.json(rows.map(serializeAlbum));
 }
 
@@ -25,15 +22,15 @@ export async function POST(request: Request) {
     return errorResponse("title and slug are required", 400);
   }
 
-  const created = await getDb()
-    .insert(albums)
-    .values({
+  try {
+    const created = await createAlbum({
       title,
       slug,
       description: (payload.description || "").trim(),
       createdBy: user.id
-    })
-    .returning();
-
-  return NextResponse.json(serializeAlbum(created[0]), { status: 201 });
+    });
+    return NextResponse.json(serializeAlbum(created), { status: 201 });
+  } catch (error) {
+    return errorResponse("failed to create album", 500);
+  }
 }

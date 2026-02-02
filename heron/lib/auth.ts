@@ -4,7 +4,7 @@ import CredentialsProvider from "next-auth/providers/credentials";
 import { eq } from "drizzle-orm";
 
 import { getDb } from "@/lib/db";
-import { allowedEmails, users } from "@/lib/db/schema";
+import { adminUsers, users } from "@/lib/db/schema";
 
 function normalizeEmail(email?: string | null) {
   return email?.trim().toLowerCase() || "";
@@ -38,15 +38,15 @@ async function ensureUserRecord(params: { email: string; googleId: string }) {
   return inserted[0]?.id ?? null;
 }
 
-async function isAllowedEmail(email: string) {
+async function isAllowedUserEmail(email: string) {
   const baseAdmin = normalizeEmail(process.env.BASE_ADMIN_EMAIL);
   if (baseAdmin && baseAdmin === email) {
     const db = getDb();
     await db
-      .insert(allowedEmails)
+      .insert(adminUsers)
       .values({ email, isBaseAdmin: true })
       .onConflictDoUpdate({
-        target: allowedEmails.email,
+        target: adminUsers.email,
         set: { isBaseAdmin: true }
       });
     return true;
@@ -54,9 +54,9 @@ async function isAllowedEmail(email: string) {
 
   const db = getDb();
   const allowed = await db
-    .select({ id: allowedEmails.id })
-    .from(allowedEmails)
-    .where(eq(allowedEmails.email, email))
+    .select({ id: adminUsers.id })
+    .from(adminUsers)
+    .where(eq(adminUsers.email, email))
     .limit(1);
   return allowed.length > 0;
 }
@@ -85,7 +85,7 @@ export const authOptions: NextAuthOptions = {
           return null;
         }
 
-        if (!(await isAllowedEmail(email))) {
+        if (!(await isAllowedUserEmail(email))) {
           return null;
         }
 
@@ -100,7 +100,7 @@ export const authOptions: NextAuthOptions = {
       if (!email) {
         return false;
       }
-      return isAllowedEmail(email);
+      return isAllowedUserEmail(email);
     },
     async jwt({ token, user, account }) {
       if (user?.email) {

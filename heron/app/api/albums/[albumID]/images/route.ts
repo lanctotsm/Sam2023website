@@ -1,10 +1,8 @@
 import { NextResponse } from "next/server";
-import { asc, desc, eq } from "drizzle-orm";
-
-import { getDb } from "@/lib/db";
-import { albumImages, images } from "@/lib/db/schema";
 import { errorResponse, getAuthUser, parseId } from "@/lib/api-utils";
 import { serializeImage } from "@/lib/serializers";
+import { getImagesInAlbum } from "@/services/album-images";
+import { linkImageToAlbum } from "@/actions/albums";
 
 export async function GET(_: Request, { params }: { params: Promise<{ albumID: string }> }) {
   const { albumID } = await params;
@@ -13,23 +11,12 @@ export async function GET(_: Request, { params }: { params: Promise<{ albumID: s
     return errorResponse("invalid album id", 400);
   }
 
-  const rows = await getDb()
-    .select({
-      id: images.id,
-      s3Key: images.s3Key,
-      width: images.width,
-      height: images.height,
-      caption: images.caption,
-      altText: images.altText,
-      createdBy: images.createdBy,
-      createdAt: images.createdAt
-    })
-    .from(images)
-    .innerJoin(albumImages, eq(albumImages.imageId, images.id))
-    .where(eq(albumImages.albumId, id))
-    .orderBy(asc(albumImages.sortOrder), desc(images.createdAt));
-
-  return NextResponse.json(rows.map(serializeImage));
+  try {
+    const rows = await getImagesInAlbum(id);
+    return NextResponse.json(rows.map(serializeImage));
+  } catch (error) {
+    return errorResponse("failed to fetch images", 500);
+  }
 }
 
 export async function POST(request: Request, { params }: { params: Promise<{ albumID: string }> }) {
@@ -52,17 +39,14 @@ export async function POST(request: Request, { params }: { params: Promise<{ alb
 
   const sortOrder = Number.isInteger(payload.sort_order) ? payload.sort_order : 0;
 
-  await getDb()
-    .insert(albumImages)
-    .values({
+  try {
+    await linkImageToAlbum({
       albumId: id,
       imageId,
       sortOrder
-    })
-    .onConflictDoUpdate({
-      target: [albumImages.albumId, albumImages.imageId],
-      set: { sortOrder }
     });
-
-  return NextResponse.json({ status: "linked" });
+    return NextResponse.json({ status: "linked" });
+  } catch (error: any) {
+    return errorResponse(error.message || "failed to link image", 400);
+  }
 }
