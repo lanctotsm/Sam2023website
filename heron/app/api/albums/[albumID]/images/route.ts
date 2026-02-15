@@ -1,52 +1,54 @@
 import { NextResponse } from "next/server";
-import { errorResponse, getAuthUser, parseId } from "@/lib/api-utils";
+import { errorResponse, getAuthUser } from "@/lib/api-utils";
 import { serializeImage } from "@/lib/serializers";
-import { getImagesInAlbum } from "@/services/album-images";
-import { linkImageToAlbum } from "@/actions/albums";
+import { getAlbumById } from "@/services/albums";
+import { getAlbumImages, updateAlbumImagesOrder } from "@/services/albumImages";
 
-export async function GET(_: Request, { params }: { params: Promise<{ albumID: string }> }) {
+type Params = { params: Promise<{ albumID: string }> };
+
+export async function GET(_: Request, { params }: Params) {
   const { albumID } = await params;
-  const id = parseId(albumID);
-  if (!id) {
+  const albumId = parseInt(albumID, 10);
+  if (Number.isNaN(albumId)) {
     return errorResponse("invalid album id", 400);
   }
 
-  try {
-    const rows = await getImagesInAlbum(id);
-    return NextResponse.json(rows.map(serializeImage));
-  } catch (error) {
-    return errorResponse("failed to fetch images", 500);
+  const album = await getAlbumById(albumId);
+  if (!album) {
+    return errorResponse("album not found", 404);
   }
+
+  const rows = await getAlbumImages(albumId);
+  const body = rows.map((row) => ({
+    ...serializeImage(row),
+    sort_order: row.sortOrder
+  }));
+  return NextResponse.json(body);
 }
 
-export async function POST(request: Request, { params }: { params: Promise<{ albumID: string }> }) {
-  const { albumID } = await params;
+export async function PUT(request: Request, { params }: Params) {
   const user = await getAuthUser();
   if (!user) {
     return errorResponse("unauthorized", 401);
   }
 
-  const id = parseId(albumID);
-  if (!id) {
+  const { albumID } = await params;
+  const albumId = parseInt(albumID, 10);
+  if (Number.isNaN(albumId)) {
     return errorResponse("invalid album id", 400);
   }
 
+  const album = await getAlbumById(albumId);
+  if (!album) {
+    return errorResponse("album not found", 404);
+  }
+
   const payload = await request.json();
-  const imageId = Number(payload.image_id);
-  if (!Number.isInteger(imageId) || imageId <= 0) {
-    return errorResponse("image_id is required", 400);
+  const order = payload.order;
+  if (!Array.isArray(order) || order.some((x) => typeof x !== "number")) {
+    return errorResponse("order must be an array of image ids", 400);
   }
 
-  const sortOrder = Number.isInteger(payload.sort_order) ? payload.sort_order : 0;
-
-  try {
-    await linkImageToAlbum({
-      albumId: id,
-      imageId,
-      sortOrder
-    });
-    return NextResponse.json({ status: "linked" });
-  } catch (error: any) {
-    return errorResponse(error.message || "failed to link image", 400);
-  }
+  await updateAlbumImagesOrder(albumId, order);
+  return NextResponse.json({ ok: true });
 }

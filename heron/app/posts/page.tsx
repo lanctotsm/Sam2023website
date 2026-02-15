@@ -9,14 +9,14 @@ export default async function PostsPage() {
   const posts = postsData || [];
 
   return (
-    <div className="stack">
-      <h1>Posts</h1>
-      <div className="grid">
+    <div className="grid gap-4">
+      <h1 className="text-chestnut">Posts</h1>
+      <div className="grid gap-4 md:grid-cols-2">
         {posts.map((post) => (
-          <article className="card" key={post.id}>
-            <h2>{post.title}</h2>
-            <p>{post.summary}</p>
-            <Link href={`/posts/${post.slug}`}>Read more</Link>
+          <article key={post.id} className="rounded-xl border border-desert-tan-dark bg-surface p-4 shadow-[0_2px_8px_rgba(72,9,3,0.08)]">
+            <h2 className="text-chestnut">{post.title}</h2>
+            <p className="mt-2 text-chestnut-dark">{post.summary}</p>
+            <Link href={`/posts/${post.slug}`} className="mt-2 inline-block font-medium text-copper hover:text-chestnut">Read more</Link>
           </article>
         ))}
       </div>

@@ -4,6 +4,8 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useMemo } from "react";
 import { signOut, useSession } from "next-auth/react";
+import ThemeToggle from "@/components/ThemeToggle";
+import SearchBar from "@/components/SearchBar";
 
 type NavItem = {
   href: string;
@@ -37,25 +39,42 @@ export default function Navigation() {
   };
 
   return (
-    <nav className={`navbar ${user ? "navbar-auth" : "navbar-guest"}`}>
-      <div className="navbar-links">
+    <nav
+      className={`flex flex-wrap items-center justify-between gap-4 border-b px-5 py-5 ${
+        user
+          ? "border-chestnut-dark bg-chestnut dark:border-dark-muted dark:bg-dark-surface"
+          : "bg-chestnut-light dark:bg-dark-surface dark:border-dark-muted dark:border-b"
+      }`}
+    >
+      <div className="flex items-center gap-4">
         {filteredItems.map((item) => (
           <Link
             key={item.href}
-            className={`navlink ${pathname === item.href ? "active" : ""}`}
+            className={`text-desert-tan transition-colors hover:text-caramel-light dark:text-dark-text dark:hover:text-desert-tan ${
+              pathname === item.href ? "text-caramel-light dark:text-desert-tan" : ""
+            }`}
             href={item.href}
           >
             {item.label}
           </Link>
         ))}
       </div>
-      <div className="navbar-status">
+      <div className="flex items-center gap-3 text-sm text-desert-tan dark:text-dark-text">
+        <SearchBar />
+        <ThemeToggle />
         {status === "loading" ? (
-          <span className="status muted">Checking session...</span>
+          <span className="rounded-full border border-olive-dark bg-chestnut-light px-2.5 py-1.5 text-desert-tan dark:border-dark-muted dark:bg-dark-bg dark:text-dark-text">
+            Checking session...
+          </span>
         ) : user ? (
           <>
-            <span className="status">Signed in</span>
-            <button className="secondary" onClick={handleLogout}>
+            <span className="rounded-full border border-olive-dark bg-chestnut-light px-2.5 py-1.5 text-desert-tan dark:border-dark-muted dark:bg-dark-bg dark:text-dark-text">
+              Signed in
+            </span>
+            <button
+              className="rounded-lg border border-desert-tan bg-transparent px-4 py-2.5 font-semibold text-desert-tan transition-colors hover:bg-desert-tan/10 dark:border-dark-text dark:text-dark-text dark:hover:bg-dark-surface"
+              onClick={handleLogout}
+            >
               Logout
             </button>
           </>

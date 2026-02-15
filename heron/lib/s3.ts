@@ -24,12 +24,32 @@ export function getS3Client() {
   });
 }
 
+/** S3 client for generating presigned URLs. Uses S3_PRESIGN_ENDPOINT_URL when set so the signed URL is browser-accessible (e.g. localhost:9000 instead of minio:9000). */
+function getPresignS3Client() {
+  const region = getEnv("S3_REGION", "us-east-1");
+  const endpoint = getEnv("S3_PRESIGN_ENDPOINT_URL") || getEnv("S3_ENDPOINT_URL");
+  const forcePathStyle = getEnv("S3_FORCE_PATH_STYLE", "false") === "true";
+
+  return new S3Client({
+    region,
+    endpoint: endpoint || undefined,
+    forcePathStyle,
+    credentials:
+      getEnv("AWS_ACCESS_KEY_ID") && getEnv("AWS_SECRET_ACCESS_KEY")
+        ? {
+            accessKeyId: getEnv("AWS_ACCESS_KEY_ID"),
+            secretAccessKey: getEnv("AWS_SECRET_ACCESS_KEY")
+          }
+        : undefined
+  });
+}
+
 export async function presignPutObject(params: {
   key: string;
   contentType: string;
   size: number;
 }) {
-  const client = getS3Client();
+  const client = getPresignS3Client();
   const bucket = getEnv("S3_BUCKET");
   if (!bucket) {
     throw new Error("S3_BUCKET is required");

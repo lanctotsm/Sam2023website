@@ -6,6 +6,7 @@ import { drizzle } from "drizzle-orm/better-sqlite3";
 import { migrateIfNeeded } from "./migrate";
 
 let dbInstance: ReturnType<typeof drizzle> | null = null;
+let rawDb: Database.Database | null = null;
 
 export function getDb() {
   if (dbInstance) {
@@ -25,6 +26,13 @@ export function getDb() {
 
   migrateIfNeeded(sqlite);
 
+  rawDb = sqlite;
   dbInstance = drizzle(sqlite);
   return dbInstance;
+}
+
+/** Raw DB for FTS and other raw SQL. Call getDb() first to ensure migrations ran. */
+export function getRawDb(): Database.Database {
+  if (!rawDb) getDb();
+  return rawDb!;
 }

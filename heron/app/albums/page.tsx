@@ -24,26 +24,24 @@ export default async function AlbumsPage() {
   );
 
   return (
-    <div className="stack">
-      <h1>Albums</h1>
+    <div className="grid gap-4">
+      <h1 className="text-chestnut">Albums</h1>
       {user && <CreateAlbumForm />}
-      <div className="grid album-grid">
+      <div className="grid grid-cols-[repeat(auto-fit,minmax(240px,1fr))] gap-4">
         {albumCards.map(({ album, count, thumbnail }) => (
-          <article className="card album-card" key={album.id}>
-            <Link href={`/albums/${album.slug}`} className="album-thumb">
+          <article key={album.id} className="rounded-xl border border-desert-tan-dark bg-surface p-4 shadow-[0_2px_8px_rgba(72,9,3,0.08)]">
+            <Link href={`/albums/${album.slug}`} className="block overflow-hidden rounded-xl border border-desert-tan-dark bg-desert-tan-dark">
               {thumbnail ? (
                 // eslint-disable-next-line @next/next/no-img-element
-                <img src={buildImageUrl(thumbnail.s3_key)} alt={thumbnail.alt_text || album.title} />
+                <img src={buildImageUrl(thumbnail.s3_key)} alt={thumbnail.alt_text || album.title} className="block h-44 w-full object-cover" />
               ) : (
-                <div className="placeholder">No photos yet</div>
+                <div className="grid h-44 place-items-center text-olive">No photos yet</div>
               )}
             </Link>
-            <h2>{album.title}</h2>
-            <p>{album.description}</p>
-            <p className="muted">{count} photos</p>
-            <Link className="text-link" href={`/albums/${album.slug}`}>
-              View album
-            </Link>
+            <h2 className="mt-3 text-chestnut">{album.title}</h2>
+            <p className="text-chestnut-dark">{album.description}</p>
+            <p className="text-olive">{count} photos</p>
+            <Link href={`/albums/${album.slug}`} className="font-medium text-copper hover:text-chestnut">View album</Link>
           </article>
         ))}
       </div>

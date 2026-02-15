@@ -57,7 +57,10 @@ services:
       context: ./heron
       args:
         NEXT_PUBLIC_IMAGE_BASE_URL: ${S3_PUBLIC_BASE_URL:-http://localhost:9000/cms}
+    ports:
+      - "3000:3000"
     environment:
+      API_INTERNAL_URL: http://heron:3000
       NEXT_PUBLIC_IMAGE_BASE_URL: ${S3_PUBLIC_BASE_URL:-http://localhost:9000/cms}
       NEXTAUTH_URL: ${NEXTAUTH_URL:-http://localhost:3000}
       NEXTAUTH_SECRET: ${NEXTAUTH_SECRET:-dev-secret}
@@ -68,6 +71,7 @@ services:
       S3_BUCKET: ${S3_BUCKET:-cms}
       S3_PUBLIC_BASE_URL: ${S3_PUBLIC_BASE_URL:-http://localhost:9000/cms}
       S3_ENDPOINT_URL: ${S3_ENDPOINT_URL:-http://minio:9000}
+      S3_PRESIGN_ENDPOINT_URL: ${S3_PRESIGN_ENDPOINT_URL:-http://localhost:9000}
       S3_FORCE_PATH_STYLE: ${S3_FORCE_PATH_STYLE:-true}
       AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID:-minioadmin}
       AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:-minioadmin}
