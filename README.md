@@ -46,7 +46,7 @@ graph TD
 ├── infra/                  # AWS CloudFormation templates for Lightsail
 ├── .github/                # CI/CD Workflows (Deployments)
 ├── .cursor/                # Project-specific AI rules and instructions
-├── docker-compose.yml      # Docker Compose for production-like testing
+├── docker-compose.yml      # Optional: Local testing with production build
 └── docker-compose.dev.yml  # Local development (App + MinIO for local S3)
 ```
 
