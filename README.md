@@ -1,6 +1,6 @@
 # Heron CMS
 
-Heron is a modern, lightweight, and containerized CMS built for personal portfolios and blogs. It features a Next.js frontend, a SQLite database managed via Drizzle ORM, and integrated media management using S3-compatible storage.
+Heron is a modern, lightweight CMS built for personal portfolios and blogs. It features a Next.js frontend, a SQLite database managed via Drizzle ORM, and integrated media management using S3-compatible storage.
 
 ## 🚀 Key Features
 
@@ -10,7 +10,7 @@ Heron is a modern, lightweight, and containerized CMS built for personal portfol
 - **Authentication**: Powered by NextAuth.js, supporting Google OAuth for production and a local bypass for development.
 - **Portable Data**: Uses SQLite for the main database, making the entire application easy to back up and move.
 - **Infrastructure as Code**: Includes AWS CloudFormation templates for one-click deployment to AWS Lightsail.
-- **Dockerized Workflow**: Seamless development and production environments using Docker and Docker Compose.
+- **Streamlined Development**: Docker-based local development environment with MinIO for S3 emulation.
 
 ## 📊 Project Architecture
 
@@ -24,8 +24,8 @@ graph TD
     end
     
     subgraph Hosting
-        NextJS --> Docker[Docker]
-        Docker --> Lightsail[AWS Lightsail]
+        NextJS --> PM2[PM2 Process Manager]
+        PM2 --> Lightsail[AWS Lightsail]
     end
 ```
 
@@ -46,7 +46,7 @@ graph TD
 ├── infra/                  # AWS CloudFormation templates for Lightsail
 ├── .github/                # CI/CD Workflows (Deployments)
 ├── .cursor/                # Project-specific AI rules and instructions
-├── docker-compose.yml      # Production orchestration (App + Volumes)
+├── docker-compose.yml      # Docker Compose for production-like testing
 └── docker-compose.dev.yml  # Local development (App + MinIO for local S3)
 ```
 
@@ -58,7 +58,8 @@ graph TD
 - **ORM**: [Drizzle ORM](https://orm.drizzle.team/)
 - **Auth**: [NextAuth.js](https://next-auth.js.org/)
 - **Storage**: S3-compatible ([AWS S3](https://aws.amazon.com/s3/) / [MinIO](https://min.io/))
-- **Deployment**: [Docker](https://www.docker.com/) & [AWS Lightsail](https://aws.amazon.com/lightsail/)
+- **Deployment**: [Node.js](https://nodejs.org/) with [PM2](https://pm2.keymetrics.io/) on [AWS Lightsail](https://aws.amazon.com/lightsail/)
+- **Local Development**: [Docker](https://www.docker.com/) & [Docker Compose](https://docs.docker.com/compose/)
 
 ## 💻 Getting Started
 
@@ -79,6 +80,13 @@ graph TD
 
 ## 🚢 Deployment
 
-Deployments are automated via GitHub Actions to AWS Lightsail. The pipeline builds the Docker image, pushes it to GHCR, and updates the Lightsail instance using CloudFormation.
+Deployments are automated via GitHub Actions to AWS Lightsail. The pipeline:
+1. Builds the Next.js app in standalone mode
+2. Syncs build artifacts to the Lightsail instance via rsync over SSH
+3. Manages the application process using pm2 for zero-downtime restarts
+
+The CloudFormation template provisions the Lightsail instance with Node.js 20 and pm2 pre-installed.
 
 See `.github/workflows/deploy-lightsail.yml` for the CI/CD pipeline and `infra/lightsail-cms.yaml` for the infrastructure definition.
+
+**Note**: Docker is used only for local development (via `docker-compose.dev.yml`). Production deployments run Node.js directly on the Lightsail instance.
