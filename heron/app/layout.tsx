@@ -4,8 +4,9 @@ import Navigation from "@/components/Navigation";
 import Providers from "@/app/providers";
 
 const baseUrl =
-  process.env.NEXTAUTH_URL ||
-  (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "http://localhost:3000");
+  process.env.NEXTAUTH_URL?.trim() ||
+  (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "http://localhost:3000") ||
+  "http://localhost:3000";
 
 export const metadata = {
   title: "Heron",
