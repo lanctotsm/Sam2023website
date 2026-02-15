@@ -213,12 +213,11 @@ jobs:
             ubuntu@$LIGHTSAIL_HOST "bash -se" <<'EOF'
           set -euo pipefail
           cd /opt/heron-cms
-          
-          # Ensure pm2 is available (UserData installs it; PATH may omit npm global bin in non-interactive SSH)
+                  # Ensure pm2 is available (do not assume PATH; UserData installs node+npm+pm2)
           export PATH="/usr/local/bin:/usr/bin:$PATH"
           if ! command -v pm2 >/dev/null 2>&1; then
             echo "Installing pm2..."
-            sudo npm install -g pm2
+            sudo /usr/bin/npm install -g pm2
           fi
           
           # Ensure pm2 resurrects on reboot (idempotent)
