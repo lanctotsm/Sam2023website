@@ -8,6 +8,7 @@ Parameters:
   LightsailBlueprintId:
     Type: String
     Default: ubuntu_22_04
+    Description: "Blueprint ID. ubuntu_22_04 = Node.js via UserData. nodejs = Bitnami with Node.js pre-installed (workflow expects ubuntu user)."
   LightsailBundleId:
     Type: String
     Default: nano_3_0
@@ -111,6 +112,7 @@ Resources:
         chown -R ubuntu:ubuntu /opt/heron-cms
         mkdir -p /var/lib/heron-cms/data
         chown -R ubuntu:ubuntu /var/lib/heron-cms
+        touch /var/lib/heron-cms/.startup-done
         echo "[startup] Done."
 
   CmsStaticIp:

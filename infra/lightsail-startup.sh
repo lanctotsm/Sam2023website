@@ -36,4 +36,7 @@ chown -R ubuntu:ubuntu /opt/heron-cms
 mkdir -p /var/lib/heron-cms/data
 chown -R ubuntu:ubuntu /var/lib/heron-cms
 
+# Signal startup complete (deploy workflow polls for this)
+touch /var/lib/heron-cms/.startup-done
+
 echo "[startup] Done."

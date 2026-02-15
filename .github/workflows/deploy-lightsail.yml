@@ -55,6 +55,7 @@ jobs:
             --parameter-overrides \
               BucketName=${{ secrets.CMS_BUCKET_NAME }} \
               LightsailInstanceName=${{ secrets.LIGHTSAIL_INSTANCE_NAME || 'heron-cms' }} \
+              LightsailBlueprintId=${{ secrets.LIGHTSAIL_BLUEPRINT_ID || 'ubuntu_22_04' }} \
               StaticIpName=${{ secrets.LIGHTSAIL_STATIC_IP_NAME || 'heron-cms-ip' }} \
               KeyPairName=${{ secrets.LIGHTSAIL_KEY_PAIR_NAME }} \
               CloudFrontPriceClass=${{ secrets.CLOUDFRONT_PRICE_CLASS || 'PriceClass_100' }}
@@ -66,7 +67,6 @@ jobs:
             --stack-name ${{ secrets.LIGHTSAIL_STACK_NAME }} \
             --query "Stacks[0].Outputs[?OutputKey=='LightsailStaticIp'].OutputValue" \
             --output text)
-          
           echo "Lightsail Static IP: $STATIC_IP"
           echo "public_ip=$STATIC_IP" >> $GITHUB_OUTPUT
 
@@ -139,6 +139,22 @@ jobs:
           sudo mkdir -p /opt/heron-cms
           sudo chown -R ubuntu:ubuntu /opt/heron-cms
           INIT
+
+      - name: Wait for UserData startup (Node.js, npm, pm2)
+        run: |
+          LIGHTSAIL_HOST="${{ steps.lightsail-info.outputs.public_ip }}"
+          echo "Waiting for UserData to complete (Node.js, npm, pm2)..."
+          for i in $(seq 1 36); do
+            if ssh -i lightsail.key -o StrictHostKeyChecking=no -o ServerAliveInterval=60 -o ServerAliveCountMax=3 \
+              ubuntu@$LIGHTSAIL_HOST "export PATH='/usr/local/bin:/usr/bin:\$PATH' && (test -f /var/lib/heron-cms/.startup-done || command -v npm >/dev/null)" 2>/dev/null; then
+              echo "✓ Startup complete"
+              exit 0
+            fi
+            echo "Attempt $i/36: waiting 10s..."
+            sleep 10
+          done
+          echo "✗ UserData did not complete within 6 minutes. Instance may need to be recreated with updated CloudFormation."
+          exit 1
 
       - name: Ensure persistent data directory on instance
         run: |
@@ -214,14 +230,25 @@ jobs:
           set -euo pipefail
           cd /opt/heron-cms
           export PATH="/usr/local/bin:/usr/bin:$PATH"
-          
+          NPM_CMD="$(command -v npm 2>/dev/null)"
+          [ -z "$NPM_CMD" ] && [ -x /usr/bin/npm ] && NPM_CMD="/usr/bin/npm"
+          [ -z "$NPM_CMD" ] && [ -x /usr/local/bin/npm ] && NPM_CMD="/usr/local/bin/npm"
+          if [ -z "$NPM_CMD" ] && command -v node >/dev/null 2>&1; then
+            NODE_DIR="$(dirname "$(command -v node)")"
+            [ -x "$NODE_DIR/npm" ] && NPM_CMD="$NODE_DIR/npm"
+          fi
+          if [ -z "$NPM_CMD" ]; then
+            echo "Error: npm not found. Ensure Node.js is installed (CloudFormation UserData / infra/lightsail-cms.yaml)."
+            exit 1
+          fi
+
           # Install pm2 as ubuntu user if missing (no sudo - avoids password prompt over SSH)
           if ! command -v pm2 >/dev/null 2>&1; then
             echo "Installing pm2..."
-            /usr/bin/npm install -g pm2
-            export PATH="$(/usr/bin/npm config get prefix)/bin:$PATH"
+            "$NPM_CMD" install -g pm2
+            export PATH="$("$NPM_CMD" config get prefix 2>/dev/null)/bin:$PATH"
           fi
-          
+
           # Ensure pm2 resurrects on reboot (idempotent; requires passwordless sudo on instance)
           sudo -n env PATH=$PATH pm2 startup systemd -u ubuntu --hp /home/ubuntu 2>/dev/null || true
           
