@@ -141,8 +141,8 @@ export default function AdminMediaPage() {
           const dimensions = await getImageDimensions(file);
           return {
             s3_key: presignData.files[index].s3_key,
-            caption: caption || file.name,
-            alt_text: altText || file.name,
+            caption: caption || "",
+            alt_text: altText || "",
             width: dimensions?.width,
             height: dimensions?.height
           };

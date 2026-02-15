@@ -18,7 +18,11 @@ export async function extractImagesFromZip(zipFile: File): Promise<File[]> {
     }
     
     // Check if it's an image file
-    const ext = filename.toLowerCase().slice(filename.lastIndexOf("."));
+    const lastDotIndex = filename.lastIndexOf(".");
+    if (lastDotIndex === -1) {
+      continue; // Skip files without extensions
+    }
+    const ext = filename.toLowerCase().slice(lastDotIndex);
     if (!imageExtensions.includes(ext)) {
       continue;
     }
