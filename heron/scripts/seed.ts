@@ -1,6 +1,5 @@
 import { getDb } from "../lib/db";
 import { albums, adminUsers } from "../lib/db/schema";
-import { eq } from "drizzle-orm";
 
 async function main() {
   console.log("Starting local seed...");

@@ -124,6 +124,31 @@ jobs:
           echo "✗ SSH not ready after 30 attempts"
           exit 1
 
+      - name: Wait for instance setup (cloud-init and app directory)
+        run: |
+          LIGHTSAIL_HOST="${{ steps.lightsail-info.outputs.public_ip }}"
+          ssh -i lightsail.key \
+            -o StrictHostKeyChecking=no \
+            -o ServerAliveInterval=60 \
+            -o ServerAliveCountMax=3 \
+            ubuntu@$LIGHTSAIL_HOST "bash -se" <<'INIT'
+          set -euo pipefail
+          if command -v cloud-init >/dev/null 2>&1; then
+            sudo cloud-init status --wait >/dev/null 2>&1 || true
+          fi
+          sudo mkdir -p /opt/heron-cms
+          sudo chown -R ubuntu:ubuntu /opt/heron-cms
+          INIT
+
+      - name: Ensure persistent data directory on instance
+        run: |
+          LIGHTSAIL_HOST="${{ steps.lightsail-info.outputs.public_ip }}"
+          ssh -i lightsail.key \
+            -o StrictHostKeyChecking=no \
+            -o ServerAliveInterval=60 \
+            -o ServerAliveCountMax=3 \
+            ubuntu@$LIGHTSAIL_HOST "mkdir -p /var/lib/heron-cms/data && chown -R ubuntu:ubuntu /var/lib/heron-cms"
+
       - name: Sync app to Lightsail
         run: |
           LIGHTSAIL_HOST="${{ steps.lightsail-info.outputs.public_ip }}"
@@ -167,7 +192,7 @@ jobs:
           NEXTAUTH_SECRET=${{ secrets.NEXTAUTH_SECRET }}
           BASE_ADMIN_EMAIL=${{ secrets.BASE_ADMIN_EMAIL }}
           DEV_AUTH_BYPASS=false
-          CMS_DB_PATH=/opt/heron-cms/data/cms.db
+          CMS_DB_PATH=/var/lib/heron-cms/data/cms.db
           S3_REGION=${{ secrets.AWS_REGION }}
           S3_BUCKET=${{ secrets.CMS_BUCKET_NAME }}
           S3_PUBLIC_BASE_URL=${{ secrets.S3_PUBLIC_BASE_URL }}
@@ -189,6 +214,9 @@ jobs:
           set -euo pipefail
           cd /opt/heron-cms
           
+          # Ensure pm2 resurrects on reboot (idempotent)
+          sudo env PATH=$PATH pm2 startup systemd -u ubuntu --hp /home/ubuntu 2>/dev/null || true
+          
           # Start/Restart with pm2
           if pm2 show heron-cms > /dev/null 2>&1; then
             echo "Restarting heron-cms..."
@@ -198,7 +226,7 @@ jobs:
             pm2 start server.js --name heron-cms
           fi
           
-          # Save pm2 list to survive reboots
+          # Save process list so it survives reboots
           pm2 save
           
           echo "✓ Services restarted successfully"
