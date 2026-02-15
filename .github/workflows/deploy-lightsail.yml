@@ -252,11 +252,13 @@ jobs:
             exit 1
           fi
 
-          # Install pm2 as app user if missing (no sudo - avoids password prompt over SSH)
+          # Install pm2 as app user if missing (user prefix to avoid writing to /opt/bitnami/node)
           if ! command -v pm2 >/dev/null 2>&1; then
             echo "Installing pm2..."
+            export npm_config_prefix="$HOME/.local"
+            mkdir -p "$HOME/.local/bin"
             "$NPM_CMD" install -g pm2
-            export PATH="$("$NPM_CMD" config get prefix 2>/dev/null)/bin:$PATH"
+            export PATH="$HOME/.local/bin:$PATH"
           fi
 
           # Ensure pm2 resurrects on reboot (idempotent; requires passwordless sudo on instance)
