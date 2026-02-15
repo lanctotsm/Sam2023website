@@ -1,7 +1,7 @@
 #!/bin/bash
-# Lightsail instance startup: install all dependencies for Heron CMS.
-# Assumes nothing is installed. Run at first boot via CloudFormation UserData.
-# Keep in sync with UserData in infra/lightsail-cms.yaml when changing.
+# Lightsail instance startup: install all dependencies for Heron CMS (Ubuntu path).
+# Used when NodePreinstalled=false (e.g. ubuntu_22_04). For Bitnami, CloudFormation
+# UserData in lightsail-cms.yaml runs the conditional path. Keep in sync with that.
 set -euo pipefail
 
 export DEBIAN_FRONTEND=noninteractive

@@ -7,8 +7,17 @@ Parameters:
     Default: heron-cms
   LightsailBlueprintId:
     Type: String
-    Default: ubuntu_22_04
-    Description: "Blueprint ID. ubuntu_22_04 = Node.js via UserData. nodejs = Bitnami with Node.js pre-installed (workflow expects ubuntu user)."
+    Default: nodejs
+    Description: "Blueprint ID. nodejs = Bitnami Node.js (default). ubuntu_22_04 = Ubuntu with Node.js via UserData. Use aws lightsail get-blueprints to list."
+  LightsailInstanceUser:
+    Type: String
+    Default: bitnami
+    Description: "SSH and app user. bitnami for Bitnami blueprint, ubuntu for ubuntu_22_04."
+  NodePreinstalled:
+    Type: String
+    Default: 'true'
+    AllowedValues: ['true', 'false']
+    Description: "Set to false for ubuntu_22_04 (Node installed by UserData). true for Bitnami."
   LightsailBundleId:
     Type: String
     Default: nano_3_0
@@ -92,26 +101,35 @@ Resources:
       BlueprintId: !Ref LightsailBlueprintId
       BundleId: !Ref LightsailBundleId
       KeyPairName: !Ref KeyPairName
-      UserData: |
+      UserData: !Sub |
         #!/bin/bash
-        # Runs infra/lightsail-startup.sh - keep in sync with that file. Assumes nothing is installed.
+        # Supports Bitnami (Node pre-installed) and Ubuntu (Node via UserData). Keep in sync with infra/lightsail-startup.sh.
         set -euo pipefail
         export DEBIAN_FRONTEND=noninteractive
-        echo "[startup] Installing base system packages..."
-        apt-get update -y
-        apt-get install -y ca-certificates curl gnupg
-        echo "[startup] Installing Node.js 20 (NodeSource)..."
-        curl -fsSL https://deb.nodesource.com/setup_20.x | bash -
-        apt-get install -y nodejs
-        echo "[startup] Installing pm2..."
-        /usr/bin/npm install -g pm2
+        if [ "${NodePreinstalled}" = "false" ]; then
+          echo "[startup] Installing base system packages..."
+          apt-get update -y
+          apt-get install -y ca-certificates curl gnupg
+          echo "[startup] Installing Node.js 20 (NodeSource)..."
+          curl -fsSL https://deb.nodesource.com/setup_20.x | bash -
+          apt-get install -y nodejs
+          echo "[startup] Installing pm2..."
+          /usr/bin/npm install -g pm2
+        else
+          echo "[startup] Node pre-installed (Bitnami); ensuring pm2..."
+          NPM_CMD="$(command -v npm 2>/dev/null || echo /usr/bin/npm)"
+          if ! command -v pm2 >/dev/null 2>&1; then
+            "$NPM_CMD" install -g pm2 2>/dev/null || true
+          fi
+        fi
         echo "[startup] Installing utilities..."
-        apt-get install -y rsync git unzip jq wget vim net-tools htop ufw
+        apt-get update -y 2>/dev/null || true
+        apt-get install -y rsync git unzip jq wget vim net-tools htop ufw 2>/dev/null || true
         echo "[startup] Creating app and data directories..."
         mkdir -p /opt/heron-cms
-        chown -R ubuntu:ubuntu /opt/heron-cms
+        chown -R ${LightsailInstanceUser}:${LightsailInstanceUser} /opt/heron-cms
         mkdir -p /var/lib/heron-cms/data
-        chown -R ubuntu:ubuntu /var/lib/heron-cms
+        chown -R ${LightsailInstanceUser}:${LightsailInstanceUser} /var/lib/heron-cms
         touch /var/lib/heron-cms/.startup-done
         echo "[startup] Done."
 
