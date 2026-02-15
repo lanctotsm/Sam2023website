@@ -213,9 +213,17 @@ jobs:
             ubuntu@$LIGHTSAIL_HOST "bash -se" <<'EOF'
           set -euo pipefail
           cd /opt/heron-cms
+          export PATH="/usr/local/bin:/usr/bin:$PATH"
           
-          # Ensure pm2 resurrects on reboot (idempotent)
-          sudo env PATH=$PATH pm2 startup systemd -u ubuntu --hp /home/ubuntu 2>/dev/null || true
+          # Install pm2 as ubuntu user if missing (no sudo - avoids password prompt over SSH)
+          if ! command -v pm2 >/dev/null 2>&1; then
+            echo "Installing pm2..."
+            /usr/bin/npm install -g pm2
+            export PATH="$(/usr/bin/npm config get prefix)/bin:$PATH"
+          fi
+          
+          # Ensure pm2 resurrects on reboot (idempotent; requires passwordless sudo on instance)
+          sudo -n env PATH=$PATH pm2 startup systemd -u ubuntu --hp /home/ubuntu 2>/dev/null || true
           
           # Start/Restart with pm2
           if pm2 show heron-cms > /dev/null 2>&1; then
