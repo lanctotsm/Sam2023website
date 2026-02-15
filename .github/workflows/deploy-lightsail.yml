@@ -71,6 +71,28 @@ jobs:
           echo "Lightsail Static IP: $STATIC_IP"
           echo "public_ip=$STATIC_IP" >> $GITHUB_OUTPUT
 
+      - name: Update Route 53 A record
+        if: ${{ secrets.ROUTE53_HOSTED_ZONE_ID != '' && secrets.ROUTE53_RECORD_NAME != '' }}
+        run: |
+          STATIC_IP="${{ steps.lightsail-info.outputs.public_ip }}"
+          ZONE_ID="${{ secrets.ROUTE53_HOSTED_ZONE_ID }}"
+          RECORD_NAME="${{ secrets.ROUTE53_RECORD_NAME }}"
+          aws route53 change-resource-record-sets \
+            --hosted-zone-id "$ZONE_ID" \
+            --change-batch "{
+              \"Comment\": \"Point domain to Lightsail CMS\",
+              \"Changes\": [{
+                \"Action\": \"UPSERT\",
+                \"ResourceRecordSet\": {
+                  \"Name\": \"$RECORD_NAME\",
+                  \"Type\": \"A\",
+                  \"TTL\": 300,
+                  \"ResourceRecords\": [{\"Value\": \"$STATIC_IP\"}]
+                }
+              }]
+            }"
+          echo "✓ Route 53 A record updated: $RECORD_NAME -> $STATIC_IP"
+
       - name: Prepare SSH key
         run: |
           if [ -z "${{ secrets.LIGHTSAIL_SSH_KEY_SECRET_NAME }}" ]; then
@@ -228,6 +250,46 @@ jobs:
           GOOGLE_CLIENT_SECRET=${{ secrets.GOOGLE_CLIENT_SECRET }}
           EOF
 
+      - name: Write PM2 ecosystem config (so app gets env including CMS_DB_PATH)
+        env:
+          ECOSYSTEM_NEXTAUTH_URL: ${{ secrets.NEXTAUTH_URL }}
+          ECOSYSTEM_NEXTAUTH_SECRET: ${{ secrets.NEXTAUTH_SECRET }}
+          ECOSYSTEM_BASE_ADMIN_EMAIL: ${{ secrets.BASE_ADMIN_EMAIL }}
+          ECOSYSTEM_AWS_REGION: ${{ secrets.AWS_REGION }}
+          ECOSYSTEM_CMS_BUCKET: ${{ secrets.CMS_BUCKET_NAME }}
+          ECOSYSTEM_S3_PUBLIC_BASE_URL: ${{ secrets.S3_PUBLIC_BASE_URL }}
+          ECOSYSTEM_APP_ACCESS_KEY: ${{ secrets.APP_AWS_ACCESS_KEY_ID }}
+          ECOSYSTEM_APP_SECRET_KEY: ${{ secrets.APP_AWS_SECRET_ACCESS_KEY }}
+          ECOSYSTEM_GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID }}
+          ECOSYSTEM_GOOGLE_CLIENT_SECRET: ${{ secrets.GOOGLE_CLIENT_SECRET }}
+        run: |
+          node -e "
+          const env = {
+            PORT: '3000',
+            NODE_ENV: 'production',
+            NEXTAUTH_URL: process.env.ECOSYSTEM_NEXTAUTH_URL || '',
+            NEXTAUTH_SECRET: process.env.ECOSYSTEM_NEXTAUTH_SECRET || '',
+            BASE_ADMIN_EMAIL: process.env.ECOSYSTEM_BASE_ADMIN_EMAIL || '',
+            DEV_AUTH_BYPASS: 'false',
+            CMS_DB_PATH: '/var/lib/heron-cms/data/cms.db',
+            S3_REGION: process.env.ECOSYSTEM_AWS_REGION || '',
+            S3_BUCKET: process.env.ECOSYSTEM_CMS_BUCKET || '',
+            S3_PUBLIC_BASE_URL: process.env.ECOSYSTEM_S3_PUBLIC_BASE_URL || '',
+            AWS_ACCESS_KEY_ID: process.env.ECOSYSTEM_APP_ACCESS_KEY || '',
+            AWS_SECRET_ACCESS_KEY: process.env.ECOSYSTEM_APP_SECRET_KEY || '',
+            GOOGLE_CLIENT_ID: process.env.ECOSYSTEM_GOOGLE_CLIENT_ID || '',
+            GOOGLE_CLIENT_SECRET: process.env.ECOSYSTEM_GOOGLE_CLIENT_SECRET || ''
+          };
+          const cfg = 'module.exports = { apps: [{ name: \"heron-cms\", script: \"server.js\", cwd: \"/opt/heron-cms\", env: ' + JSON.stringify(env) + ' }] };';
+          require('fs').writeFileSync('ecosystem.config.cjs', cfg);
+          "
+          LIGHTSAIL_HOST="${{ steps.lightsail-info.outputs.public_ip }}"
+          scp -i lightsail.key \
+            -o StrictHostKeyChecking=no \
+            -o ServerAliveInterval=60 \
+            -o ServerAliveCountMax=3 \
+            ecosystem.config.cjs bitnami@$LIGHTSAIL_HOST:/opt/heron-cms/
+
       - name: Restart services
         run: |
           LIGHTSAIL_HOST="${{ steps.lightsail-info.outputs.public_ip }}"
@@ -264,16 +326,16 @@ jobs:
           # Ensure pm2 resurrects on reboot (idempotent; requires passwordless sudo on instance)
           sudo -n env PATH=$PATH pm2 startup systemd -u bitnami --hp /home/bitnami 2>/dev/null || true
           
-          # Start/Restart with pm2
+          # Start/Restart with pm2 (ecosystem supplies env so CMS_DB_PATH and others are set)
           if pm2 show heron-cms > /dev/null 2>&1; then
-            echo "Restarting heron-cms..."
-            pm2 restart heron-cms
+            echo "Restarting heron-cms with updated env..."
+            pm2 reload ecosystem.config.cjs --update-env
           else
             echo "Starting heron-cms..."
-            pm2 start server.js --name heron-cms
+            pm2 start ecosystem.config.cjs
           fi
           
-          # Save process list so it survives reboots
+          # Save process list so it survives reboots (env is stored in ecosystem)
           pm2 save
           
           echo "✓ Services restarted successfully"
