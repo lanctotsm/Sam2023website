@@ -241,14 +241,14 @@ jobs:
             echo "Error: npm not found. Ensure Node.js is installed (CloudFormation UserData / infra/lightsail-cms.yaml)."
             exit 1
           fi
-          
+
           # Install pm2 as ubuntu user if missing (no sudo - avoids password prompt over SSH)
           if ! command -v pm2 >/dev/null 2>&1; then
             echo "Installing pm2..."
             "$NPM_CMD" install -g pm2
             export PATH="$("$NPM_CMD" config get prefix 2>/dev/null)/bin:$PATH"
           fi
-          
+
           # Ensure pm2 resurrects on reboot (idempotent; requires passwordless sudo on instance)
           sudo -n env PATH=$PATH pm2 startup systemd -u ubuntu --hp /home/ubuntu 2>/dev/null || true
           
