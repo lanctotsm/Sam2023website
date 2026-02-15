@@ -3,8 +3,9 @@ import { getAllPosts } from "@/services/posts";
 import { getAllAlbums } from "@/services/albums";
 
 const baseUrl =
-  process.env.NEXTAUTH_URL ||
-  (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "http://localhost:3000");
+  process.env.NEXTAUTH_URL?.trim() ||
+  (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "http://localhost:3000") ||
+  "http://localhost:3000";
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const root = baseUrl.replace(/\/+$/, "");

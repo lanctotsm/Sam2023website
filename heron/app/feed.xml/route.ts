@@ -3,8 +3,8 @@ import { getAllPosts } from "@/services/posts";
 import { serializePost } from "@/lib/serializers";
 
 const baseUrl =
-  process.env.NEXTAUTH_URL ||
-  process.env.VERCEL_URL ||
+  process.env.NEXTAUTH_URL?.trim() ||
+  (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "http://localhost:3000") ||
   "http://localhost:3000";
 
 function escapeXml(s: string): string {
