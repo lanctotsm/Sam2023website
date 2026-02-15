@@ -1,71 +1,26 @@
 services:
-  postgres:
-    image: postgres:15-alpine
+  heron:
+    image: ${HERON_IMAGE}
     environment:
-      POSTGRES_USER: cms
-      POSTGRES_PASSWORD: cms
-      POSTGRES_DB: cms
-    ports:
-      - "5432:5432"
-    volumes:
-      - cms_postgres:/var/lib/postgresql/data
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U cms -d cms"]
-      interval: 2s
-      timeout: 5s
-      retries: 10
-
-  cms-backend:
-    build:
-      context: ./cms-backend
-    environment:
-      PORT: 8080
-      DATABASE_URL: postgres://cms:cms@postgres:5432/cms?sslmode=disable
-      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID}
-      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET}
-      GOOGLE_REDIRECT_URL: ${GOOGLE_REDIRECT_URL}
+      NEXTAUTH_URL: ${NEXTAUTH_URL}
+      NEXTAUTH_SECRET: ${NEXTAUTH_SECRET}
       BASE_ADMIN_EMAIL: ${BASE_ADMIN_EMAIL}
-      FRONTEND_BASE_URL: ${FRONTEND_BASE_URL}
-      SESSION_DURATION: 24h
-      COOKIE_SECURE: "false"
+      DEV_AUTH_BYPASS: ${DEV_AUTH_BYPASS:-false}
+      CMS_DB_PATH: ${CMS_DB_PATH:-/app/data/cms.db}
       S3_REGION: ${S3_REGION}
       S3_BUCKET: ${S3_BUCKET}
       S3_PUBLIC_BASE_URL: ${S3_PUBLIC_BASE_URL}
       S3_ENDPOINT_URL: ${S3_ENDPOINT_URL}
-      S3_PRESIGN_ENDPOINT_URL: ${S3_PRESIGN_ENDPOINT_URL}
       S3_FORCE_PATH_STYLE: ${S3_FORCE_PATH_STYLE}
-      AWS_USE_STATIC_CREDS: ${AWS_USE_STATIC_CREDS}
       AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID}
       AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY}
-      ALLOWED_ORIGINS: ${ALLOWED_ORIGINS}
-      DEV_AUTH_BYPASS: ${DEV_AUTH_BYPASS}
-    ports:
-      - "8080:8080"
-    depends_on:
-      postgres:
-        condition: service_healthy
-    healthcheck:
-      test: ["CMD", "wget", "-q", "-O", "-", "http://localhost:8080/health"]
-      interval: 5s
-      timeout: 5s
-      retries: 10
-      start_period: 30s
-
-  cms-frontend:
-    build:
-      context: ./cms-frontend
-      args:
-        NEXT_PUBLIC_API_BASE_URL: ${NEXT_PUBLIC_API_BASE_URL:-http://localhost:8080}
-        NEXT_PUBLIC_IMAGE_BASE_URL: ${S3_PUBLIC_BASE_URL}
-    environment:
-      NEXT_PUBLIC_API_BASE_URL: ${NEXT_PUBLIC_API_BASE_URL:-http://localhost:8080}
-      API_INTERNAL_URL: http://cms-backend:8080
       NEXT_PUBLIC_IMAGE_BASE_URL: ${S3_PUBLIC_BASE_URL}
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET}
     ports:
       - "3000:3000"
-    depends_on:
-      cms-backend:
-        condition: service_healthy
+    volumes:
+      - cms_data:/app/data
 
 volumes:
-  cms_postgres:
+  cms_data:

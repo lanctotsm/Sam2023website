@@ -1,0 +1,26 @@
+# Must exclude so COPY . . does not overwrite Linux node_modules (avoids Exec format error)
+node_modules
+.next
+npm-debug.log*
+
+# Env and local files (set via compose)
+.env
+.env.*
+!.env.example
+
+# Git and IDE
+.git
+.gitignore
+.dockerignore
+.cursor
+.vscode
+.idea
+*.md
+
+# Tests and misc
+coverage
+.nyc_output
+playwright-report
+test-results
+*.db
+data
