@@ -9,6 +9,8 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     environment: production
+    env:
+      LIGHTSAIL_SSH_USER: ${{ secrets.LIGHTSAIL_SSH_USER || 'bitnami' }}
     permissions:
       contents: read
       packages: write
@@ -55,7 +57,9 @@ jobs:
             --parameter-overrides \
               BucketName=${{ secrets.CMS_BUCKET_NAME }} \
               LightsailInstanceName=${{ secrets.LIGHTSAIL_INSTANCE_NAME || 'heron-cms' }} \
-              LightsailBlueprintId=${{ secrets.LIGHTSAIL_BLUEPRINT_ID || 'ubuntu_22_04' }} \
+              LightsailBlueprintId=${{ secrets.LIGHTSAIL_BLUEPRINT_ID || 'nodejs' }} \
+              LightsailInstanceUser=${{ secrets.LIGHTSAIL_INSTANCE_USER || 'bitnami' }} \
+              NodePreinstalled=${{ secrets.NODE_PREINSTALLED || 'true' }} \
               StaticIpName=${{ secrets.LIGHTSAIL_STATIC_IP_NAME || 'heron-cms-ip' }} \
               KeyPairName=${{ secrets.LIGHTSAIL_KEY_PAIR_NAME }} \
               CloudFrontPriceClass=${{ secrets.CLOUDFRONT_PRICE_CLASS || 'PriceClass_100' }}
@@ -113,7 +117,7 @@ jobs:
               -o BatchMode=yes \
               -o ServerAliveInterval=60 \
               -o ServerAliveCountMax=3 \
-              ubuntu@$LIGHTSAIL_HOST "echo ssh-ready" 2>/dev/null; then
+              $LIGHTSAIL_SSH_USER@$LIGHTSAIL_HOST "echo ssh-ready" 2>/dev/null; then
               echo "✓ SSH ready"
               exit 0
             fi
@@ -131,13 +135,13 @@ jobs:
             -o StrictHostKeyChecking=no \
             -o ServerAliveInterval=60 \
             -o ServerAliveCountMax=3 \
-            ubuntu@$LIGHTSAIL_HOST "bash -se" <<'INIT'
+            $LIGHTSAIL_SSH_USER@$LIGHTSAIL_HOST "bash -se" <<'INIT'
           set -euo pipefail
           if command -v cloud-init >/dev/null 2>&1; then
             sudo cloud-init status --wait >/dev/null 2>&1 || true
           fi
           sudo mkdir -p /opt/heron-cms
-          sudo chown -R ubuntu:ubuntu /opt/heron-cms
+          sudo chown -R $LIGHTSAIL_SSH_USER:$LIGHTSAIL_SSH_USER /opt/heron-cms
           INIT
 
       - name: Wait for UserData startup (Node.js, npm, pm2)
@@ -146,7 +150,7 @@ jobs:
           echo "Waiting for UserData to complete (Node.js, npm, pm2)..."
           for i in $(seq 1 36); do
             if ssh -i lightsail.key -o StrictHostKeyChecking=no -o ServerAliveInterval=60 -o ServerAliveCountMax=3 \
-              ubuntu@$LIGHTSAIL_HOST "export PATH='/usr/local/bin:/usr/bin:\$PATH' && (test -f /var/lib/heron-cms/.startup-done || command -v npm >/dev/null)" 2>/dev/null; then
+              $LIGHTSAIL_SSH_USER@$LIGHTSAIL_HOST "export PATH='/opt/bitnami/node/bin:/usr/local/bin:/usr/bin:\$PATH' && (test -f /var/lib/heron-cms/.startup-done || command -v npm >/dev/null)" 2>/dev/null; then
               echo "✓ Startup complete"
               exit 0
             fi
@@ -163,7 +167,7 @@ jobs:
             -o StrictHostKeyChecking=no \
             -o ServerAliveInterval=60 \
             -o ServerAliveCountMax=3 \
-            ubuntu@$LIGHTSAIL_HOST "sudo mkdir -p /var/lib/heron-cms/data && sudo chown -R ubuntu:ubuntu /var/lib/heron-cms"
+            $LIGHTSAIL_SSH_USER@$LIGHTSAIL_HOST "sudo mkdir -p /var/lib/heron-cms/data && sudo chown -R $LIGHTSAIL_SSH_USER:$LIGHTSAIL_SSH_USER /var/lib/heron-cms"
 
       - name: Sync app to Lightsail
         run: |
@@ -174,25 +178,25 @@ jobs:
           rsync -avz --delete \
             -e "ssh -i lightsail.key -o StrictHostKeyChecking=no -o ServerAliveInterval=60 -o ServerAliveCountMax=3 -o TCPKeepAlive=yes" \
             heron/.next/standalone/ \
-            ubuntu@$LIGHTSAIL_HOST:/opt/heron-cms
+            $LIGHTSAIL_SSH_USER@$LIGHTSAIL_HOST:/opt/heron-cms
             
           # Sync static files
           rsync -avz --delete \
             -e "ssh -i lightsail.key -o StrictHostKeyChecking=no -o ServerAliveInterval=60 -o ServerAliveCountMax=3 -o TCPKeepAlive=yes" \
             heron/.next/static/ \
-            ubuntu@$LIGHTSAIL_HOST:/opt/heron-cms/.next/static
+            $LIGHTSAIL_SSH_USER@$LIGHTSAIL_HOST:/opt/heron-cms/.next/static
             
           # Sync public files
           rsync -avz --delete \
             -e "ssh -i lightsail.key -o StrictHostKeyChecking=no -o ServerAliveInterval=60 -o ServerAliveCountMax=3 -o TCPKeepAlive=yes" \
             heron/public/ \
-            ubuntu@$LIGHTSAIL_HOST:/opt/heron-cms/public
+            $LIGHTSAIL_SSH_USER@$LIGHTSAIL_HOST:/opt/heron-cms/public
             
           # Sync drizzle migrations
           rsync -avz --delete \
             -e "ssh -i lightsail.key -o StrictHostKeyChecking=no -o ServerAliveInterval=60 -o ServerAliveCountMax=3 -o TCPKeepAlive=yes" \
             heron/drizzle/ \
-            ubuntu@$LIGHTSAIL_HOST:/opt/heron-cms/drizzle
+            $LIGHTSAIL_SSH_USER@$LIGHTSAIL_HOST:/opt/heron-cms/drizzle
 
       - name: Write .env file on instance
         run: |
@@ -201,7 +205,7 @@ jobs:
             -o StrictHostKeyChecking=no \
             -o ServerAliveInterval=60 \
             -o ServerAliveCountMax=3 \
-            ubuntu@$LIGHTSAIL_HOST "cat > /opt/heron-cms/.env" <<'EOF'
+            $LIGHTSAIL_SSH_USER@$LIGHTSAIL_HOST "cat > /opt/heron-cms/.env" <<'EOF'
           PORT=3000
           NODE_ENV=production
           NEXTAUTH_URL=${{ secrets.NEXTAUTH_URL }}
@@ -226,10 +230,10 @@ jobs:
             -o ServerAliveInterval=60 \
             -o ServerAliveCountMax=3 \
             -o TCPKeepAlive=yes \
-            ubuntu@$LIGHTSAIL_HOST "bash -se" <<'EOF'
+            $LIGHTSAIL_SSH_USER@$LIGHTSAIL_HOST "bash -se" <<'EOF'
           set -euo pipefail
           cd /opt/heron-cms
-          export PATH="/usr/local/bin:/usr/bin:$PATH"
+          export PATH="/opt/bitnami/node/bin:/usr/local/bin:/usr/bin:$PATH"
           NPM_CMD="$(command -v npm 2>/dev/null)"
           [ -z "$NPM_CMD" ] && [ -x /usr/bin/npm ] && NPM_CMD="/usr/bin/npm"
           [ -z "$NPM_CMD" ] && [ -x /usr/local/bin/npm ] && NPM_CMD="/usr/local/bin/npm"
@@ -242,7 +246,7 @@ jobs:
             exit 1
           fi
 
-          # Install pm2 as ubuntu user if missing (no sudo - avoids password prompt over SSH)
+          # Install pm2 as app user if missing (no sudo - avoids password prompt over SSH)
           if ! command -v pm2 >/dev/null 2>&1; then
             echo "Installing pm2..."
             "$NPM_CMD" install -g pm2
@@ -250,7 +254,7 @@ jobs:
           fi
 
           # Ensure pm2 resurrects on reboot (idempotent; requires passwordless sudo on instance)
-          sudo -n env PATH=$PATH pm2 startup systemd -u ubuntu --hp /home/ubuntu 2>/dev/null || true
+          sudo -n env PATH=$PATH pm2 startup systemd -u $LIGHTSAIL_SSH_USER --hp /home/$LIGHTSAIL_SSH_USER 2>/dev/null || true
           
           # Start/Restart with pm2
           if pm2 show heron-cms > /dev/null 2>&1; then
