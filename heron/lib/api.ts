@@ -98,3 +98,28 @@ export async function presignImage(fileName: string, contentType: string, size: 
     })
   });
 }
+
+export async function presignImageBatch(
+  files: Array<{ file_name: string; content_type: string; size: number }>
+) {
+  return apiFetch<{
+    files: Array<{
+      file_name: string;
+      upload_url: string;
+      s3_key: string;
+      public_url: string;
+    }>;
+  }>("/images/presign-batch", {
+    method: "POST",
+    body: JSON.stringify({ files })
+  });
+}
+
+export async function createImageBatch(
+  images: Array<Partial<Image>>
+) {
+  return apiFetch<{ images: Image[] }>("/images/batch", {
+    method: "POST",
+    body: JSON.stringify({ images })
+  });
+}
