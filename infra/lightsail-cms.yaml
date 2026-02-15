@@ -9,10 +9,6 @@ Parameters:
     Type: String
     Default: nodejs
     Description: "Blueprint ID. nodejs = Bitnami Node.js (default). ubuntu_22_04 = Ubuntu with Node.js via UserData. Use aws lightsail get-blueprints to list."
-  LightsailInstanceUser:
-    Type: String
-    Default: bitnami
-    Description: "SSH and app user. bitnami for Bitnami blueprint, ubuntu for ubuntu_22_04."
   NodePreinstalled:
     Type: String
     Default: 'true'
@@ -127,9 +123,9 @@ Resources:
         apt-get install -y rsync git unzip jq wget vim net-tools htop ufw 2>/dev/null || true
         echo "[startup] Creating app and data directories..."
         mkdir -p /opt/heron-cms
-        chown -R ${LightsailInstanceUser}:${LightsailInstanceUser} /opt/heron-cms
+        chown -R bitnami:bitnami /opt/heron-cms
         mkdir -p /var/lib/heron-cms/data
-        chown -R ${LightsailInstanceUser}:${LightsailInstanceUser} /var/lib/heron-cms
+        chown -R bitnami:bitnami /var/lib/heron-cms
         touch /var/lib/heron-cms/.startup-done
         echo "[startup] Done."
 
