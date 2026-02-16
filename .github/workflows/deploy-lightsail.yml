@@ -138,9 +138,11 @@ jobs:
           set -euo pipefail
           # Wait for cloud-init (first boot only)
           command -v cloud-init >/dev/null 2>&1 && sudo cloud-init status --wait >/dev/null 2>&1 || true
-          # Wait for UserData to finish (Bitnami startup)
+          # Wait for UserData to finish (Bitnami startup). We only need node on the
+          # instance (standalone app is synced from pipeline); use full path because
+          # SSH non-interactive shell often has no PATH to /opt/bitnami/node/bin.
           for i in $(seq 1 36); do
-            if test -f /var/lib/heron-cms/.startup-done || command -v npm >/dev/null 2>&1; then
+            if test -f /var/lib/heron-cms/.startup-done || test -x /opt/bitnami/node/bin/node 2>/dev/null; then
               break
             fi
             echo "Waiting for startup ($i/36)..."; sleep 10
