@@ -170,6 +170,7 @@ jobs:
           ssh -F ssh_config lightsail "cat > /opt/heron-cms/.env" <<'EOF'
           PORT=3000
           NODE_ENV=production
+          API_INTERNAL_URL=http://127.0.0.1:3000
           NEXTAUTH_URL=${{ secrets.NEXTAUTH_URL }}
           NEXTAUTH_SECRET=${{ secrets.NEXTAUTH_SECRET }}
           BASE_ADMIN_EMAIL=${{ secrets.BASE_ADMIN_EMAIL }}
