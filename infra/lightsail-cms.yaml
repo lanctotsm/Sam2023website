@@ -96,15 +96,13 @@ Resources:
         #!/bin/bash
         set -euo pipefail
         export DEBIAN_FRONTEND=noninteractive
-        echo "[startup] Bitnami Node.js — installing utilities..."
+        echo "[startup] Creating app and data directories..."
+        mkdir -p /opt/heron-cms /var/lib/heron-cms/data
+        chown -R bitnami:bitnami /opt/heron-cms /var/lib/heron-cms
+        touch /var/lib/heron-cms/.startup-done
+        echo "[startup] Installing utilities..."
         apt-get update -y 2>/dev/null || true
         apt-get install -y rsync git unzip jq 2>/dev/null || true
-        echo "[startup] Creating app and data directories..."
-        mkdir -p /opt/heron-cms
-        chown -R bitnami:bitnami /opt/heron-cms
-        mkdir -p /var/lib/heron-cms/data
-        chown -R bitnami:bitnami /var/lib/heron-cms
-        touch /var/lib/heron-cms/.startup-done
         echo "[startup] Done."
 
   CmsStaticIp:
