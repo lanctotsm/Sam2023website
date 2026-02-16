@@ -8,7 +8,7 @@ set -e
 echo "🔍 Running pre-commit checks..."
 
 if [ -d "heron" ]; then
-  echo "🧪 Next.js lint (heron)"
+  echo "🧪 ESLint (heron)"
   if [ -d "heron/node_modules" ]; then
     (cd heron && npm run lint)
   else
