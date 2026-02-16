@@ -32,19 +32,16 @@ jobs:
           cache-dependency-path: heron/package-lock.json
 
       - name: Install dependencies
-        run: |
-          cd heron
-          npm ci
+        run: npm ci
+        working-directory: heron
 
       - name: Build Heron app
         env:
           NEXT_PUBLIC_IMAGE_BASE_URL: ${{ secrets.S3_PUBLIC_BASE_URL }}
-          # These are needed during build if any pages are statically generated
           NEXTAUTH_URL: ${{ secrets.NEXTAUTH_URL }}
           NEXTAUTH_SECRET: ${{ secrets.NEXTAUTH_SECRET }}
-        run: |
-          cd heron
-          npm run build
+        run: npm run build
+        working-directory: heron
 
       - name: Deploy CloudFormation
         run: |
@@ -55,8 +52,6 @@ jobs:
             --parameter-overrides \
               BucketName=${{ secrets.CMS_BUCKET_NAME }} \
               LightsailInstanceName=${{ secrets.LIGHTSAIL_INSTANCE_NAME || 'heron-cms' }} \
-              LightsailBlueprintId=${{ secrets.LIGHTSAIL_BLUEPRINT_ID || 'nodejs' }} \
-              NodePreinstalled=${{ secrets.NODE_PREINSTALLED || 'true' }} \
               StaticIpName=${{ secrets.LIGHTSAIL_STATIC_IP_NAME || 'heron-cms-ip' }} \
               KeyPairName=${{ secrets.LIGHTSAIL_KEY_PAIR_NAME }} \
               CloudFrontPriceClass=${{ secrets.CLOUDFRONT_PRICE_CLASS || 'PriceClass_100' }}
@@ -97,147 +92,79 @@ jobs:
             }"
           echo "✓ Route 53 A record updated: $ROUTE53_RECORD_NAME -> $STATIC_IP"
 
-      - name: Prepare SSH key
+      - name: Prepare SSH
         run: |
-          if [ -z "${{ secrets.LIGHTSAIL_SSH_KEY_SECRET_NAME }}" ]; then
-            echo "Error: LIGHTSAIL_SSH_KEY_SECRET_NAME must be set in GitHub secrets"
-            exit 1
-          fi
-          
-          echo "Fetching SSH key from AWS Secrets Manager..."
+          # Fetch key from Secrets Manager
           SECRET_VALUE=$(aws secretsmanager get-secret-value \
             --secret-id "${{ secrets.LIGHTSAIL_SSH_KEY_SECRET_NAME }}" \
-            --query SecretString \
-            --output text)
-          
-          # Handle both plain text and JSON formats
+            --query SecretString --output text)
           if echo "$SECRET_VALUE" | jq -e . >/dev/null 2>&1; then
-            # If it's JSON, try to extract the key (common keys: privateKey, ssh_key, key)
             echo "$SECRET_VALUE" | jq -r '.privateKey // .ssh_key // .key // .' > lightsail.key
           else
-            # Plain text, use as-is
             echo "$SECRET_VALUE" > lightsail.key
           fi
           chmod 600 lightsail.key
-          
-          # Validate key format
-          if ssh-keygen -l -f lightsail.key >/dev/null 2>&1; then
-            echo "✓ SSH key is valid"
-          else
-            echo "✗ SSH key validation failed - check the key format in Secrets Manager"
-            exit 1
-          fi
+          ssh-keygen -l -f lightsail.key >/dev/null 2>&1 || { echo "✗ Invalid SSH key"; exit 1; }
+          echo "✓ SSH key ready"
 
-      - name: Wait for SSH to be ready
-        run: |
+          # Write SSH config so every ssh/scp/rsync uses the same options
           LIGHTSAIL_HOST="${{ steps.lightsail-info.outputs.public_ip }}"
-          echo "Waiting for SSH on $LIGHTSAIL_HOST..."
-          
+          cat > ssh_config <<SSH
+          Host lightsail
+            HostName $LIGHTSAIL_HOST
+            User bitnami
+            IdentityFile $(pwd)/lightsail.key
+            StrictHostKeyChecking no
+            ServerAliveInterval 60
+            ServerAliveCountMax 3
+            TCPKeepAlive yes
+          SSH
+          echo "✓ SSH config written for $LIGHTSAIL_HOST"
+
+      - name: Wait for SSH
+        run: |
           for i in {1..30}; do
-            if ssh -i lightsail.key \
-              -o StrictHostKeyChecking=no \
-              -o ConnectTimeout=10 \
-              -o BatchMode=yes \
-              -o ServerAliveInterval=60 \
-              -o ServerAliveCountMax=3 \
-              bitnami@$LIGHTSAIL_HOST "echo ssh-ready" 2>/dev/null; then
-              echo "✓ SSH ready"
-              exit 0
+            if ssh -F ssh_config lightsail "echo ok" 2>/dev/null; then
+              echo "✓ SSH ready"; exit 0
             fi
-            echo "Attempt $i/30 failed, retrying in 10s..."
-            sleep 10
+            echo "Attempt $i/30, retrying in 10s..."; sleep 10
           done
-          
-          echo "✗ SSH not ready after 30 attempts"
-          exit 1
+          echo "✗ SSH not ready after 30 attempts"; exit 1
 
-      - name: Wait for instance setup (cloud-init and app directory)
+      - name: Prepare instance
         run: |
-          LIGHTSAIL_HOST="${{ steps.lightsail-info.outputs.public_ip }}"
-          ssh -i lightsail.key \
-            -o StrictHostKeyChecking=no \
-            -o ServerAliveInterval=60 \
-            -o ServerAliveCountMax=3 \
-            bitnami@$LIGHTSAIL_HOST "bash -se" <<'INIT'
+          ssh -F ssh_config lightsail "bash -s" <<'PREP'
           set -euo pipefail
-          if command -v cloud-init >/dev/null 2>&1; then
-            sudo cloud-init status --wait >/dev/null 2>&1 || true
-          fi
-          sudo mkdir -p /opt/heron-cms
-          sudo chown -R bitnami:bitnami /opt/heron-cms
-          INIT
-
-      - name: Wait for UserData startup (Node.js, npm, pm2)
-        run: |
-          LIGHTSAIL_HOST="${{ steps.lightsail-info.outputs.public_ip }}"
-          echo "Waiting for UserData to complete (Node.js, npm, pm2)..."
+          # Wait for cloud-init (first boot only)
+          command -v cloud-init >/dev/null 2>&1 && sudo cloud-init status --wait >/dev/null 2>&1 || true
+          # Wait for UserData to finish (Bitnami startup)
           for i in $(seq 1 36); do
-            if ssh -i lightsail.key -o StrictHostKeyChecking=no -o ServerAliveInterval=60 -o ServerAliveCountMax=3 \
-              bitnami@$LIGHTSAIL_HOST "export PATH='/opt/bitnami/node/bin:/usr/local/bin:/usr/bin:\$PATH' && (test -f /var/lib/heron-cms/.startup-done || command -v npm >/dev/null)" 2>/dev/null; then
-              echo "✓ Startup complete"
-              exit 0
+            if test -f /var/lib/heron-cms/.startup-done || command -v npm >/dev/null 2>&1; then
+              break
             fi
-            echo "Attempt $i/36: waiting 10s..."
-            sleep 10
+            echo "Waiting for startup ($i/36)..."; sleep 10
           done
-          echo "✗ UserData did not complete within 6 minutes. Instance may need to be recreated with updated CloudFormation."
-          exit 1
-
-      - name: Ensure persistent data directory on instance
-        run: |
-          LIGHTSAIL_HOST="${{ steps.lightsail-info.outputs.public_ip }}"
-          ssh -i lightsail.key \
-            -o StrictHostKeyChecking=no \
-            -o ServerAliveInterval=60 \
-            -o ServerAliveCountMax=3 \
-            bitnami@$LIGHTSAIL_HOST "sudo mkdir -p /var/lib/heron-cms/data && sudo chown -R bitnami:bitnami /var/lib/heron-cms"
-
-      - name: Ensure rsync on instance
-        run: |
-          LIGHTSAIL_HOST="${{ steps.lightsail-info.outputs.public_ip }}"
-          ssh -i lightsail.key \
-            -o StrictHostKeyChecking=no \
-            -o ServerAliveInterval=60 \
-            -o ServerAliveCountMax=3 \
-            bitnami@$LIGHTSAIL_HOST "sudo apt-get update -y && sudo apt-get install -y rsync"
+          # Ensure directories
+          sudo mkdir -p /opt/heron-cms /var/lib/heron-cms/data
+          sudo chown -R bitnami:bitnami /opt/heron-cms /var/lib/heron-cms
+          # Ensure rsync is installed
+          command -v rsync >/dev/null 2>&1 || { sudo apt-get update -y && sudo apt-get install -y rsync; }
+          echo "✓ Instance ready"
+          PREP
 
       - name: Sync app to Lightsail
         run: |
-          LIGHTSAIL_HOST="${{ steps.lightsail-info.outputs.public_ip }}"
-          
-          # Sync standalone build files
-          # Note: standalone includes node_modules and server.js
-          rsync -avz --delete \
-            -e "ssh -i lightsail.key -o StrictHostKeyChecking=no -o ServerAliveInterval=60 -o ServerAliveCountMax=3 -o TCPKeepAlive=yes" \
-            heron/.next/standalone/ \
-            bitnami@$LIGHTSAIL_HOST:/opt/heron-cms
-            
-          # Sync static files
-          rsync -avz --delete \
-            -e "ssh -i lightsail.key -o StrictHostKeyChecking=no -o ServerAliveInterval=60 -o ServerAliveCountMax=3 -o TCPKeepAlive=yes" \
-            heron/.next/static/ \
-            bitnami@$LIGHTSAIL_HOST:/opt/heron-cms/.next/static
-            
-          # Sync public files
-          rsync -avz --delete \
-            -e "ssh -i lightsail.key -o StrictHostKeyChecking=no -o ServerAliveInterval=60 -o ServerAliveCountMax=3 -o TCPKeepAlive=yes" \
-            heron/public/ \
-            bitnami@$LIGHTSAIL_HOST:/opt/heron-cms/public
-            
-          # Sync drizzle migrations
-          rsync -avz --delete \
-            -e "ssh -i lightsail.key -o StrictHostKeyChecking=no -o ServerAliveInterval=60 -o ServerAliveCountMax=3 -o TCPKeepAlive=yes" \
-            heron/drizzle/ \
-            bitnami@$LIGHTSAIL_HOST:/opt/heron-cms/drizzle
+          SSH_OPTS="-F ssh_config"
+          rsync -az --delete -e "ssh $SSH_OPTS" heron/.next/standalone/ lightsail:/opt/heron-cms
+          rsync -az --delete -e "ssh $SSH_OPTS" heron/.next/static/     lightsail:/opt/heron-cms/.next/static
+          rsync -az --delete -e "ssh $SSH_OPTS" heron/public/            lightsail:/opt/heron-cms/public
+          rsync -az --delete -e "ssh $SSH_OPTS" heron/drizzle/           lightsail:/opt/heron-cms/drizzle
+          rsync -az          -e "ssh $SSH_OPTS" heron/scripts/deploy-db.cjs lightsail:/opt/heron-cms/scripts/
+          echo "✓ Files synced"
 
-      - name: Write .env file on instance
+      - name: Write .env on instance
         run: |
-          LIGHTSAIL_HOST="${{ steps.lightsail-info.outputs.public_ip }}"
-          ssh -i lightsail.key \
-            -o StrictHostKeyChecking=no \
-            -o ServerAliveInterval=60 \
-            -o ServerAliveCountMax=3 \
-            bitnami@$LIGHTSAIL_HOST "cat > /opt/heron-cms/.env" <<'EOF'
+          ssh -F ssh_config lightsail "cat > /opt/heron-cms/.env" <<'EOF'
           PORT=3000
           NODE_ENV=production
           NEXTAUTH_URL=${{ secrets.NEXTAUTH_URL }}
@@ -254,120 +181,65 @@ jobs:
           GOOGLE_CLIENT_SECRET=${{ secrets.GOOGLE_CLIENT_SECRET }}
           EOF
 
-      - name: Write PM2 ecosystem config (so app gets env including CMS_DB_PATH)
-        env:
-          ECOSYSTEM_NEXTAUTH_URL: ${{ secrets.NEXTAUTH_URL }}
-          ECOSYSTEM_NEXTAUTH_SECRET: ${{ secrets.NEXTAUTH_SECRET }}
-          ECOSYSTEM_BASE_ADMIN_EMAIL: ${{ secrets.BASE_ADMIN_EMAIL }}
-          ECOSYSTEM_AWS_REGION: ${{ secrets.AWS_REGION }}
-          ECOSYSTEM_CMS_BUCKET: ${{ secrets.CMS_BUCKET_NAME }}
-          ECOSYSTEM_S3_PUBLIC_BASE_URL: ${{ secrets.S3_PUBLIC_BASE_URL }}
-          ECOSYSTEM_APP_ACCESS_KEY: ${{ secrets.APP_AWS_ACCESS_KEY_ID }}
-          ECOSYSTEM_APP_SECRET_KEY: ${{ secrets.APP_AWS_SECRET_ACCESS_KEY }}
-          ECOSYSTEM_GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID }}
-          ECOSYSTEM_GOOGLE_CLIENT_SECRET: ${{ secrets.GOOGLE_CLIENT_SECRET }}
+      - name: Run database migrations and seed
         run: |
-          node -e "
-          const env = {
-            PORT: '3000',
-            NODE_ENV: 'production',
-            NEXTAUTH_URL: process.env.ECOSYSTEM_NEXTAUTH_URL || '',
-            NEXTAUTH_SECRET: process.env.ECOSYSTEM_NEXTAUTH_SECRET || '',
-            BASE_ADMIN_EMAIL: process.env.ECOSYSTEM_BASE_ADMIN_EMAIL || '',
-            DEV_AUTH_BYPASS: 'false',
-            CMS_DB_PATH: '/var/lib/heron-cms/data/cms.db',
-            S3_REGION: process.env.ECOSYSTEM_AWS_REGION || '',
-            S3_BUCKET: process.env.ECOSYSTEM_CMS_BUCKET || '',
-            S3_PUBLIC_BASE_URL: process.env.ECOSYSTEM_S3_PUBLIC_BASE_URL || '',
-            AWS_ACCESS_KEY_ID: process.env.ECOSYSTEM_APP_ACCESS_KEY || '',
-            AWS_SECRET_ACCESS_KEY: process.env.ECOSYSTEM_APP_SECRET_KEY || '',
-            GOOGLE_CLIENT_ID: process.env.ECOSYSTEM_GOOGLE_CLIENT_ID || '',
-            GOOGLE_CLIENT_SECRET: process.env.ECOSYSTEM_GOOGLE_CLIENT_SECRET || ''
-          };
-          const cfg = 'module.exports = { apps: [{ name: \"heron-cms\", script: \"server.js\", cwd: \"/opt/heron-cms\", env: ' + JSON.stringify(env) + ' }] };';
-          require('fs').writeFileSync('ecosystem.config.cjs', cfg);
-          "
-          LIGHTSAIL_HOST="${{ steps.lightsail-info.outputs.public_ip }}"
-          scp -i lightsail.key \
-            -o StrictHostKeyChecking=no \
-            -o ServerAliveInterval=60 \
-            -o ServerAliveCountMax=3 \
-            ecosystem.config.cjs bitnami@$LIGHTSAIL_HOST:/opt/heron-cms/
-
-      - name: Restart services
-        run: |
-          LIGHTSAIL_HOST="${{ steps.lightsail-info.outputs.public_ip }}"
-          ssh -i lightsail.key \
-            -o StrictHostKeyChecking=no \
-            -o ServerAliveInterval=60 \
-            -o ServerAliveCountMax=3 \
-            -o TCPKeepAlive=yes \
-            bitnami@$LIGHTSAIL_HOST "bash -se" <<'EOF'
+          ssh -F ssh_config lightsail "bash -s" <<'DB'
           set -euo pipefail
           cd /opt/heron-cms
           export PATH="/opt/bitnami/node/bin:/usr/local/bin:/usr/bin:$PATH"
-          NPM_CMD="$(command -v npm 2>/dev/null)"
-          [ -z "$NPM_CMD" ] && [ -x /usr/bin/npm ] && NPM_CMD="/usr/bin/npm"
-          [ -z "$NPM_CMD" ] && [ -x /usr/local/bin/npm ] && NPM_CMD="/usr/local/bin/npm"
-          if [ -z "$NPM_CMD" ] && command -v node >/dev/null 2>&1; then
-            NODE_DIR="$(dirname "$(command -v node)")"
-            [ -x "$NODE_DIR/npm" ] && NPM_CMD="$NODE_DIR/npm"
-          fi
-          if [ -z "$NPM_CMD" ]; then
-            echo "Error: npm not found. Ensure Node.js is installed (CloudFormation UserData / infra/lightsail-cms.yaml)."
-            exit 1
-          fi
+          set -a; [ -f .env ] && . ./.env; set +a
+          node scripts/deploy-db.cjs
+          DB
 
-          # Install pm2 as app user if missing (user prefix to avoid writing to /opt/bitnami/node)
+      - name: Restart services
+        run: |
+          ssh -F ssh_config lightsail "bash -s" <<'SVC'
+          set -euo pipefail
+          cd /opt/heron-cms
+          export PATH="/opt/bitnami/node/bin:/usr/local/bin:/usr/bin:$HOME/.local/bin:$PATH"
+
+          # Ensure pm2 is installed (user prefix to avoid /opt/bitnami/node EACCES)
           if ! command -v pm2 >/dev/null 2>&1; then
             echo "Installing pm2..."
+            NPM_CMD="$(command -v npm 2>/dev/null || echo /opt/bitnami/node/bin/npm)"
             export npm_config_prefix="$HOME/.local"
             mkdir -p "$HOME/.local/bin"
             "$NPM_CMD" install -g pm2
-            export PATH="$HOME/.local/bin:$PATH"
           fi
 
-          # Ensure pm2 resurrects on reboot (idempotent; requires passwordless sudo on instance)
+          # Source env so pm2 inherits it (replaces the ecosystem config)
+          set -a; . ./.env; set +a
+
+          # Ensure pm2 resurrects on reboot
           sudo -n env PATH=$PATH pm2 startup systemd -u bitnami --hp /home/bitnami 2>/dev/null || true
-          
-          # Start/Restart with pm2 (ecosystem supplies env so CMS_DB_PATH and others are set)
-          if pm2 show heron-cms > /dev/null 2>&1; then
-            echo "Restarting heron-cms with updated env..."
-            pm2 reload ecosystem.config.cjs --update-env
-          else
-            echo "Starting heron-cms..."
-            pm2 start ecosystem.config.cjs
-          fi
-          
-          # Save process list so it survives reboots (env is stored in ecosystem)
-          pm2 save
-          
-          echo "✓ Services restarted successfully"
-          EOF
 
-      - name: Configure Apache reverse proxy (port 80 -> app on 3000)
+          # Start or reload
+          if pm2 show heron-cms > /dev/null 2>&1; then
+            pm2 restart heron-cms --update-env
+          else
+            pm2 start server.js --name heron-cms
+          fi
+          pm2 save
+
+          echo "✓ Services running"
+          SVC
+
+      - name: Configure Apache reverse proxy
         run: |
-          LIGHTSAIL_HOST="${{ steps.lightsail-info.outputs.public_ip }}"
-          ssh -i lightsail.key \
-            -o StrictHostKeyChecking=no \
-            -o ServerAliveInterval=60 \
-            -o ServerAliveCountMax=3 \
-            bitnami@$LIGHTSAIL_HOST "bash -se" <<'PROXY'
+          ssh -F ssh_config lightsail "bash -s" <<'PROXY'
           set -euo pipefail
           VHOST="/opt/bitnami/apache/conf/vhosts/heron-cms-proxy.conf"
-          sudo tee "$VHOST" <<'APACHE'
+          sudo tee "$VHOST" > /dev/null <<'APACHE'
           <VirtualHost *:80>
-            ServerName _
             ProxyPreserveHost On
             ProxyPass / http://127.0.0.1:3000/
             ProxyPassReverse / http://127.0.0.1:3000/
           </VirtualHost>
           APACHE
           if [ -x /opt/bitnami/ctlscript.sh ]; then
-            sudo /opt/bitnami/ctlscript.sh restart apache 2>/dev/null || true
-          fi
-          if command -v systemctl >/dev/null 2>&1; then
+            sudo /opt/bitnami/ctlscript.sh restart apache
+          else
             sudo systemctl restart apache2 2>/dev/null || sudo systemctl restart httpd 2>/dev/null || true
           fi
-          echo "✓ Reverse proxy configured (80 -> 3000)"
+          echo "✓ Apache proxy configured (80 -> 3000)"
           PROXY
