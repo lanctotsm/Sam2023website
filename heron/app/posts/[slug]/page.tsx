@@ -12,18 +12,20 @@ export const dynamic = "force-dynamic";
 
 export default async function PostDetailPage({ params }: PageProps) {
   const { slug } = await params;
+  let post: Post;
   try {
-    const post = await serverFetch<Post>(`/posts/slug/${slug}`);
-    return (
-      <article className="grid gap-4">
-        <h1 className="text-chestnut">{post.title}</h1>
-        {post.summary && <p className="text-chestnut-dark">{post.summary}</p>}
-        <div className="prose max-w-none prose-headings:text-chestnut prose-p:text-chestnut-dark">
-          <ReactMarkdown remarkPlugins={[remarkGfm]}>{post.markdown}</ReactMarkdown>
-        </div>
-      </article>
-    );
+    post = await serverFetch<Post>(`/posts/slug/${slug}`);
   } catch {
     notFound();
   }
+
+  return (
+    <article className="grid gap-4">
+      <h1 className="text-chestnut">{post.title}</h1>
+      {post.summary && <p className="text-chestnut-dark">{post.summary}</p>}
+      <div className="prose max-w-none prose-headings:text-chestnut prose-p:text-chestnut-dark">
+        <ReactMarkdown remarkPlugins={[remarkGfm]}>{post.markdown}</ReactMarkdown>
+      </div>
+    </article>
+  );
 }
