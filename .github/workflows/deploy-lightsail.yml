@@ -69,10 +69,10 @@ jobs:
       - name: Update Route 53 A record
         env:
           ROUTE53_ZONE_ID: ${{ secrets.ROUTE53_HOSTED_ZONE_ID }}
-          ROUTE53_RECORD: ${{ secrets.ROUTE53_RECORD_NAME }}
+          ROUTE53_RECORD_NAME: ${{ secrets.ROUTE53_RECORD_NAME }}
         run: |
-          if [ -z "$ROUTE53_ZONE_ID" ] || [ -z "$ROUTE53_RECORD" ]; then
-            echo "Skipping Route 53 (secrets not set)"
+          if [ -z "$ROUTE53_ZONE_ID" ] || [ -z "$ROUTE53_RECORD_NAME" ]; then
+            echo "Skipping Route 53 (ROUTE53_HOSTED_ZONE_ID or ROUTE53_RECORD_NAME not set)"
             exit 0
           fi
           STATIC_IP="${{ steps.lightsail-info.outputs.public_ip }}"
@@ -83,14 +83,14 @@ jobs:
               \"Changes\": [{
                 \"Action\": \"UPSERT\",
                 \"ResourceRecordSet\": {
-                  \"Name\": \"$ROUTE53_RECORD\",
+                  \"Name\": \"$ROUTE53_RECORD_NAME\",
                   \"Type\": \"A\",
                   \"TTL\": 300,
                   \"ResourceRecords\": [{\"Value\": \"$STATIC_IP\"}]
                 }
               }]
             }"
-          echo "✓ Route 53: $ROUTE53_RECORD -> $STATIC_IP"
+          echo "✓ Route 53 A record updated: $ROUTE53_RECORD_NAME -> $STATIC_IP"
 
       - name: Prepare SSH
         run: |
