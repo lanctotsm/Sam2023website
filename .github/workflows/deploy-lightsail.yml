@@ -250,12 +250,26 @@ jobs:
           # Prefer Let's Encrypt cert paths when they exist
           LE_CERT="/etc/letsencrypt/live/\${SITE_DOMAIN}/fullchain.pem"
           LE_KEY="/etc/letsencrypt/live/\${SITE_DOMAIN}/privkey.pem"
+          BITNAMI_CERT_DIR="/opt/bitnami/apache/conf/bitnami/certs"
+          BITNAMI_CERT="\$BITNAMI_CERT_DIR/server.crt"
+          BITNAMI_KEY="\$BITNAMI_CERT_DIR/server.key"
           if [ -f "\$LE_CERT" ] && [ -f "\$LE_KEY" ]; then
             CERT_FILE="\$LE_CERT"
             KEY_FILE="\$LE_KEY"
           else
-            CERT_FILE="/opt/bitnami/apache/conf/bitnami/certs/server.crt"
-            KEY_FILE="/opt/bitnami/apache/conf/bitnami/certs/server.key"
+            CERT_FILE="\$BITNAMI_CERT"
+            KEY_FILE="\$BITNAMI_KEY"
+            # Bitnami Node.js stacks may not ship Apache certs; create self-signed if missing
+            if [ ! -f "\$BITNAMI_CERT" ] || [ ! -f "\$BITNAMI_KEY" ]; then
+              echo "Creating self-signed cert for Apache 443..."
+              CERT_DIR="/opt/bitnami/apache/conf/bitnami/certs"
+              sudo mkdir -p \$CERT_DIR
+              sudo openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
+                -keyout \$CERT_DIR/server.key -out \$CERT_DIR/server.crt \
+                -subj "/CN=\${SITE_DOMAIN}/O=Heron CMS"
+              sudo chmod 644 \$CERT_DIR/server.crt
+              sudo chmod 600 \$CERT_DIR/server.key
+            fi
           fi
 
           sudo tee "\$VHOST" > /dev/null <<APACHE
@@ -273,16 +287,29 @@ jobs:
           <VirtualHost *:443>
             ServerName \${SITE_DOMAIN}
             SSLEngine on
-            SSLCertificateFile "\$CERT_FILE"
-            SSLCertificateKeyFile "\$KEY_FILE"
+            SSLCertificateFile "$CERT_FILE"
+            SSLCertificateKeyFile "$KEY_FILE"
             ProxyPreserveHost On
             ProxyPass / http://127.0.0.1:3000/
             ProxyPassReverse / http://127.0.0.1:3000/
           </VirtualHost>
           APACHE
 
+          # Validate Apache config and show clear errors on failure
+          if [ -x /opt/bitnami/apache/bin/apachectl ]; then
+            echo "--- Apache configtest ---"
+            sudo /opt/bitnami/apache/bin/apachectl configtest || {
+              echo "Apache config test failed. Last 30 lines of error log:"
+              sudo tail -30 /opt/bitnami/apache/logs/error_log 2>/dev/null || sudo tail -30 /var/log/apache2/error.log 2>/dev/null || true
+              exit 1
+            }
+          fi
           if [ -x /opt/bitnami/ctlscript.sh ]; then
-            sudo /opt/bitnami/ctlscript.sh restart apache
+            sudo /opt/bitnami/ctlscript.sh restart apache || {
+              echo "Apache restart failed. Error log:"
+              sudo tail -50 /opt/bitnami/apache/logs/error_log 2>/dev/null || sudo journalctl -u bitnami.apache.service -n 30 --no-pager 2>/dev/null || true
+              exit 1
+            }
           else
             sudo systemctl restart apache2 2>/dev/null || sudo systemctl restart httpd 2>/dev/null || true
           fi
