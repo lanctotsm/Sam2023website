@@ -36,6 +36,18 @@ export async function POST(request: Request) {
     return errorResponse("unauthorized", 401);
   }
 
+  // Validate Content-Length before parsing FormData to avoid loading oversized requests into memory
+  const contentLength = request.headers.get("content-length");
+  if (contentLength) {
+    const requestSize = parseInt(contentLength, 10);
+    // Allow some overhead for multipart boundaries and headers (10% buffer)
+    const maxRequestSize = MAX_FILE_BYTES * 1.1;
+    if (requestSize > maxRequestSize) {
+      const maxMB = Math.round(MAX_FILE_BYTES / (1024 * 1024));
+      return errorResponse(`request size exceeds ${maxMB}MB limit`, 413);
+    }
+  }
+
   const uploadedKeys: string[] = [];
   const createdImageIds: number[] = [];
 
