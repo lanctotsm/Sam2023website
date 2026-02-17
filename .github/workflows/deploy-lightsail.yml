@@ -57,7 +57,7 @@ jobs:
           aws cloudformation deploy \
             --stack-name ${{ secrets.LIGHTSAIL_STACK_NAME }} \
             --template-file infra/lightsail-cms.yaml \
-            --capabilities CAPABILITY_IAM \
+            --capabilities CAPABILITY_IAM CAPABILITY_NAMED_IAM \
             --parameter-overrides \
               BucketName=${{ secrets.CMS_BUCKET_NAME }} \
               LightsailInstanceName=${{ secrets.LIGHTSAIL_INSTANCE_NAME || 'heron-cms' }} \
