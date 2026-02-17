@@ -110,3 +110,7 @@ Deployments are automated via GitHub Actions to AWS Lightsail. The pipeline buil
 - **Workflow**: `.github/workflows/deploy-lightsail.yml`
 - **Infrastructure**: `infra/lightsail-cms.yaml` (Lightsail instance, S3, CloudFront)
 - **Local dev** uses Docker Compose and MinIO only; production does not run the app in Docker.
+
+### HTTPS with Let's Encrypt
+
+If the repo secrets **`ROUTE53_RECORD_NAME`** (your domain) and **`LETSENCRYPT_EMAIL`** (e.g. `admin@yourdomain.com`) are set, each deploy will attempt to obtain or renew a Let's Encrypt certificate and configure Apache to use it. Certbot runs on the instance and a cron job renews the cert twice daily. Ensure your domain’s DNS already points to the Lightsail static IP before the first deploy so ACME validation can succeed.

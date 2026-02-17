@@ -228,22 +228,90 @@ jobs:
           echo "✓ Services running"
           SVC
 
-      - name: Configure Apache reverse proxy
+      - name: Configure Apache reverse proxy and Let's Encrypt
+        env:
+          SITE_DOMAIN: ${{ secrets.ROUTE53_RECORD_NAME }}
+          LETSENCRYPT_EMAIL: ${{ secrets.LETSENCRYPT_EMAIL }}
         run: |
-          ssh -F ssh_config lightsail "bash -s" <<'PROXY'
+          ssh -F ssh_config lightsail "bash -s" <<PROXY
           set -euo pipefail
           VHOST="/opt/bitnami/apache/conf/vhosts/heron-cms-proxy.conf"
-          sudo tee "$VHOST" > /dev/null <<'APACHE'
+          WEBROOT="/var/lib/letsencrypt-webroot"
+          SITE_DOMAIN='${SITE_DOMAIN}'
+          LETSENCRYPT_EMAIL='${LETSENCRYPT_EMAIL}'
+
+          if [ -z "\$SITE_DOMAIN" ]; then
+            echo "SITE_DOMAIN is empty; skipping Apache reverse proxy and Let's Encrypt configuration."
+            exit 0
+          fi
+          sudo mkdir -p "\$WEBROOT/.well-known/acme-challenge"
+          sudo chown -R bitnami:bitnami "\$WEBROOT"
+
+          # Prefer Let's Encrypt cert paths when they exist
+          LE_CERT="/etc/letsencrypt/live/\${SITE_DOMAIN}/fullchain.pem"
+          LE_KEY="/etc/letsencrypt/live/\${SITE_DOMAIN}/privkey.pem"
+          if [ -f "\$LE_CERT" ] && [ -f "\$LE_KEY" ]; then
+            CERT_FILE="\$LE_CERT"
+            KEY_FILE="\$LE_KEY"
+          else
+            CERT_FILE="/opt/bitnami/apache/conf/bitnami/certs/server.crt"
+            KEY_FILE="/opt/bitnami/apache/conf/bitnami/certs/server.key"
+          fi
+
+          sudo tee "\$VHOST" > /dev/null <<APACHE
           <VirtualHost *:80>
+            ServerName \${SITE_DOMAIN}
+            Alias /.well-known/acme-challenge \$WEBROOT/.well-known/acme-challenge
+            <Directory \$WEBROOT/.well-known/acme-challenge>
+              Require all granted
+            </Directory>
+            # Redirect all traffic to HTTPS except ACME challenges
+            RewriteEngine On
+            RewriteCond %{REQUEST_URI} !^/.well-known/acme-challenge/
+            RewriteRule ^(.*)$ https://%{HTTP_HOST}\$1 [R=301,L]
+          </VirtualHost>
+          <VirtualHost *:443>
+            ServerName \${SITE_DOMAIN}
+            SSLEngine on
+            SSLCertificateFile "\$CERT_FILE"
+            SSLCertificateKeyFile "\$KEY_FILE"
             ProxyPreserveHost On
             ProxyPass / http://127.0.0.1:3000/
             ProxyPassReverse / http://127.0.0.1:3000/
           </VirtualHost>
           APACHE
+
           if [ -x /opt/bitnami/ctlscript.sh ]; then
             sudo /opt/bitnami/ctlscript.sh restart apache
           else
             sudo systemctl restart apache2 2>/dev/null || sudo systemctl restart httpd 2>/dev/null || true
           fi
-          echo "✓ Apache proxy configured (80 -> 3000)"
+          echo "✓ Apache proxy configured (80 + 443 -> 3000)"
+
+          # Obtain or renew Let's Encrypt certificate when domain and email are set
+          if [ -n "\$SITE_DOMAIN" ] && [ -n "\$LETSENCRYPT_EMAIL" ]; then
+            if ! command -v certbot >/dev/null 2>&1; then
+              echo "Installing certbot..."
+              sudo apt-get update -qq -y
+              sudo apt-get install -y -qq certbot
+            fi
+            if sudo certbot certonly --webroot -w "\$WEBROOT" -d "\$SITE_DOMAIN" \
+              --non-interactive --agree-tos --email "\$LETSENCRYPT_EMAIL" \
+              --keep-until-expiring 2>/dev/null; then
+              echo "✓ Let's Encrypt certificate obtained or already valid"
+              # Re-write vhost with LE paths and restart
+              sudo sed -i "s|SSLCertificateFile .*|SSLCertificateFile \$LE_CERT|" "\$VHOST"
+              sudo sed -i "s|SSLCertificateKeyFile .*|SSLCertificateKeyFile \$LE_KEY|" "\$VHOST"
+              if [ -x /opt/bitnami/ctlscript.sh ]; then
+                sudo /opt/bitnami/ctlscript.sh restart apache
+              else
+                sudo systemctl restart apache2 2>/dev/null || sudo systemctl restart httpd 2>/dev/null || true
+              fi
+            else
+              echo "⚠ Certbot did not obtain a certificate (DNS may not point here yet); using existing or self-signed cert"
+            fi
+            # Ensure renewal runs twice daily and restarts Apache after renew
+            RENEW_HOOK='/opt/bitnami/ctlscript.sh restart apache 2>/dev/null || systemctl restart apache2'
+            (sudo crontab -l 2>/dev/null | grep -v certbot; echo "0 0,12 * * * certbot renew -q --deploy-hook \"$RENEW_HOOK\" 2>/dev/null") | sudo crontab - 2>/dev/null || true
+          fi
           PROXY
