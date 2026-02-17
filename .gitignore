@@ -21,6 +21,7 @@ heron/build/
 .env.production.local
 my-nextjs-site/.env.local
 heron/.env.local
+heron/.env
 
 # AWS Secrets and Configuration
 config/secrets.json
