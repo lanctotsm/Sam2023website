@@ -2,11 +2,18 @@ import { and, asc, eq } from "drizzle-orm";
 import { getDb } from "@/lib/db";
 import { albumImages, images } from "@/lib/db/schema";
 
+export async function addAlbumImage(albumId: number, imageId: number, sortOrder: number) {
+  await getDb().insert(albumImages).values({ albumId, imageId, sortOrder });
+}
+
 export async function getAlbumImages(albumId: number) {
   const rows = await getDb()
     .select({
       id: images.id,
       s3Key: images.s3Key,
+      s3KeyThumb: images.s3KeyThumb,
+      s3KeyLarge: images.s3KeyLarge,
+      s3KeyOriginal: images.s3KeyOriginal,
       width: images.width,
       height: images.height,
       caption: images.caption,

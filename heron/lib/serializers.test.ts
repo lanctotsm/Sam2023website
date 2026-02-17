@@ -1,0 +1,141 @@
+import { describe, it, expect } from "vitest";
+import { serializePost, serializeAlbum, serializeImage } from "./serializers";
+
+describe("lib/serializers", () => {
+  describe("serializePost", () => {
+    it("maps post row to API shape", () => {
+      const row = {
+        id: 1,
+        title: "My Post",
+        slug: "my-post",
+        summary: "Summary",
+        markdown: "# Hi",
+        status: "published" as const,
+        publishedAt: "2024-01-15T00:00:00Z",
+        createdBy: 1,
+        createdAt: "2024-01-01T00:00:00Z",
+        updatedAt: "2024-01-15T00:00:00Z"
+      };
+      expect(serializePost(row)).toEqual({
+        id: 1,
+        title: "My Post",
+        slug: "my-post",
+        summary: "Summary",
+        markdown: "# Hi",
+        status: "published",
+        published_at: "2024-01-15T00:00:00Z",
+        created_by: 1,
+        created_at: "2024-01-01T00:00:00Z",
+        updated_at: "2024-01-15T00:00:00Z"
+      });
+    });
+
+    it("uses empty string for null summary and normalizes null dates", () => {
+      const row = {
+        id: 2,
+        title: "Draft",
+        slug: "draft",
+        summary: null,
+        markdown: "",
+        status: "draft" as const,
+        publishedAt: null,
+        createdBy: null,
+        createdAt: "2024-01-01T00:00:00Z",
+        updatedAt: "2024-01-01T00:00:00Z"
+      };
+      const out = serializePost(row);
+      expect(out.summary).toBe("");
+      expect(out.published_at).toBeNull();
+      expect(out.created_by).toBeNull();
+    });
+  });
+
+  describe("serializeAlbum", () => {
+    it("maps album row to API shape", () => {
+      const row = {
+        id: 1,
+        title: "Trip",
+        slug: "trip",
+        description: "A trip",
+        createdBy: 1,
+        createdAt: "2024-01-01T00:00:00Z",
+        updatedAt: "2024-01-01T00:00:00Z"
+      };
+      expect(serializeAlbum(row)).toEqual({
+        id: 1,
+        title: "Trip",
+        slug: "trip",
+        description: "A trip",
+        created_by: 1,
+        created_at: "2024-01-01T00:00:00Z",
+        updated_at: "2024-01-01T00:00:00Z"
+      });
+    });
+
+    it("uses empty string for null description", () => {
+      const row = {
+        id: 2,
+        title: "Empty",
+        slug: "empty",
+        description: null,
+        createdBy: null,
+        createdAt: "",
+        updatedAt: ""
+      };
+      expect(serializeAlbum(row).description).toBe("");
+    });
+  });
+
+  describe("serializeImage", () => {
+    it("maps image row to API shape with variant keys", () => {
+      const row = {
+        id: 1,
+        s3Key: "uploads/uuid/large.jpg",
+        s3KeyThumb: "uploads/uuid/thumb.jpg",
+        s3KeyLarge: "uploads/uuid/large.jpg",
+        s3KeyOriginal: "uploads/uuid/original.jpg",
+        width: 800,
+        height: 600,
+        caption: "A photo",
+        altText: "Alt",
+        createdBy: 1,
+        createdAt: "2024-01-01T00:00:00Z"
+      };
+      expect(serializeImage(row)).toEqual({
+        id: 1,
+        s3_key: "uploads/uuid/large.jpg",
+        s3_key_thumb: "uploads/uuid/thumb.jpg",
+        s3_key_large: "uploads/uuid/large.jpg",
+        s3_key_original: "uploads/uuid/original.jpg",
+        width: 800,
+        height: 600,
+        caption: "A photo",
+        alt_text: "Alt",
+        created_by: 1,
+        created_at: "2024-01-01T00:00:00Z"
+      });
+    });
+
+    it("uses null for optional variant keys and empty strings for caption/alt", () => {
+      const row = {
+        id: 2,
+        s3Key: "legacy/key.jpg",
+        s3KeyThumb: null,
+        s3KeyLarge: null,
+        s3KeyOriginal: null,
+        width: null,
+        height: null,
+        caption: null,
+        altText: null,
+        createdBy: null,
+        createdAt: ""
+      };
+      const out = serializeImage(row);
+      expect(out.s3_key_thumb).toBeNull();
+      expect(out.s3_key_large).toBeNull();
+      expect(out.s3_key_original).toBeNull();
+      expect(out.caption).toBe("");
+      expect(out.alt_text).toBe("");
+    });
+  });
+});

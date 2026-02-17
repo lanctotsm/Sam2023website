@@ -4,21 +4,12 @@ import { useEffect, useState } from "react";
 import Image from "next/image";
 import { toast } from "sonner";
 import type { Image as ImageMeta } from "@/lib/api";
-import { 
-  apiFetch, 
-  presignImageBatch, 
-  createImageBatch 
-} from "@/lib/api";
-import { buildImageUrl } from "@/lib/images";
+import { apiFetch } from "@/lib/api";
+import { buildThumbUrl } from "@/lib/images";
 import { MediaItemSkeleton } from "@/components/Skeleton";
-import { extractImagesFromZip, isZipFile, getImageDimensions } from "@/lib/upload-utils";
+import { extractImagesFromZip, isZipFile, isFileWithinSizeLimit, MAX_UPLOAD_BYTES } from "@/lib/upload-utils";
 
-type FileUploadProgress = {
-  file: File;
-  status: "pending" | "uploading" | "done" | "error";
-  progress: number;
-  error?: string;
-};
+const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || "/api";
 
 export default function AdminMediaPage() {
   const [images, setImages] = useState<ImageMeta[]>([]);
@@ -29,7 +20,8 @@ export default function AdminMediaPage() {
   const [loading, setLoading] = useState(false);
   const [loadingImages, setLoadingImages] = useState(true);
   const [error, setError] = useState("");
-  const [fileProgress, setFileProgress] = useState<FileUploadProgress[]>([]);
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const [isDragging, setIsDragging] = useState(false);
 
   const fetchImages = async () => {
     setLoadingImages(true);
@@ -47,16 +39,13 @@ export default function AdminMediaPage() {
     fetchImages();
   }, []);
 
-  const handleFileSelection = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const selectedFiles = Array.from(event.target.files || []);
+  const processSelectedFiles = async (selectedFiles: File[]) => {
     if (selectedFiles.length === 0) return;
 
     setError("");
 
-    // Check if any file is a zip
     const zipFiles = selectedFiles.filter(isZipFile);
-    const imageFiles = selectedFiles.filter(f => !isZipFile(f));
-
+    const imageFiles = selectedFiles.filter((f) => !isZipFile(f));
     let allFiles = [...imageFiles];
 
     if (zipFiles.length > 0) {
@@ -75,101 +64,113 @@ export default function AdminMediaPage() {
       }
     }
 
+    const oversized = allFiles.filter((f) => !isFileWithinSizeLimit(f));
+    if (oversized.length > 0) {
+      const maxMB = Math.round(MAX_UPLOAD_BYTES / (1024 * 1024));
+      setError(`Some files exceed ${maxMB}MB limit: ${oversized.map((f) => f.name).join(", ")}`);
+      toast.error(`Max file size is ${maxMB}MB. Remove or resize the oversized file(s).`);
+      setStatus("");
+      return;
+    }
+
     setFiles(allFiles);
-    setFileProgress(allFiles.map(f => ({ file: f, status: "pending", progress: 0 })));
     setStatus("");
   };
 
-  const uploadFile = (url: string, contentType: string, fileToUpload: File, index: number) => {
-    return new Promise<void>((resolve, reject) => {
-      const xhr = new XMLHttpRequest();
-      xhr.upload.addEventListener("progress", (event) => {
-        if (event.lengthComputable) {
-          const progress = Math.round((event.loaded / event.total) * 100);
-          setFileProgress(prev => {
-            const updated = [...prev];
-            updated[index] = { ...updated[index], progress, status: "uploading" };
-            return updated;
-          });
-        }
-      });
-      xhr.addEventListener("load", () => {
-        if (xhr.status >= 200 && xhr.status < 300) {
-          setFileProgress(prev => {
-            const updated = [...prev];
-            updated[index] = { ...updated[index], status: "done", progress: 100 };
-            return updated;
-          });
-          resolve();
-        } else {
-          reject(new Error(`Upload failed (${xhr.status})`));
-        }
-      });
-      xhr.addEventListener("error", () => reject(new Error("Upload failed")));
-      xhr.open("PUT", url);
-      xhr.setRequestHeader("Content-Type", contentType);
-      xhr.send(fileToUpload);
-    });
+  const handleFileSelection = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    await processSelectedFiles(Array.from(event.target.files || []));
+    event.target.value = "";
   };
 
-  const upload = async () => {
+  const handleDrop = async (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+    const items = e.dataTransfer?.items;
+    if (!items) return;
+    const files: File[] = [];
+    for (let i = 0; i < items.length; i++) {
+      const entry = items[i];
+      if (entry.kind === "file") {
+        const file = entry.getAsFile();
+        if (file) files.push(file);
+      }
+    }
     if (files.length === 0) return;
+    await processSelectedFiles(files);
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!isDragging) setIsDragging(true);
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!e.currentTarget.contains(e.relatedTarget as Node)) setIsDragging(false);
+  };
+
+  const upload = () => {
+    if (files.length === 0) return;
+
+    const oversized = files.filter((f) => !isFileWithinSizeLimit(f));
+    if (oversized.length > 0) {
+      const maxMB = Math.round(MAX_UPLOAD_BYTES / (1024 * 1024));
+      setError(`Some files exceed ${maxMB}MB limit.`);
+      toast.error(`Max file size is ${maxMB}MB.`);
+      return;
+    }
 
     setLoading(true);
     setError("");
-    setStatus("Presigning uploads...");
+    setStatus("Uploading...");
+    setUploadProgress(0);
 
-    try {
-      const presignData = await presignImageBatch(
-        files.map(f => ({
-          file_name: f.name,
-          content_type: f.type,
-          size: f.size
-        }))
-      );
-
-      setStatus("Uploading to S3...");
-      await Promise.all(
-        presignData.files.map((presign, index) =>
-          uploadFile(presign.upload_url, files[index].type, files[index], index)
-        )
-      );
-
-      setStatus("Saving metadata...");
-      const imageData = await Promise.all(
-        files.map(async (file, index) => {
-          const dimensions = await getImageDimensions(file);
-          return {
-            s3_key: presignData.files[index].s3_key,
-            caption: caption || "",
-            alt_text: altText || "",
-            width: dimensions?.width,
-            height: dimensions?.height
-          };
-        })
-      );
-
-      const createdImages = await createImageBatch(imageData);
-
-      setImages((prev) => [...createdImages.images, ...prev]);
-      setFiles([]);
-      setFileProgress([]);
-      setCaption("");
-      setAltText("");
-      setStatus("Upload complete!");
-      toast.success(`${files.length} image(s) uploaded.`);
-
-      // Reset file input
-      const fileInput = document.querySelector('input[type="file"]') as HTMLInputElement;
-      if (fileInput) fileInput.value = "";
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : "Upload failed";
-      setError(msg);
-      toast.error(msg);
-      setStatus("");
-    } finally {
-      setLoading(false);
+    const formData = new FormData();
+    formData.append("caption", caption);
+    formData.append("alt_text", altText);
+    for (const file of files) {
+      formData.append("files", file);
     }
+
+    const xhr = new XMLHttpRequest();
+    xhr.upload.addEventListener("progress", (event) => {
+      if (event.lengthComputable) {
+        setUploadProgress(Math.round((event.loaded / event.total) * 100));
+      }
+    });
+    xhr.addEventListener("load", () => {
+      setLoading(false);
+      setStatus("");
+      if (xhr.status >= 200 && xhr.status < 300) {
+        try {
+          const data = JSON.parse(xhr.responseText) as { images: ImageMeta[] };
+          setImages((prev) => [...data.images, ...prev]);
+          setFiles([]);
+          setCaption("");
+          setAltText("");
+          toast.success(`${data.images.length} image(s) uploaded.`);
+          const fileInput = document.querySelector('input[type="file"]') as HTMLInputElement;
+          if (fileInput) fileInput.value = "";
+        } catch {
+          setError("Invalid response");
+          toast.error("Upload failed.");
+        }
+      } else {
+        setError(xhr.responseText || `Upload failed (${xhr.status})`);
+        toast.error("Upload failed.");
+      }
+    });
+    xhr.addEventListener("error", () => {
+      setLoading(false);
+      setStatus("");
+      setError("Upload failed");
+      toast.error("Upload failed.");
+    });
+    xhr.open("POST", `${API_BASE}/images/upload`);
+    xhr.withCredentials = true;
+    xhr.send(formData);
   };
 
   const handleDelete = async (imageId: number) => {
@@ -198,22 +199,41 @@ export default function AdminMediaPage() {
   const cardClass =
     "rounded-xl border border-desert-tan-dark bg-surface p-4 shadow-[0_2px_8px_rgba(72,9,3,0.08)]";
 
-  const overallProgress = fileProgress.length > 0
-    ? Math.round(fileProgress.reduce((sum, f) => sum + f.progress, 0) / fileProgress.length)
-    : 0;
-
   return (
     <div className="flex flex-col gap-6">
       <section className={`${cardClass} flex flex-col gap-4`}>
         <h2 className="m-0 text-chestnut">Upload New Images</h2>
         <label className={labelClass}>Select Images (multiple or zip file)</label>
-        <input
-          className="block w-full text-sm text-chestnut-dark file:mr-4 file:rounded-lg file:border-0 file:bg-chestnut file:px-4 file:py-2 file:text-desert-tan"
-          type="file"
-          accept="image/*,.zip"
-          multiple
-          onChange={handleFileSelection}
-        />
+        <div
+          role="button"
+          tabIndex={0}
+          onDragOver={handleDragOver}
+          onDragLeave={handleDragLeave}
+          onDrop={handleDrop}
+          className={`relative rounded-xl border-2 border-dashed p-6 text-center transition-colors ${
+            isDragging
+              ? "border-chestnut bg-chestnut/10"
+              : "border-desert-tan-dark bg-surface hover:border-chestnut/50"
+          }`}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" || e.key === " ") {
+              e.preventDefault();
+              e.currentTarget.querySelector<HTMLInputElement>("input[type=file]")?.click();
+            }
+          }}
+        >
+          <input
+            className="absolute inset-0 w-full cursor-pointer opacity-0"
+            type="file"
+            accept="image/*,.zip"
+            multiple
+            onChange={handleFileSelection}
+            aria-label="Select images or zip file"
+          />
+          <p className="pointer-events-none m-0 text-sm text-chestnut-dark">
+            {isDragging ? "Drop images or zip here" : "Drag and drop images or zip here, or click to browse"}
+          </p>
+        </div>
         {files.length > 0 && (
           <p className="text-sm text-olive">
             {files.length} file(s) selected
@@ -234,35 +254,19 @@ export default function AdminMediaPage() {
           placeholder="Description for accessibility"
         />
         {error && <p className="text-copper text-sm">{error}</p>}
-        {status && (
+        {loading && (
           <div className="space-y-2">
-            <p className="text-olive text-sm">{status}</p>
-            {loading && fileProgress.length > 0 && (
-              <>
-                <progress className="h-2 w-full rounded-full" value={overallProgress} max={100} />
-                <p className="text-xs text-olive">{overallProgress}% complete</p>
-              </>
-            )}
+            <p className="text-olive text-sm">Uploading {files.length} file(s)...</p>
+            <div className="h-3 w-full overflow-hidden rounded-full bg-desert-tan-dark/30">
+              <div
+                className="h-full rounded-full bg-chestnut transition-[width] duration-200 ease-out"
+                style={{ width: `${uploadProgress}%` }}
+              />
+            </div>
+            <p className="text-xs font-medium text-chestnut-dark">{uploadProgress}%</p>
           </div>
         )}
-        {fileProgress.length > 0 && loading && (
-          <div className="max-h-48 overflow-y-auto space-y-1">
-            {fileProgress.map((fp, idx) => (
-              <div key={idx} className="flex items-center gap-2 text-xs">
-                <span className="flex-1 truncate text-chestnut-dark">{fp.file.name}</span>
-                <span className={
-                  fp.status === "done" ? "text-olive" :
-                  fp.status === "error" ? "text-copper" :
-                  fp.status === "uploading" ? "text-chestnut" : "text-olive"
-                }>
-                  {fp.status === "done" ? "✓" :
-                   fp.status === "error" ? "✗" :
-                   fp.status === "uploading" ? `${fp.progress}%` : "⏳"}
-                </span>
-              </div>
-            ))}
-          </div>
-        )}
+        {status && !loading && <p className="text-olive text-sm">{status}</p>}
         <button
           className="rounded-lg bg-chestnut px-4 py-2.5 text-desert-tan transition hover:bg-chestnut-dark disabled:opacity-60"
           onClick={upload}
@@ -288,7 +292,7 @@ export default function AdminMediaPage() {
               <div className={`${cardClass} flex flex-col gap-3`} key={image.id}>
                 <div className="overflow-hidden rounded-lg">
                   <Image
-                    src={buildImageUrl(image.s3_key)}
+                    src={buildThumbUrl(image)}
                     alt={image.alt_text || image.caption || "Uploaded image"}
                     width={300}
                     height={200}

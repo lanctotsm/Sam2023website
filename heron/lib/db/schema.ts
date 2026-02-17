@@ -79,6 +79,9 @@ export const images = sqliteTable(
   {
     id: integer("id").primaryKey({ autoIncrement: true }),
     s3Key: text("s3_key").notNull(),
+    s3KeyThumb: text("s3_key_thumb"),
+    s3KeyLarge: text("s3_key_large"),
+    s3KeyOriginal: text("s3_key_original"),
     width: integer("width"),
     height: integer("height"),
     caption: text("caption"),

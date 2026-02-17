@@ -1,5 +1,12 @@
 import JSZip from "jszip";
 
+/** Max file size for upload (client-side check, must match or be under server MAX_UPLOAD_BYTES). 100MB. */
+export const MAX_UPLOAD_BYTES = 100 * 1024 * 1024;
+
+export function isFileWithinSizeLimit(file: File): boolean {
+  return file.size <= MAX_UPLOAD_BYTES;
+}
+
 /**
  * Extract image files from a zip file
  */

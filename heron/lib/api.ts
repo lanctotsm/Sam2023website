@@ -22,6 +22,9 @@ export type Album = {
 export type Image = {
   id: number;
   s3_key: string;
+  s3_key_thumb?: string | null;
+  s3_key_large?: string | null;
+  s3_key_original?: string | null;
   width?: number | null;
   height?: number | null;
   caption?: string;
@@ -73,10 +76,6 @@ export async function createAlbum(payload: Partial<Album>): Promise<Album> {
   return apiFetch<Album>("/albums", { method: "POST", body: JSON.stringify(payload) });
 }
 
-export async function createImage(payload: Partial<Image>): Promise<Image> {
-  return apiFetch<Image>("/images", { method: "POST", body: JSON.stringify(payload) });
-}
-
 export async function linkAlbumImage(albumId: number, imageId: number, sortOrder: number) {
   return apiFetch(`/albums/${albumId}/images`, {
     method: "POST",
@@ -84,42 +83,15 @@ export async function linkAlbumImage(albumId: number, imageId: number, sortOrder
   });
 }
 
-export async function presignImage(fileName: string, contentType: string, size: number) {
-  return apiFetch<{
-    upload_url: string;
-    s3_key: string;
-    public_url: string;
-  }>("/images/presign", {
+export async function uploadImages(formData: FormData): Promise<{ images: Image[] }> {
+  const response = await fetch(`${API_BASE}/images/upload`, {
     method: "POST",
-    body: JSON.stringify({
-      file_name: fileName,
-      content_type: contentType,
-      size
-    })
+    credentials: "include",
+    body: formData
   });
-}
-
-export async function presignImageBatch(
-  files: Array<{ file_name: string; content_type: string; size: number }>
-) {
-  return apiFetch<{
-    files: Array<{
-      file_name: string;
-      upload_url: string;
-      s3_key: string;
-      public_url: string;
-    }>;
-  }>("/images/presign-batch", {
-    method: "POST",
-    body: JSON.stringify({ files })
-  });
-}
-
-export async function createImageBatch(
-  images: Array<Partial<Image>>
-) {
-  return apiFetch<{ images: Image[] }>("/images/batch", {
-    method: "POST",
-    body: JSON.stringify({ images })
-  });
+  if (!response.ok) {
+    const text = await response.text();
+    throw new Error(text || `Upload failed: ${response.status}`);
+  }
+  return response.json() as Promise<{ images: Image[] }>;
 }
