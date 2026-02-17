@@ -287,8 +287,8 @@ jobs:
           <VirtualHost *:443>
             ServerName \${SITE_DOMAIN}
             SSLEngine on
-            SSLCertificateFile "$CERT_FILE"
-            SSLCertificateKeyFile "$KEY_FILE"
+            SSLCertificateFile "\$CERT_FILE"
+            SSLCertificateKeyFile "\$KEY_FILE"
             ProxyPreserveHost On
             ProxyPass / http://127.0.0.1:3000/
             ProxyPassReverse / http://127.0.0.1:3000/
