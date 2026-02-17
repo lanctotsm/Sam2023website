@@ -312,6 +312,6 @@ jobs:
             fi
             # Ensure renewal runs twice daily and restarts Apache after renew
             RENEW_HOOK='/opt/bitnami/ctlscript.sh restart apache 2>/dev/null || systemctl restart apache2'
-            (sudo crontab -l 2>/dev/null | grep -v certbot; echo "0 0,12 * * * certbot renew -q --deploy-hook \"\$RENEW_HOOK\" 2>/dev/null") | sudo crontab - 2>/dev/null || true
+            (sudo crontab -l 2>/dev/null | grep -v certbot; echo "0 0,12 * * * certbot renew -q --deploy-hook \"$RENEW_HOOK\" 2>/dev/null") | sudo crontab - 2>/dev/null || true
           fi
           PROXY
