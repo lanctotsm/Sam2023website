@@ -12,6 +12,10 @@ if ! command -v pm2 >/dev/null 2>&1; then
   "$NPM_CMD" install -g pm2
 fi
 
+if [ ! -f .env ]; then
+  echo "Error: .env file not found. Cannot load environment variables."
+  exit 1
+fi
 set -a; . ./.env; set +a
 sudo -n env PATH=$PATH pm2 startup systemd -u bitnami --hp /home/bitnami 2>/dev/null || true
 
