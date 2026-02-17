@@ -135,4 +135,41 @@ describe("POST /api/images/upload", () => {
       expect.objectContaining({ caption: "A caption", altText: "Alt" })
     );
   });
+
+  it("returns 413 when Content-Length exceeds limit", async () => {
+    vi.mocked(getAuthUser).mockResolvedValue(MOCK_AUTH_USER as never);
+    const file = new File([new Blob(["x"])], "test.jpg", { type: "image/jpeg" });
+    const form = new FormData();
+    form.append("files", file);
+    
+    // Create request with oversized Content-Length header
+    const maxBytes = Number(process.env.MAX_UPLOAD_BYTES) || 100 * 1024 * 1024;
+    const req = new Request("http://x/api/images/upload", {
+      method: "POST",
+      body: form,
+      headers: {
+        "content-length": String(maxBytes * 2) // Double the limit
+      }
+    });
+    
+    const res = await POST(req);
+    expect(res.status).toBe(413);
+    const data = await res.json();
+    expect(data.error).toMatch(/exceeds.*limit/);
+    expect(processImage).not.toHaveBeenCalled();
+  });
+
+  it("returns 400 when individual file size exceeds MAX_FILE_BYTES", async () => {
+    vi.mocked(getAuthUser).mockResolvedValue(MOCK_AUTH_USER as never);
+    const maxBytes = Number(process.env.MAX_UPLOAD_BYTES) || 100 * 1024 * 1024;
+    // Create a file with actual large content
+    const largeBuffer = Buffer.alloc(maxBytes + 1024); // slightly over limit
+    const largeFile = new File([largeBuffer], "large.jpg", { type: "image/jpeg" });
+    
+    const res = await POST(formRequestWithFiles([largeFile]));
+    expect(res.status).toBe(400);
+    const data = await res.json();
+    expect(data.error).toMatch(/exceeds max size/);
+    expect(processImage).not.toHaveBeenCalled();
+  });
 });
