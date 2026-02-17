@@ -112,6 +112,27 @@ Resources:
       StaticIpName: !Ref StaticIpName
       AttachedTo: !Ref CmsInstance
 
+  # Policy for the IAM user that the CMS app uses to upload/delete/list objects (e.g. cms-s3-uploader).
+  # Attach this policy to that user in IAM if the user was created outside this stack.
+  CmsS3UploaderPolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      ManagedPolicyName: !Sub "${AWS::StackName}-cms-s3-uploader"
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Sid: AllowObjectWriteReadDelete
+            Effect: Allow
+            Action:
+              - s3:PutObject
+              - s3:GetObject
+              - s3:DeleteObject
+            Resource: !Sub "arn:aws:s3:::${CmsBucket}/*"
+          - Sid: AllowListBucket
+            Effect: Allow
+            Action: s3:ListBucket
+            Resource: !Sub "arn:aws:s3:::${CmsBucket}"
+
 Outputs:
   CloudFrontDomain:
     Value: !GetAtt CmsDistribution.DomainName
@@ -121,3 +142,6 @@ Outputs:
     Value: !GetAtt CmsStaticIp.IpAddress
   S3Bucket:
     Value: !Ref CmsBucket
+  CmsS3UploaderPolicyArn:
+    Description: "Attach this policy to the IAM user used by the CMS app (e.g. cms-s3-uploader) if that user is not in this stack."
+    Value: !Ref CmsS3UploaderPolicy
