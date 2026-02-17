@@ -1,4 +1,4 @@
-/**
+ /**
  * Deploy-time DB setup: run migrations then seed base data.
  * Usage: CMS_DB_PATH=... BASE_ADMIN_EMAIL=... node scripts/deploy-db.cjs
  */

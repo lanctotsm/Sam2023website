@@ -34,6 +34,10 @@ export default function RootLayout({ children }: { children: ReactNode }) {
       <head>
         <script dangerouslySetInnerHTML={{ __html: themeScript }} />
         <link
+          href="https://fonts.googleapis.com/css2?family=Roboto:wght@500&display=swap"
+          rel="stylesheet"
+        />
+        <link
           rel="alternate"
           type="application/rss+xml"
           title="RSS Feed"
