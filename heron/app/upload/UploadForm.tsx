@@ -233,8 +233,13 @@ export default function UploadForm() {
         {status === "uploading" && (
           <div className="space-y-2">
             <p className="text-olive text-sm">Uploading {files.length} file(s)...</p>
-            <progress className="h-2 w-full rounded-full" value={uploadProgress} max={100} />
-            <p className="text-xs text-olive">{uploadProgress}% complete</p>
+            <div className="h-3 w-full overflow-hidden rounded-full bg-desert-tan-dark/30">
+              <div
+                className="h-full rounded-full bg-chestnut transition-[width] duration-200 ease-out"
+                style={{ width: `${uploadProgress}%` }}
+              />
+            </div>
+            <p className="text-xs font-medium text-chestnut-dark">{uploadProgress}%</p>
           </div>
         )}
         {status === "done" && <p className="text-olive text-sm">Upload complete!</p>}

@@ -237,17 +237,19 @@ export default function AdminMediaPage() {
           placeholder="Description for accessibility"
         />
         {error && <p className="text-copper text-sm">{error}</p>}
-        {status && (
+        {loading && (
           <div className="space-y-2">
-            <p className="text-olive text-sm">{status}</p>
-            {loading && (
-              <>
-                <progress className="h-2 w-full rounded-full" value={uploadProgress} max={100} />
-                <p className="text-xs text-olive">{uploadProgress}% complete</p>
-              </>
-            )}
+            <p className="text-olive text-sm">Uploading {files.length} file(s)...</p>
+            <div className="h-3 w-full overflow-hidden rounded-full bg-desert-tan-dark/30">
+              <div
+                className="h-full rounded-full bg-chestnut transition-[width] duration-200 ease-out"
+                style={{ width: `${uploadProgress}%` }}
+              />
+            </div>
+            <p className="text-xs font-medium text-chestnut-dark">{uploadProgress}%</p>
           </div>
         )}
+        {status && !loading && <p className="text-olive text-sm">{status}</p>}
         <button
           className="rounded-lg bg-chestnut px-4 py-2.5 text-desert-tan transition hover:bg-chestnut-dark disabled:opacity-60"
           onClick={upload}
