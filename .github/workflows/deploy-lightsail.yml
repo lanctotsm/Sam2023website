@@ -240,6 +240,10 @@ jobs:
           SITE_DOMAIN='${SITE_DOMAIN}'
           LETSENCRYPT_EMAIL='${LETSENCRYPT_EMAIL}'
 
+          if [ -z "\$SITE_DOMAIN" ]; then
+            echo "SITE_DOMAIN is empty; skipping Apache reverse proxy and Let's Encrypt configuration."
+            exit 0
+          fi
           sudo mkdir -p "\$WEBROOT/.well-known/acme-challenge"
           sudo chown -R bitnami:bitnami "\$WEBROOT"
 
