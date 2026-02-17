@@ -54,8 +54,8 @@ graph TD
 
 ## 🛠 Technology Stack
 
-- **Framework**: [Next.js 16](https://nextjs.org/) (App Router)
-- **Runtime**: Node.js 22+
+- **Framework**: [Next.js 15](https://nextjs.org/) (App Router)
+- **Runtime**: Node.js 22+ locally; CI and deployment use Node 24 to match the Lightsail/Bitnami runtime (required for native better-sqlite3).
 - **Language**: [TypeScript](https://www.typescriptlang.org/)
 - **Database**: [SQLite](https://sqlite.org/) via [better-sqlite3](https://github.com/WiseLibs/better-sqlite3)
 - **ORM**: [Drizzle ORM](https://orm.drizzle.team/)
@@ -67,7 +67,7 @@ graph TD
 
 ### Local Development (recommended: Docker + MinIO)
 
-1. **Environment**: Copy `heron/.env.local.example` to `heron/.env.local` and adjust values if needed.
+1. **Environment**: Copy `heron/.env.local.example` to `heron/.env.local` and adjust values if needed. Next.js also loads `heron/.env` if present; do not commit `heron/.env` or `heron/.env.local`.
 2. **Start services (app + MinIO)**:
    ```bash
    docker compose -f docker-compose.dev.yml up --build

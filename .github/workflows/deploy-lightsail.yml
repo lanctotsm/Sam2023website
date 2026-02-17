@@ -36,6 +36,14 @@ jobs:
         run: npm ci
         working-directory: heron
 
+      - name: Lint
+        run: npm run lint
+        working-directory: heron
+
+      - name: Typecheck
+        run: npm run typecheck
+        working-directory: heron
+
       - name: Build Heron app
         env:
           NEXT_PUBLIC_IMAGE_BASE_URL: ${{ secrets.S3_PUBLIC_BASE_URL }}
