@@ -112,9 +112,11 @@ export async function POST(request: Request) {
       });
       createdImages.push(row);
       createdImageIds.push(row.id);
+    }
 
-      if (albumId != null && Number.isInteger(albumId) && albumId > 0) {
-        await addAlbumImage(albumId, row.id, index);
+    if (albumId != null && Number.isInteger(albumId) && albumId > 0) {
+      for (let index = 0; index < createdImages.length; index++) {
+        await addAlbumImage(albumId, createdImages[index].id, index);
       }
     }
 
