@@ -61,39 +61,49 @@ async function isAllowedUserEmail(email: string) {
   return allowed.length > 0;
 }
 
+const isDevAuthEnabled =
+  process.env.NODE_ENV === "development" || process.env.DEV_AUTH_BYPASS === "true";
+
 export const authOptions: NextAuthOptions = {
   secret: process.env.NEXTAUTH_SECRET,
   session: {
     strategy: "jwt"
   },
+  pages: {
+    signIn: "/login"
+  },
   providers: [
     GoogleProvider({
-      clientId: process.env.GOOGLE_CLIENT_ID || "",
-      clientSecret: process.env.GOOGLE_CLIENT_SECRET || ""
+      clientId: process.env.GOOGLE_OAUTH_CLIENT_ID || "",
+      clientSecret: process.env.GOOGLE_OAUTH_CLIENT_SECRET || ""
     }),
-    CredentialsProvider({
-      name: "Dev Login",
-      credentials: {
-        email: { label: "Email", type: "email" }
-      },
-      async authorize(credentials) {
-        if (process.env.DEV_AUTH_BYPASS !== "true") {
-          return null;
-        }
+    ...(isDevAuthEnabled
+      ? [
+          CredentialsProvider({
+            name: "Dev Login",
+            credentials: {
+              email: { label: "Email", type: "email" }
+            },
+            async authorize(credentials) {
+              if (process.env.DEV_AUTH_BYPASS !== "true") {
+                return null;
+              }
 
-        const email = normalizeEmail(credentials?.email);
-        if (!email) {
-          return null;
-        }
+              const email = normalizeEmail(credentials?.email);
+              if (!email) {
+                return null;
+              }
 
-        if (!(await isAllowedUserEmail(email))) {
-          return null;
-        }
+              if (!(await isAllowedUserEmail(email))) {
+                return null;
+              }
 
-        const id = await ensureUserRecord({ email, googleId: `local:${email}` });
-        return id ? ({ id: id.toString(), email } as User) : null;
-      }
-    })
+              const id = await ensureUserRecord({ email, googleId: `local:${email}` });
+              return id ? ({ id: id.toString(), email } as User) : null;
+            }
+          })
+        ]
+      : [])
   ],
   callbacks: {
     async signIn({ user }) {
