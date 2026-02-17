@@ -268,7 +268,7 @@ jobs:
             # Redirect all traffic to HTTPS except ACME challenges
             RewriteEngine On
             RewriteCond %{REQUEST_URI} !^/.well-known/acme-challenge/
-            RewriteRule ^(.*)$ https://%{HTTP_HOST}\$1 [R=301,L]
+            RewriteRule ^(.*)$ https://%{HTTP_HOST}\\\$1 [R=301,L]
           </VirtualHost>
           <VirtualHost *:443>
             ServerName \${SITE_DOMAIN}
