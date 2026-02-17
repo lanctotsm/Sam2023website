@@ -240,7 +240,7 @@ jobs:
           SITE_DOMAIN='${SITE_DOMAIN}'
           LETSENCRYPT_EMAIL='${LETSENCRYPT_EMAIL}'
 
-          sudo mkdir -p "\$WEBROOT"
+          sudo mkdir -p "\$WEBROOT/.well-known/acme-challenge"
           sudo chown -R bitnami:bitnami "\$WEBROOT"
 
           # Prefer Let's Encrypt cert paths when they exist
@@ -257,8 +257,8 @@ jobs:
           sudo tee "\$VHOST" > /dev/null <<APACHE
           <VirtualHost *:80>
             ServerName \${SITE_DOMAIN}
-            Alias /.well-known/acme-challenge \$WEBROOT
-            <Directory \$WEBROOT>
+            Alias /.well-known/acme-challenge \$WEBROOT/.well-known/acme-challenge
+            <Directory \$WEBROOT/.well-known/acme-challenge>
               Require all granted
             </Directory>
             ProxyPreserveHost On
