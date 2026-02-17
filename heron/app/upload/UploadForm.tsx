@@ -5,25 +5,13 @@ import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { toast } from "sonner";
 import type { Album, Image as ImageMeta } from "@/lib/api";
-import { 
-  apiFetch, 
-  getAlbums, 
-  presignImage, 
-  presignImageBatch,
-  createImageBatch,
-  linkAlbumImage 
-} from "@/lib/api";
-import { buildImageUrl } from "@/lib/images";
-import { extractImagesFromZip, isZipFile, getImageDimensions } from "@/lib/upload-utils";
+import { apiFetch, getAlbums } from "@/lib/api";
+import { buildThumbUrl } from "@/lib/images";
+import { extractImagesFromZip, isZipFile } from "@/lib/upload-utils";
 
-type UploadState = "idle" | "extracting" | "presigning" | "uploading" | "saving" | "done" | "error";
+const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || "/api";
 
-type FileUploadProgress = {
-  file: File;
-  status: "pending" | "uploading" | "done" | "error";
-  progress: number;
-  error?: string;
-};
+type UploadState = "idle" | "extracting" | "uploading" | "done" | "error";
 
 export default function UploadForm() {
   const router = useRouter();
@@ -33,9 +21,10 @@ export default function UploadForm() {
   const [caption, setCaption] = useState("");
   const [altText, setAltText] = useState("");
   const [status, setStatus] = useState<UploadState>("idle");
-  const [fileProgress, setFileProgress] = useState<FileUploadProgress[]>([]);
+  const [uploadProgress, setUploadProgress] = useState(0);
   const [uploaded, setUploaded] = useState<ImageMeta[]>([]);
   const [error, setError] = useState("");
+  const [isDragging, setIsDragging] = useState(false);
 
   useEffect(() => {
     apiFetch<Album[]>("/albums")
@@ -44,21 +33,18 @@ export default function UploadForm() {
   }, []);
 
   const isReady = useMemo(
-    () => !!albumId && files.length > 0 && status !== "uploading" && status !== "presigning",
+    () => !!albumId && files.length > 0 && status !== "uploading",
     [albumId, files, status]
   );
 
-  const handleFileSelection = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const selectedFiles = Array.from(event.target.files || []);
+  const processSelectedFiles = async (selectedFiles: File[]) => {
     if (selectedFiles.length === 0) return;
 
     setError("");
     setStatus("idle");
 
-    // Check if any file is a zip
     const zipFiles = selectedFiles.filter(isZipFile);
-    const imageFiles = selectedFiles.filter(f => !isZipFile(f));
-
+    const imageFiles = selectedFiles.filter((f) => !isZipFile(f));
     let allFiles = [...imageFiles];
 
     if (zipFiles.length > 0) {
@@ -78,52 +64,41 @@ export default function UploadForm() {
     }
 
     setFiles(allFiles);
-    setFileProgress(allFiles.map(f => ({ file: f, status: "pending", progress: 0 })));
     setStatus("idle");
   };
 
-  const uploadFile = (url: string, contentType: string, fileToUpload: File, index: number) => {
-    return new Promise<void>((resolve, reject) => {
-      const xhr = new XMLHttpRequest();
-      xhr.upload.addEventListener("progress", (event) => {
-        if (event.lengthComputable) {
-          const progress = Math.round((event.loaded / event.total) * 100);
-          setFileProgress(prev => {
-            const updated = [...prev];
-            updated[index] = { ...updated[index], progress, status: "uploading" };
-            return updated;
-          });
-        }
-      });
-      xhr.addEventListener("load", () => {
-        if (xhr.status >= 200 && xhr.status < 300) {
-          setFileProgress(prev => {
-            const updated = [...prev];
-            updated[index] = { ...updated[index], status: "done", progress: 100 };
-            return updated;
-          });
-          resolve();
-        } else {
-          setFileProgress(prev => {
-            const updated = [...prev];
-            updated[index] = { ...updated[index], status: "error", error: `Upload failed (${xhr.status})` };
-            return updated;
-          });
-          reject(new Error(`Upload failed (${xhr.status})`));
-        }
-      });
-      xhr.addEventListener("error", () => {
-        setFileProgress(prev => {
-          const updated = [...prev];
-          updated[index] = { ...updated[index], status: "error", error: "Upload failed" };
-          return updated;
-        });
-        reject(new Error("Upload failed"));
-      });
-      xhr.open("PUT", url);
-      xhr.setRequestHeader("Content-Type", contentType);
-      xhr.send(fileToUpload);
-    });
+  const handleFileSelection = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    await processSelectedFiles(Array.from(event.target.files || []));
+    event.target.value = "";
+  };
+
+  const handleDrop = async (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+    const items = e.dataTransfer?.items;
+    if (!items) return;
+    const files: File[] = [];
+    for (let i = 0; i < items.length; i++) {
+      const entry = items[i];
+      if (entry.kind === "file") {
+        const file = entry.getAsFile();
+        if (file) files.push(file);
+      }
+    }
+    if (files.length === 0) return;
+    await processSelectedFiles(files);
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!isDragging) setIsDragging(true);
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!e.currentTarget.contains(e.relatedTarget as Node)) setIsDragging(false);
   };
 
   const upload = async () => {
@@ -132,67 +107,62 @@ export default function UploadForm() {
     }
 
     setError("");
-    setStatus("presigning");
+    setStatus("uploading");
     setUploaded([]);
+    setUploadProgress(0);
 
-    try {
-      // Presign all files
-      const presignData = await presignImageBatch(
-        files.map(f => ({
-          file_name: f.name,
-          content_type: f.type,
-          size: f.size
-        }))
-      );
-
-      // Upload all files to S3
-      setStatus("uploading");
-      await Promise.all(
-        presignData.files.map((presign, index) => 
-          uploadFile(presign.upload_url, files[index].type, files[index], index)
-        )
-      );
-
-      // Get dimensions and create metadata for all files
-      setStatus("saving");
-      const imageData = await Promise.all(
-        files.map(async (file, index) => {
-          const dimensions = await getImageDimensions(file);
-          return {
-            s3_key: presignData.files[index].s3_key,
-            caption: caption || "",
-            alt_text: altText || "",
-            width: dimensions?.width,
-            height: dimensions?.height
-          };
-        })
-      );
-
-      const createdImages = await createImageBatch(imageData);
-
-      // Link all images to the album
-      await Promise.all(
-        createdImages.images.map((img, index) => 
-          linkAlbumImage(Number(albumId), img.id, index)
-        )
-      );
-
-      setUploaded(createdImages.images);
-      setStatus("done");
-      toast.success(`${files.length} photo(s) uploaded successfully`);
-      
-      const album = albums.find((a) => a.id === Number(albumId));
-      if (album?.slug) {
-        router.push(`/albums/${album.slug}`);
-      } else {
-        router.push("/albums");
-      }
-    } catch (err) {
-      setStatus("error");
-      const msg = err instanceof Error ? err.message : "Upload failed.";
-      setError(msg);
-      toast.error(msg);
+    const formData = new FormData();
+    formData.append("album_id", albumId);
+    formData.append("caption", caption);
+    formData.append("alt_text", altText);
+    for (const file of files) {
+      formData.append("files", file);
     }
+
+    return new Promise<void>((resolve, reject) => {
+      const xhr = new XMLHttpRequest();
+      xhr.upload.addEventListener("progress", (event) => {
+        if (event.lengthComputable) {
+          setUploadProgress(Math.round((event.loaded / event.total) * 100));
+        }
+      });
+      xhr.addEventListener("load", () => {
+        if (xhr.status >= 200 && xhr.status < 300) {
+          try {
+            const data = JSON.parse(xhr.responseText) as { images: ImageMeta[] };
+            setUploaded(data.images);
+            setStatus("done");
+            toast.success(`${files.length} photo(s) uploaded successfully`);
+            const album = albums.find((a) => a.id === Number(albumId));
+            if (album?.slug) {
+              router.push(`/albums/${album.slug}`);
+            } else {
+              router.push("/albums");
+            }
+          } catch {
+            setStatus("error");
+            setError("Invalid response");
+            toast.error("Upload failed.");
+          }
+          resolve();
+        } else {
+          setStatus("error");
+          const msg = xhr.responseText || `Upload failed (${xhr.status})`;
+          setError(msg);
+          toast.error(msg);
+          reject(new Error(msg));
+        }
+      });
+      xhr.addEventListener("error", () => {
+        setStatus("error");
+        setError("Upload failed");
+        toast.error("Upload failed.");
+        reject(new Error("Upload failed"));
+      });
+      xhr.open("POST", `${API_BASE}/images/upload`);
+      xhr.withCredentials = true;
+      xhr.send(formData);
+    });
   };
 
   const inputClass =
@@ -200,10 +170,6 @@ export default function UploadForm() {
   const labelClass = "text-sm font-medium text-chestnut-dark";
   const cardClass =
     "rounded-xl border border-desert-tan-dark bg-surface p-4 shadow-[0_2px_8px_rgba(72,9,3,0.08)]";
-
-  const overallProgress = fileProgress.length > 0
-    ? Math.round(fileProgress.reduce((sum, f) => sum + f.progress, 0) / fileProgress.length)
-    : 0;
 
   return (
     <div className="flex flex-col gap-6">
@@ -223,13 +189,36 @@ export default function UploadForm() {
           ))}
         </select>
         <label className={labelClass}>Photos (multiple images or zip file)</label>
-        <input
-          className="block w-full text-sm text-chestnut-dark file:mr-4 file:rounded-lg file:border-0 file:bg-chestnut file:px-4 file:py-2 file:text-desert-tan"
-          type="file"
-          multiple
-          accept="image/*,.zip"
-          onChange={handleFileSelection}
-        />
+        <div
+          role="button"
+          tabIndex={0}
+          onDragOver={handleDragOver}
+          onDragLeave={handleDragLeave}
+          onDrop={handleDrop}
+          className={`relative rounded-xl border-2 border-dashed p-6 text-center transition-colors ${
+            isDragging
+              ? "border-chestnut bg-chestnut/10"
+              : "border-desert-tan-dark bg-surface hover:border-chestnut/50"
+          }`}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" || e.key === " ") {
+              e.preventDefault();
+              e.currentTarget.querySelector<HTMLInputElement>("input[type=file]")?.click();
+            }
+          }}
+        >
+          <input
+            className="absolute inset-0 w-full cursor-pointer opacity-0"
+            type="file"
+            multiple
+            accept="image/*,.zip"
+            onChange={handleFileSelection}
+            aria-label="Select photos or zip file"
+          />
+          <p className="pointer-events-none m-0 text-sm text-chestnut-dark">
+            {isDragging ? "Drop images or zip here" : "Drag and drop images or zip here, or click to browse"}
+          </p>
+        </div>
         {files.length > 0 && (
           <p className="text-sm text-olive">
             {files.length} file(s) selected
@@ -241,36 +230,15 @@ export default function UploadForm() {
         <input className={inputClass} value={altText} onChange={(event) => setAltText(event.target.value)} />
         
         {status === "extracting" && <p className="text-olive text-sm">Extracting images from zip...</p>}
-        {status === "presigning" && <p className="text-olive text-sm">Preparing upload...</p>}
         {status === "uploading" && (
           <div className="space-y-2">
             <p className="text-olive text-sm">Uploading {files.length} file(s)...</p>
-            <progress className="h-2 w-full rounded-full" value={overallProgress} max={100} />
-            <p className="text-xs text-olive">{overallProgress}% complete</p>
+            <progress className="h-2 w-full rounded-full" value={uploadProgress} max={100} />
+            <p className="text-xs text-olive">{uploadProgress}% complete</p>
           </div>
         )}
-        {status === "saving" && <p className="text-olive text-sm">Saving metadata...</p>}
         {status === "done" && <p className="text-olive text-sm">Upload complete!</p>}
         {error && <p className="text-copper text-sm">{error}</p>}
-        
-        {fileProgress.length > 0 && status === "uploading" && (
-          <div className="max-h-48 overflow-y-auto space-y-1">
-            {fileProgress.map((fp, idx) => (
-              <div key={idx} className="flex items-center gap-2 text-xs">
-                <span className="flex-1 truncate text-chestnut-dark">{fp.file.name}</span>
-                <span className={
-                  fp.status === "done" ? "text-olive" :
-                  fp.status === "error" ? "text-copper" :
-                  fp.status === "uploading" ? "text-chestnut" : "text-olive"
-                }>
-                  {fp.status === "done" ? "✓" :
-                   fp.status === "error" ? "✗" :
-                   fp.status === "uploading" ? `${fp.progress}%` : "⏳"}
-                </span>
-              </div>
-            ))}
-          </div>
-        )}
         
         <button
           className="rounded-lg bg-chestnut px-4 py-2.5 text-desert-tan transition hover:bg-chestnut-dark disabled:opacity-60"
@@ -288,7 +256,7 @@ export default function UploadForm() {
             {uploaded.map((img) => (
               <div key={img.id} className="overflow-hidden rounded-lg">
                 <Image
-                  src={buildImageUrl(img.s3_key)}
+                  src={buildThumbUrl(img)}
                   alt={img.alt_text || img.caption || "Uploaded image"}
                   width={img.width || 300}
                   height={img.height || 200}

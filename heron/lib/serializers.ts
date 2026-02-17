@@ -35,6 +35,9 @@ export function serializeImage(row: ImageRow) {
   return {
     id: row.id,
     s3_key: row.s3Key,
+    s3_key_thumb: row.s3KeyThumb ?? null,
+    s3_key_large: row.s3KeyLarge ?? null,
+    s3_key_original: row.s3KeyOriginal ?? null,
     width: row.width,
     height: row.height,
     caption: row.caption || "",

@@ -2,6 +2,11 @@
 const nextConfig = {
   reactStrictMode: true,
   output: "standalone",
+  experimental: {
+    serverActions: {
+      bodySizeLimit: "100mb"
+    }
+  },
   images: {
     remotePatterns: [
       {

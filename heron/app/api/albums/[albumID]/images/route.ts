@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { errorResponse, getAuthUser } from "@/lib/api-utils";
 import { serializeImage } from "@/lib/serializers";
 import { getAlbumById } from "@/services/albums";
-import { getAlbumImages, updateAlbumImagesOrder } from "@/services/albumImages";
+import { addAlbumImage, getAlbumImages, updateAlbumImagesOrder } from "@/services/albumImages";
 
 type Params = { params: Promise<{ albumID: string }> };
 
@@ -24,6 +24,34 @@ export async function GET(_: Request, { params }: Params) {
     sort_order: row.sortOrder
   }));
   return NextResponse.json(body);
+}
+
+export async function POST(request: Request, { params }: Params) {
+  const user = await getAuthUser();
+  if (!user) {
+    return errorResponse("unauthorized", 401);
+  }
+
+  const { albumID } = await params;
+  const albumId = parseInt(albumID, 10);
+  if (Number.isNaN(albumId)) {
+    return errorResponse("invalid album id", 400);
+  }
+
+  const album = await getAlbumById(albumId);
+  if (!album) {
+    return errorResponse("album not found", 404);
+  }
+
+  const payload = await request.json();
+  const imageId = Number(payload.image_id);
+  const sortOrder = Number(payload.sort_order);
+  if (!Number.isInteger(imageId) || imageId <= 0 || !Number.isInteger(sortOrder) || sortOrder < 0) {
+    return errorResponse("image_id and sort_order (non-negative integers) are required", 400);
+  }
+
+  await addAlbumImage(albumId, imageId, sortOrder);
+  return NextResponse.json({ ok: true }, { status: 201 });
 }
 
 export async function PUT(request: Request, { params }: Params) {
