@@ -7,7 +7,7 @@ import type { Image as ImageMeta } from "@/lib/api";
 import { apiFetch } from "@/lib/api";
 import { buildThumbUrl } from "@/lib/images";
 import { MediaItemSkeleton } from "@/components/Skeleton";
-import { extractImagesFromZip, isZipFile } from "@/lib/upload-utils";
+import { extractImagesFromZip, isZipFile, isFileWithinSizeLimit, MAX_UPLOAD_BYTES } from "@/lib/upload-utils";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || "/api";
 
@@ -64,6 +64,15 @@ export default function AdminMediaPage() {
       }
     }
 
+    const oversized = allFiles.filter((f) => !isFileWithinSizeLimit(f));
+    if (oversized.length > 0) {
+      const maxMB = Math.round(MAX_UPLOAD_BYTES / (1024 * 1024));
+      setError(`Some files exceed ${maxMB}MB limit: ${oversized.map((f) => f.name).join(", ")}`);
+      toast.error(`Max file size is ${maxMB}MB. Remove or resize the oversized file(s).`);
+      setStatus("");
+      return;
+    }
+
     setFiles(allFiles);
     setStatus("");
   };
@@ -104,6 +113,14 @@ export default function AdminMediaPage() {
 
   const upload = () => {
     if (files.length === 0) return;
+
+    const oversized = files.filter((f) => !isFileWithinSizeLimit(f));
+    if (oversized.length > 0) {
+      const maxMB = Math.round(MAX_UPLOAD_BYTES / (1024 * 1024));
+      setError(`Some files exceed ${maxMB}MB limit.`);
+      toast.error(`Max file size is ${maxMB}MB.`);
+      return;
+    }
 
     setLoading(true);
     setError("");

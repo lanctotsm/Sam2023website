@@ -7,7 +7,7 @@ import { toast } from "sonner";
 import type { Album, Image as ImageMeta } from "@/lib/api";
 import { apiFetch, getAlbums } from "@/lib/api";
 import { buildThumbUrl } from "@/lib/images";
-import { extractImagesFromZip, isZipFile } from "@/lib/upload-utils";
+import { extractImagesFromZip, isZipFile, isFileWithinSizeLimit, MAX_UPLOAD_BYTES } from "@/lib/upload-utils";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || "/api";
 
@@ -63,6 +63,15 @@ export default function UploadForm() {
       }
     }
 
+    const oversized = allFiles.filter((f) => !isFileWithinSizeLimit(f));
+    if (oversized.length > 0) {
+      const maxMB = Math.round(MAX_UPLOAD_BYTES / (1024 * 1024));
+      setError(`Some files exceed ${maxMB}MB limit: ${oversized.map((f) => f.name).join(", ")}`);
+      toast.error(`Max file size is ${maxMB}MB. Remove or resize the oversized file(s).`);
+      setStatus("idle");
+      return;
+    }
+
     setFiles(allFiles);
     setStatus("idle");
   };
@@ -103,6 +112,14 @@ export default function UploadForm() {
 
   const upload = async () => {
     if (files.length === 0 || !albumId) {
+      return;
+    }
+
+    const oversized = files.filter((f) => !isFileWithinSizeLimit(f));
+    if (oversized.length > 0) {
+      const maxMB = Math.round(MAX_UPLOAD_BYTES / (1024 * 1024));
+      setError(`Some files exceed ${maxMB}MB limit.`);
+      toast.error(`Max file size is ${maxMB}MB.`);
       return;
     }
 
