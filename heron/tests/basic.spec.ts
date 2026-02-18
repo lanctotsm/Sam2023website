@@ -7,6 +7,7 @@ test("has title", async ({ page }) => {
 
 test("navigation links are present", async ({ page }) => {
   await page.goto("/");
-  const nav = page.locator("nav");
+  const nav = page.getByRole("navigation").first();
   await expect(nav).toBeVisible();
+  await expect(page.getByRole("link", { name: /About/i }).first()).toBeVisible();
 });

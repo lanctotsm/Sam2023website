@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Image from "next/image";
+import Link from "next/link";
 import { toast } from "sonner";
 import type { Image as ImageMeta } from "@/lib/api";
 import { apiFetch } from "@/lib/api";
@@ -10,6 +11,19 @@ import { MediaItemSkeleton } from "@/components/Skeleton";
 import { extractImagesFromZip, isZipFile, isFileWithinSizeLimit, MAX_UPLOAD_BYTES } from "@/lib/upload-utils";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || "/api";
+
+function formatImageMeta(image: ImageMeta): string {
+  if (image.created_at) {
+    const d = new Date(image.created_at);
+    return d.toLocaleDateString("en-US", {
+      year: "numeric",
+      month: "short",
+      day: "numeric"
+    });
+  }
+  const parts = image.s3_key.split("/");
+  return parts[parts.length - 1] || image.s3_key;
+}
 
 export default function AdminMediaPage() {
   const [images, setImages] = useState<ImageMeta[]>([]);
@@ -194,15 +208,15 @@ export default function AdminMediaPage() {
   };
 
   const inputClass =
-    "w-full rounded-lg border border-desert-tan-dark bg-white px-3 py-2.5 text-chestnut-dark outline-none transition focus:border-chestnut focus:ring-2 focus:ring-chestnut/10";
-  const labelClass = "text-sm font-medium text-chestnut-dark";
+    "w-full rounded-lg border border-desert-tan-dark bg-white px-3 py-2.5 text-chestnut-dark outline-none transition focus:border-chestnut focus:ring-2 focus:ring-chestnut/10 dark:border-dark-muted dark:bg-dark-bg dark:text-dark-text dark:placeholder:text-dark-muted/60";
+  const labelClass = "text-sm font-medium text-chestnut-dark dark:text-dark-text";
   const cardClass =
-    "rounded-xl border border-desert-tan-dark bg-surface p-4 shadow-[0_2px_8px_rgba(72,9,3,0.08)]";
+    "rounded-xl border border-desert-tan-dark bg-surface p-4 shadow-[0_2px_8px_rgba(72,9,3,0.08)] dark:border-dark-muted dark:bg-dark-surface";
 
   return (
     <div className="flex flex-col gap-6">
       <section className={`${cardClass} flex flex-col gap-4`}>
-        <h2 className="m-0 text-chestnut">Upload New Images</h2>
+        <h2 className="m-0 text-chestnut dark:text-dark-text">Upload New Images</h2>
         <label className={labelClass}>Select Images (multiple or zip file)</label>
         <div
           role="button"
@@ -212,8 +226,8 @@ export default function AdminMediaPage() {
           onDrop={handleDrop}
           className={`relative rounded-xl border-2 border-dashed p-6 text-center transition-colors ${
             isDragging
-              ? "border-chestnut bg-chestnut/10"
-              : "border-desert-tan-dark bg-surface hover:border-chestnut/50"
+              ? "border-chestnut bg-chestnut/10 dark:bg-chestnut/20"
+              : "border-desert-tan-dark bg-surface hover:border-chestnut/50 dark:border-dark-muted dark:bg-dark-surface dark:hover:border-chestnut/50"
           }`}
           onKeyDown={(e) => {
             if (e.key === "Enter" || e.key === " ") {
@@ -230,12 +244,12 @@ export default function AdminMediaPage() {
             onChange={handleFileSelection}
             aria-label="Select images or zip file"
           />
-          <p className="pointer-events-none m-0 text-sm text-chestnut-dark">
+          <p className="pointer-events-none m-0 text-sm text-chestnut-dark dark:text-dark-muted">
             {isDragging ? "Drop images or zip here" : "Drag and drop images or zip here, or click to browse"}
           </p>
         </div>
         {files.length > 0 && (
-          <p className="text-sm text-olive">
+          <p className="text-sm text-olive dark:text-dark-muted">
             {files.length} file(s) selected
           </p>
         )}
@@ -253,7 +267,7 @@ export default function AdminMediaPage() {
           onChange={(e) => setAltText(e.target.value)}
           placeholder="Description for accessibility"
         />
-        {error && <p className="text-copper text-sm">{error}</p>}
+        {error && <p className="text-copper text-sm dark:text-copper-light">{error}</p>}
         {loading && (
           <div className="space-y-2">
             <p className="text-olive text-sm">Uploading {files.length} file(s)...</p>
@@ -263,12 +277,12 @@ export default function AdminMediaPage() {
                 style={{ width: `${uploadProgress}%` }}
               />
             </div>
-            <p className="text-xs font-medium text-chestnut-dark">{uploadProgress}%</p>
+            <p className="text-xs font-medium text-chestnut-dark dark:text-dark-muted">{uploadProgress}%</p>
           </div>
         )}
-        {status && !loading && <p className="text-olive text-sm">{status}</p>}
+        {status && !loading && <p className="text-olive text-sm dark:text-dark-muted">{status}</p>}
         <button
-          className="rounded-lg bg-chestnut px-4 py-2.5 text-desert-tan transition hover:bg-chestnut-dark disabled:opacity-60"
+          className="rounded-lg bg-chestnut px-4 py-2.5 text-desert-tan transition hover:bg-chestnut-dark disabled:opacity-60 dark:text-dark-text"
           onClick={upload}
           disabled={files.length === 0 || loading}
         >
@@ -277,7 +291,12 @@ export default function AdminMediaPage() {
       </section>
 
       <section className="flex flex-col gap-4">
-        <h2 className="text-chestnut">Media Library ({images.length} images)</h2>
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <h2 className="m-0 text-chestnut dark:text-dark-text">Media Library ({images.length} images)</h2>
+          <p className="m-0 text-sm text-olive dark:text-dark-muted">
+            Edit tags, alt text, and descriptions from the album editor.
+          </p>
+        </div>
         {loadingImages ? (
           <div className="grid grid-cols-[repeat(auto-fill,minmax(220px,1fr))] gap-4">
             {[1, 2, 3, 4, 5, 6].map((i) => (
@@ -285,7 +304,7 @@ export default function AdminMediaPage() {
             ))}
           </div>
         ) : images.length === 0 ? (
-          <p className={`${cardClass} text-olive`}>No images uploaded yet.</p>
+          <p className={`${cardClass} text-olive dark:text-dark-muted`}>No images uploaded yet.</p>
         ) : (
           <div className="grid grid-cols-[repeat(auto-fill,minmax(220px,1fr))] gap-4">
             {images.map((image) => (
@@ -301,15 +320,27 @@ export default function AdminMediaPage() {
                   />
                 </div>
                 <div className="min-w-0 flex-1">
-                  <p className="m-0 text-sm font-medium text-chestnut-dark">{image.caption || "No caption"}</p>
-                  <p className="mt-1 truncate text-xs text-olive">{image.s3_key}</p>
+                  <p className="m-0 text-sm font-medium text-chestnut-dark dark:text-dark-text">
+                    {image.caption || "No caption"}
+                  </p>
+                  <p className="mt-1 truncate text-xs text-olive dark:text-dark-muted">
+                    {formatImageMeta(image)}
+                  </p>
+                  <div className="mt-2 flex gap-2">
+                    <Link
+                      href="/admin/albums"
+                      className="rounded border border-chestnut px-2 py-1 text-xs text-chestnut transition hover:bg-chestnut/5 dark:border-dark-text dark:text-dark-text dark:hover:bg-dark-bg"
+                    >
+                      Open Albums
+                    </Link>
+                    <button
+                      className="rounded border border-copper px-2 py-1 text-xs text-copper transition hover:bg-copper/10 dark:border-copper dark:text-copper-light dark:hover:bg-copper/20"
+                      onClick={() => handleDelete(image.id)}
+                    >
+                      Delete
+                    </button>
+                  </div>
                 </div>
-                <button
-                  className="rounded-lg border border-copper bg-transparent px-3 py-2 text-sm text-copper transition hover:bg-copper/10"
-                  onClick={() => handleDelete(image.id)}
-                >
-                  Delete
-                </button>
               </div>
             ))}
           </div>

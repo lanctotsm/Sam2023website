@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { signIn, signOut, useSession } from "next-auth/react";
+import { signIn, useSession } from "next-auth/react";
 import { toast } from "sonner";
 
 // Official Google "G" logo from Google's CDN (Firebase Auth / Identity)
@@ -43,31 +43,15 @@ export default function AdminLoginButton() {
     }
   };
 
-  const handleLogout = async () => {
-    setLoading(true);
-    try {
-      await signOut({ callbackUrl: "/" });
-    } finally {
-      setLoading(false);
-    }
-  };
-
   if (status === "loading") {
     return <span className="text-olive dark:text-dark-muted">...</span>;
   }
 
   if (session?.user) {
     return (
-      <div className="flex items-center gap-3">
-        <span className="text-sm text-olive-dark dark:text-dark-muted">{userEmail}</span>
-        <button
-          className="rounded-lg border border-chestnut bg-transparent px-3 py-1.5 text-sm font-semibold text-chestnut transition-all hover:opacity-90 disabled:opacity-60 dark:border-dark-text dark:text-dark-text"
-          onClick={handleLogout}
-          disabled={loading}
-        >
-          {loading ? "..." : "Log out"}
-        </button>
-      </div>
+      <span className="text-sm text-olive-dark dark:text-dark-muted" title={userEmail}>
+        {userEmail}
+      </span>
     );
   }
 

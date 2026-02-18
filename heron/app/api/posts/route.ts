@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { errorResponse, getAuthUser } from "@/lib/api-utils";
 import { serializePost } from "@/lib/serializers";
 import { createPost, getAllPosts } from "@/services/posts";
+import { replacePostInlineImages } from "@/services/postInlineImages";
 
 export async function GET(request: Request) {
   const user = await getAuthUser();
@@ -9,7 +10,7 @@ export async function GET(request: Request) {
   const statusParam = searchParams.get("status") || undefined;
 
   const rows = await getAllPosts({ user, status: statusParam });
-  return NextResponse.json(rows.map(serializePost));
+  return NextResponse.json(rows.map((row) => serializePost(row)));
 }
 
 export async function POST(request: Request) {
@@ -27,6 +28,12 @@ export async function POST(request: Request) {
     return errorResponse("title, slug, and markdown are required", 400);
   }
 
+  const inlineImageIdsRaw = payload.inline_image_ids;
+  const inlineImageIds =
+    Array.isArray(inlineImageIdsRaw)
+      ? inlineImageIdsRaw.map((x: unknown) => Number(x)).filter((x: number) => Number.isInteger(x) && x > 0)
+      : undefined;
+
   try {
     const created = await createPost({
       title,
@@ -37,7 +44,13 @@ export async function POST(request: Request) {
       publishedAt: payload.published_at || null,
       createdBy: user.id
     });
-    return NextResponse.json(serializePost(created), { status: 201 });
+    if (inlineImageIds) {
+      await replacePostInlineImages(created.id, inlineImageIds);
+    }
+    return NextResponse.json(
+      serializePost(created, inlineImageIds ? { inlineImageIds } : undefined),
+      { status: 201 }
+    );
   } catch (error) {
     return errorResponse("failed to create post", 500);
   }

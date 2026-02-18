@@ -107,6 +107,7 @@ dist
 # Temporary folders
 tmp/
 temp/
+heron/.samples/
 
 # Windows specific
 *.exe.config

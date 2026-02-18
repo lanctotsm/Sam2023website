@@ -3,16 +3,15 @@ import { test, expect } from "@playwright/test";
 test.describe("Auth flow", () => {
   test("login page loads", async ({ page }) => {
     await page.goto("/login");
-    // Check for "Log in" button
-    await expect(page.getByRole("button", { name: /Log in/i })).toBeVisible();
+    await expect(page.getByRole("heading", { name: /Login/i })).toBeVisible();
+    await expect(page.getByRole("button", { name: /Google/i })).toBeVisible();
   });
 
-  test("unauthorized access redirects or shows error", async ({ page }) => {
-    // Attempting to visit an admin page without being logged in
+  test("unauthorized admin shows sign-in prompt", async ({ page }) => {
     await page.goto("/admin");
-    // Depending on implementation, it might redirect to /login or show a 401
-    // Usually NextAuth redirects to signin or we handle it in middleware
-    await expect(page).toHaveURL(/\/login|api\/auth\/signin/);
+    await expect(page).toHaveURL(/\/admin/);
+    await expect(page.getByRole("heading", { name: /Admin/i })).toBeVisible();
+    await expect(page.getByRole("button", { name: /Google/i })).toBeVisible();
   });
 });
 
@@ -24,6 +23,7 @@ test.describe("Public pages", () => {
 
   test("resume page loads", async ({ page }) => {
     await page.goto("/resume");
-    await expect(page.locator("h1")).toContainText(/Resume/i);
+    await expect(page).toHaveURL(/\/resume/);
+    await expect(page.getByRole("heading", { name: /Samuel Lanctot/i })).toBeVisible();
   });
 });

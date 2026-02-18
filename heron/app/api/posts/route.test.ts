@@ -12,6 +12,9 @@ vi.mock("@/services/posts", () => ({
   getAllPosts: vi.fn(),
   createPost: vi.fn()
 }));
+vi.mock("@/services/postInlineImages", () => ({
+  replacePostInlineImages: vi.fn()
+}));
 
 vi.mock("@/lib/serializers", () => ({
   serializePost: (p: unknown) => p
@@ -19,11 +22,13 @@ vi.mock("@/lib/serializers", () => ({
 
 const { getAuthUser } = await import("@/lib/api-utils");
 const { getAllPosts, createPost } = await import("@/services/posts");
+const { replacePostInlineImages } = await import("@/services/postInlineImages");
 
 describe("POSTS /api/posts", () => {
   beforeEach(() => {
     vi.mocked(getAuthUser).mockResolvedValue(null);
     vi.mocked(getAllPosts).mockResolvedValue([]);
+    vi.mocked(replacePostInlineImages).mockResolvedValue(undefined);
   });
 
   describe("GET", () => {
@@ -94,7 +99,8 @@ describe("POSTS /api/posts", () => {
           title: "New Post",
           slug: "new-post",
           summary: "S",
-          markdown: "M"
+          markdown: "M",
+          inline_image_ids: [101, 102]
         })
       );
       expect(res.status).toBe(201);
@@ -103,6 +109,7 @@ describe("POSTS /api/posts", () => {
       expect(createPost).toHaveBeenCalledWith(
         expect.objectContaining({ title: "New Post", slug: "new-post", markdown: "M", createdBy: 1 })
       );
+      expect(replacePostInlineImages).toHaveBeenCalledWith(1, [101, 102]);
     });
   });
 });

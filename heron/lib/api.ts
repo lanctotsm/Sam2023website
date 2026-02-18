@@ -4,6 +4,7 @@ export type Post = {
   slug: string;
   summary?: string;
   markdown: string;
+  inline_image_ids?: number[];
   status: string;
   published_at?: string | null;
   created_at: string;
@@ -27,8 +28,11 @@ export type Image = {
   s3_key_original?: string | null;
   width?: number | null;
   height?: number | null;
+  name?: string;
   caption?: string;
   alt_text?: string;
+  description?: string;
+  tags?: string;
   created_at: string;
 };
 

@@ -38,27 +38,32 @@ async function ensureUserRecord(params: { email: string; googleId: string }) {
   return inserted[0]?.id ?? null;
 }
 
-async function isAllowedUserEmail(email: string) {
+async function getAllowedAdminUser(email: string) {
   const baseAdmin = normalizeEmail(process.env.BASE_ADMIN_EMAIL);
   if (baseAdmin && baseAdmin === email) {
     const db = getDb();
     await db
       .insert(adminUsers)
-      .values({ email, isBaseAdmin: true })
+      .values({ email, isBaseAdmin: true, name: "Base Admin" })
       .onConflictDoUpdate({
         target: adminUsers.email,
         set: { isBaseAdmin: true }
       });
-    return true;
+    return { name: "Base Admin" };
   }
 
   const db = getDb();
-  const allowed = await db
-    .select({ id: adminUsers.id })
+  const [allowed] = await db
+    .select({ id: adminUsers.id, name: adminUsers.name })
     .from(adminUsers)
     .where(eq(adminUsers.email, email))
     .limit(1);
-  return allowed.length > 0;
+  return allowed || null;
+}
+
+async function isAllowedUserEmail(email: string) {
+  const allowed = await getAllowedAdminUser(email);
+  return Boolean(allowed);
 }
 
 const isDevAuthEnabled =
@@ -121,10 +126,12 @@ export const authOptions: NextAuthOptions = {
         }
         const googleId = account?.providerAccountId || `local:${email}`;
         const userId = await ensureUserRecord({ email, googleId });
+        const adminInvite = await getAllowedAdminUser(email);
         if (userId) {
           token.userId = userId;
           token.email = email;
           token.role = "admin";
+          token.name = adminInvite?.name || user.name || token.name;
         }
       }
       return token;
@@ -134,6 +141,7 @@ export const authOptions: NextAuthOptions = {
         session.user.id = token.userId as number | undefined;
         session.user.email = (token.email as string) || session.user.email;
         session.user.role = (token.role as string) || "admin";
+        session.user.name = (token.name as string) || session.user.name;
       }
       return session;
     }

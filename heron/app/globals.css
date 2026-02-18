@@ -18,11 +18,11 @@
   --color-copper-light: #d4611f;
   --color-surface: #f5ead5;
   --color-surface-hover: #efe2c8;
-  /* Dark mode backgrounds and text */
+  /* Dark mode backgrounds and text - high contrast for readability */
   --color-dark-bg: #1a1a1a;
-  --color-dark-surface: #2d2d2d;
-  --color-dark-text: #e5d1a4;
-  --color-dark-muted: #937a24;
+  --color-dark-surface: #252525;
+  --color-dark-text: #e8dcb8;
+  --color-dark-muted: #b8a86c;
 }
 
 * {
@@ -47,9 +47,21 @@ body {
   background: var(--color-desert-tan);
 }
 
+.dark::-webkit-scrollbar-track {
+  background: var(--color-dark-bg);
+}
+
 ::-webkit-scrollbar-thumb {
   background: var(--color-caramel);
   border-radius: 4px;
+}
+
+.dark::-webkit-scrollbar-thumb {
+  background: var(--color-dark-muted);
+}
+
+.dark::-webkit-scrollbar-thumb:hover {
+  background: var(--color-dark-text);
 }
 
 ::-webkit-scrollbar-thumb:hover {

@@ -4,8 +4,8 @@ type PostRow = typeof posts.$inferSelect;
 type AlbumRow = typeof albums.$inferSelect;
 type ImageRow = typeof images.$inferSelect;
 
-export function serializePost(row: PostRow) {
-  return {
+export function serializePost(row: PostRow, options?: { inlineImageIds?: number[] }) {
+  const base = {
     id: row.id,
     title: row.title,
     slug: row.slug,
@@ -17,6 +17,13 @@ export function serializePost(row: PostRow) {
     created_at: row.createdAt,
     updated_at: row.updatedAt
   };
+  if (options?.inlineImageIds) {
+    return {
+      ...base,
+      inline_image_ids: options.inlineImageIds
+    };
+  }
+  return base;
 }
 
 export function serializeAlbum(row: AlbumRow) {
@@ -40,8 +47,11 @@ export function serializeImage(row: ImageRow) {
     s3_key_original: row.s3KeyOriginal ?? null,
     width: row.width,
     height: row.height,
+    name: row.name || "",
     caption: row.caption || "",
     alt_text: row.altText || "",
+    description: row.description || "",
+    tags: row.tags || "",
     created_by: row.createdBy ?? null,
     created_at: row.createdAt
   };

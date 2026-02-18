@@ -23,7 +23,7 @@ function formatRfc822(dateStr: string): string {
 
 export async function GET() {
   const rows = await getAllPosts({});
-  const posts = Array.isArray(rows) ? rows.map(serializePost) : [];
+  const posts = Array.isArray(rows) ? rows.map((row) => serializePost(row)) : [];
 
   const xml = `<?xml version="1.0" encoding="UTF-8"?>
 <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">

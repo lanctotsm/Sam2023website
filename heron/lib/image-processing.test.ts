@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import sharp from "sharp";
-import { processImage } from "./image-processing";
+import { processImage, rotateImage } from "./image-processing";
 
 describe("lib/image-processing", () => {
   async function createSmallJpeg(width: number, height: number): Promise<Buffer> {
@@ -60,5 +60,15 @@ describe("lib/image-processing", () => {
     } finally {
       process.env.LARGE_IMAGE_MAX_MP = orig;
     }
+  });
+
+  it("rotateImage rotates buffer by 90 degrees", async () => {
+    const input = await createSmallJpeg(100, 50);
+    const rotated = await rotateImage(input, 90);
+    expect(rotated).toBeInstanceOf(Buffer);
+    expect(rotated.length).toBeGreaterThan(0);
+    const meta = await sharp(rotated).metadata();
+    expect(meta.width).toBe(50);
+    expect(meta.height).toBe(100);
   });
 });

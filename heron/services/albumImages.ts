@@ -16,8 +16,11 @@ export async function getAlbumImages(albumId: number) {
       s3KeyOriginal: images.s3KeyOriginal,
       width: images.width,
       height: images.height,
+      name: images.name,
       caption: images.caption,
       altText: images.altText,
+      description: images.description,
+      tags: images.tags,
       createdBy: images.createdBy,
       createdAt: images.createdAt,
       sortOrder: albumImages.sortOrder
@@ -38,4 +41,13 @@ export async function updateAlbumImagesOrder(albumId: number, imageIdsInOrder: n
       .set({ sortOrder: i })
       .where(and(eq(albumImages.albumId, albumId), eq(albumImages.imageId, imageIdsInOrder[i])));
   }
+}
+
+export async function isImageLinkedToAnyAlbum(imageId: number) {
+  const rows = await getDb()
+    .select({ imageId: albumImages.imageId })
+    .from(albumImages)
+    .where(eq(albumImages.imageId, imageId))
+    .limit(1);
+  return rows.length > 0;
 }

@@ -38,7 +38,9 @@ export async function searchFts(query: string) {
     Promise.all(albumIds.map((id) => getAlbumById(id)))
   ]);
 
-  const posts = postRows.filter((p): p is NonNullable<typeof p> => p != null && p.status === "published").map(serializePost);
+  const posts = postRows
+    .filter((p): p is NonNullable<typeof p> => p != null && p.status === "published")
+    .map((row) => serializePost(row));
   const albums = albumRows.filter((a): a is NonNullable<typeof a> => a != null).map(serializeAlbum);
 
   return { posts, albums };

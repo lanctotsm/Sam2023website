@@ -1,6 +1,7 @@
 import "./globals.css";
 import type { ReactNode } from "react";
 import Navigation from "@/components/Navigation";
+import Footer from "@/components/Footer";
 import Providers from "@/app/providers";
 
 const baseUrl =
@@ -47,7 +48,10 @@ export default function RootLayout({ children }: { children: ReactNode }) {
       <body className="m-0 bg-caramel-light text-chestnut-dark dark:bg-dark-bg dark:text-dark-text">
         <Providers>
           <Navigation />
-          <main className="mx-auto max-w-[1100px] px-5 py-8 pb-20">{children}</main>
+          <main className="mx-auto flex min-h-[calc(100vh-4rem)] max-w-[1100px] flex-col px-5 py-8 pb-6">
+            {children}
+            <Footer />
+          </main>
         </Providers>
       </body>
     </html>

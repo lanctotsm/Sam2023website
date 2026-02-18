@@ -1,6 +1,7 @@
 import {
   S3Client,
   PutObjectCommand,
+  GetObjectCommand,
   DeleteObjectCommand,
   DeleteObjectsCommand,
   ListObjectsV2Command
@@ -52,6 +53,26 @@ export async function putObject(params: {
       ContentType: params.contentType
     })
   );
+}
+
+/** Get object body as Buffer. Throws if not found. */
+export async function getObject(key: string): Promise<Buffer> {
+  const client = getS3Client();
+  const response = await client.send(
+    new GetObjectCommand({
+      Bucket: getBucket(),
+      Key: key
+    })
+  );
+  const body = response.Body;
+  if (!body) {
+    throw new Error("Empty response from S3");
+  }
+  const chunks: Uint8Array[] = [];
+  for await (const chunk of body as AsyncIterable<Uint8Array>) {
+    chunks.push(chunk);
+  }
+  return Buffer.concat(chunks);
 }
 
 /** Delete a single object from S3. Ignores 404. */

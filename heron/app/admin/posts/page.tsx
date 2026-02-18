@@ -1,9 +1,15 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
+import { useSearchParams } from "next/navigation";
+import Link from "next/link";
 import { toast } from "sonner";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 import type { Post } from "@/lib/api";
-import { apiFetch, createPost } from "@/lib/api";
+import { apiFetch, createPost, uploadImages } from "@/lib/api";
+import { slugify } from "@/lib/slug";
+import { buildImageUrl } from "@/lib/images";
 
 const emptyPost = {
   title: "",
@@ -14,11 +20,17 @@ const emptyPost = {
 };
 
 export default function AdminPostsPage() {
+  const searchParams = useSearchParams();
   const [posts, setPosts] = useState<Post[]>([]);
   const [form, setForm] = useState(emptyPost);
+  const [ownedImageIds, setOwnedImageIds] = useState<number[] | null>([]);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [loading, setLoading] = useState(false);
+  const [loadingEdit, setLoadingEdit] = useState(false);
+  const [uploadingInline, setUploadingInline] = useState(false);
   const [error, setError] = useState("");
+  const markdownRef = useRef<HTMLTextAreaElement>(null);
+  const inlineUploadInputRef = useRef<HTMLInputElement>(null);
 
   const fetchPosts = async () => {
     try {
@@ -33,6 +45,19 @@ export default function AdminPostsPage() {
     fetchPosts();
   }, []);
 
+  const appliedEditRef = useRef<string | null>(null);
+  useEffect(() => {
+    const editId = searchParams.get("edit");
+    if (editId && posts.length > 0 && appliedEditRef.current !== editId) {
+      appliedEditRef.current = editId;
+      const id = parseInt(editId, 10);
+      const post = posts.find((p) => p.id === id);
+      if (post) {
+        handleEdit(post);
+      }
+    }
+  }, [searchParams, posts]); // eslint-disable-line react-hooks/exhaustive-deps
+
   const handleSubmit = async () => {
     setLoading(true);
     setError("");
@@ -41,16 +66,23 @@ export default function AdminPostsPage() {
         // Update existing post
         const updated = await apiFetch<Post>(`/posts/${editingId}`, {
           method: "PUT",
-          body: JSON.stringify(form)
+          body: JSON.stringify({
+            ...form,
+            ...(ownedImageIds ? { inline_image_ids: ownedImageIds } : {})
+          })
         });
         setPosts((prev) => prev.map((p) => (p.id === editingId ? updated : p)));
         setEditingId(null);
       } else {
         // Create new post
-        const created = await createPost(form);
+        const created = await createPost({
+          ...form,
+          inline_image_ids: ownedImageIds || []
+        });
         setPosts((prev) => [created, ...prev]);
       }
       setForm(emptyPost);
+      setOwnedImageIds([]);
       toast.success(editingId ? "Post updated." : "Post created.");
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Failed to save post";
@@ -61,15 +93,26 @@ export default function AdminPostsPage() {
     }
   };
 
-  const handleEdit = (post: Post) => {
-    setEditingId(post.id);
-    setForm({
-      title: post.title,
-      slug: post.slug,
-      summary: post.summary || "",
-      markdown: post.markdown,
-      status: post.status
-    });
+  const handleEdit = async (post: Post) => {
+    setLoadingEdit(true);
+    try {
+      const fullPost = await apiFetch<Post>(`/posts/${post.id}`);
+      setEditingId(fullPost.id);
+      setForm({
+        title: fullPost.title,
+        slug: fullPost.slug,
+        summary: fullPost.summary || "",
+        markdown: fullPost.markdown,
+        status: fullPost.status
+      });
+      setOwnedImageIds(fullPost.inline_image_ids || []);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Failed to load post";
+      setError(msg);
+      toast.error(msg);
+    } finally {
+      setLoadingEdit(false);
+    }
   };
 
   const handleDelete = async (postId: number) => {
@@ -95,24 +138,90 @@ export default function AdminPostsPage() {
   const handleCancel = () => {
     setEditingId(null);
     setForm(emptyPost);
+    setOwnedImageIds([]);
     setError("");
   };
 
+  const insertMarkdownAtCursor = (snippet: string) => {
+    const textarea = markdownRef.current;
+    if (!textarea) {
+      setForm((prev) => ({ ...prev, markdown: `${prev.markdown}\n\n${snippet}`.trim() }));
+      return;
+    }
+
+    const start = textarea.selectionStart;
+    const end = textarea.selectionEnd;
+    const existing = form.markdown;
+    const before = existing.slice(0, start);
+    const after = existing.slice(end);
+    const nextValue = `${before}${snippet}${after}`;
+    const nextCursorPos = before.length + snippet.length;
+    setForm((prev) => ({ ...prev, markdown: nextValue }));
+
+    requestAnimationFrame(() => {
+      if (!markdownRef.current) return;
+      markdownRef.current.focus();
+      markdownRef.current.selectionStart = nextCursorPos;
+      markdownRef.current.selectionEnd = nextCursorPos;
+    });
+  };
+
+  const handleUploadAndInsert = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(event.target.files || []);
+    event.target.value = "";
+    if (files.length === 0) return;
+
+    setUploadingInline(true);
+    try {
+      const formData = new FormData();
+      for (const file of files) {
+        formData.append("files", file);
+      }
+      const uploaded = await uploadImages(formData);
+      const markdownSnippets = uploaded.images.map((image) => {
+        const alt = image.alt_text || image.caption || image.name || "Image";
+        const url = buildImageUrl(image.s3_key);
+        return `![${alt}](${url})`;
+      });
+      const combined = markdownSnippets.join("\n\n");
+      insertMarkdownAtCursor(combined);
+      setOwnedImageIds((prev) => {
+        const base = prev || [];
+        const incoming = uploaded.images.map((img) => img.id);
+        return Array.from(new Set([...base, ...incoming]));
+      });
+      toast.success(`Inserted ${uploaded.images.length} image markdown link(s).`);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Failed to upload image";
+      setError(msg);
+      toast.error(msg);
+    } finally {
+      setUploadingInline(false);
+    }
+  };
+
   const inputClass =
-    "w-full rounded-lg border border-desert-tan-dark bg-white px-3 py-2.5 text-chestnut-dark outline-none transition focus:border-chestnut focus:ring-2 focus:ring-chestnut/10";
-  const labelClass = "text-sm font-medium text-chestnut-dark";
+    "w-full rounded-lg border border-desert-tan-dark bg-white px-3 py-2.5 text-chestnut-dark outline-none transition focus:border-chestnut focus:ring-2 focus:ring-chestnut/10 dark:border-dark-muted dark:bg-dark-bg dark:text-dark-text dark:placeholder:text-dark-muted/60";
+  const labelClass = "text-sm font-medium text-chestnut-dark dark:text-dark-text";
   const cardClass =
-    "rounded-xl border border-desert-tan-dark bg-surface p-4 shadow-[0_2px_8px_rgba(72,9,3,0.08)]";
+    "rounded-xl border border-desert-tan-dark bg-surface p-4 shadow-[0_2px_8px_rgba(72,9,3,0.08)] dark:border-dark-muted dark:bg-dark-surface";
 
   return (
     <div className="flex flex-col gap-6">
       <section className={`${cardClass} flex flex-col gap-4`}>
-        <h2 className="m-0 text-chestnut">{editingId ? "Edit Post" : "Create Post"}</h2>
+        <h2 className="m-0 text-chestnut dark:text-dark-text">{editingId ? "Edit Post" : "Create Post"}</h2>
         <label className={labelClass}>Title</label>
         <input
           className={inputClass}
           value={form.title}
-          onChange={(e) => setForm({ ...form, title: e.target.value })}
+          onChange={(e) => {
+            const title = e.target.value;
+            setForm((prev) => ({
+              ...prev,
+              title,
+              slug: editingId ? prev.slug : slugify(title)
+            }));
+          }}
           placeholder="Post title"
         />
         <label className={labelClass}>Slug</label>
@@ -130,14 +239,49 @@ export default function AdminPostsPage() {
           placeholder="Brief summary of the post"
           rows={2}
         />
-        <label className={labelClass}>Content (Markdown)</label>
-        <textarea
-          className={inputClass}
-          rows={12}
-          value={form.markdown}
-          onChange={(e) => setForm({ ...form, markdown: e.target.value })}
-          placeholder="Write your post content in markdown..."
-        />
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <label className={labelClass}>Content (Markdown)</label>
+          <button
+            type="button"
+            onClick={() => inlineUploadInputRef.current?.click()}
+            className="rounded-lg border border-chestnut bg-transparent px-3 py-1.5 text-sm text-chestnut transition hover:bg-chestnut/5 dark:border-dark-text dark:text-dark-text dark:hover:bg-dark-bg"
+            disabled={uploadingInline || loading}
+          >
+            {uploadingInline ? "Uploading..." : "Upload & Insert Image"}
+          </button>
+          <input
+            ref={inlineUploadInputRef}
+            type="file"
+            accept="image/*"
+            multiple
+            className="hidden"
+            onChange={handleUploadAndInsert}
+            disabled={uploadingInline || loading}
+          />
+        </div>
+        <p className="m-0 text-xs text-olive dark:text-dark-muted">
+          Uploaded images are inserted as markdown and tracked as post-owned for cleanup on delete.
+        </p>
+        <div className="grid gap-4 md:grid-cols-2">
+          <textarea
+            ref={markdownRef}
+            className={inputClass}
+            rows={12}
+            value={form.markdown}
+            onChange={(e) => setForm({ ...form, markdown: e.target.value })}
+            placeholder="Write your post content in markdown..."
+          />
+          <div className="rounded-lg border border-desert-tan-dark bg-white px-3 py-2.5 dark:border-dark-muted dark:bg-dark-bg">
+            <p className="mb-2 text-xs font-medium text-olive dark:text-dark-muted">Preview</p>
+            <div className="prose prose-sm max-h-[280px] max-w-none overflow-y-auto prose-headings:text-chestnut prose-p:text-chestnut-dark dark:prose-headings:text-dark-text dark:prose-p:text-dark-muted">
+              {form.markdown ? (
+                <ReactMarkdown remarkPlugins={[remarkGfm]}>{form.markdown}</ReactMarkdown>
+              ) : (
+                <p className="text-olive dark:text-dark-muted">Preview will appear here...</p>
+              )}
+            </div>
+          </div>
+        </div>
         <label className={labelClass}>Status</label>
         <select
           className={inputClass}
@@ -148,10 +292,10 @@ export default function AdminPostsPage() {
           <option value="published">Published</option>
           <option value="archived">Archived</option>
         </select>
-        {error && <p className="text-copper text-sm">{error}</p>}
+        {error && <p className="text-copper text-sm dark:text-copper-light">{error}</p>}
         <div className="flex flex-wrap gap-3">
           <button
-            className="rounded-lg bg-chestnut px-4 py-2.5 text-desert-tan transition hover:bg-chestnut-dark disabled:opacity-60"
+            className="rounded-lg bg-chestnut px-4 py-2.5 text-desert-tan transition hover:bg-chestnut-dark disabled:opacity-60 dark:text-dark-text"
             disabled={loading}
             onClick={handleSubmit}
           >
@@ -159,7 +303,7 @@ export default function AdminPostsPage() {
           </button>
           {editingId && (
             <button
-              className="rounded-lg border border-chestnut bg-transparent px-4 py-2.5 text-chestnut transition hover:bg-chestnut/5"
+              className="rounded-lg border border-chestnut bg-transparent px-4 py-2.5 text-chestnut transition hover:bg-chestnut/5 dark:border-dark-text dark:text-dark-text dark:hover:bg-dark-bg"
               onClick={handleCancel}
             >
               Cancel
@@ -169,9 +313,9 @@ export default function AdminPostsPage() {
       </section>
 
       <section className="flex flex-col gap-4">
-        <h2 className="text-chestnut">All Posts ({posts.length})</h2>
+        <h2 className="text-chestnut dark:text-dark-text">All Posts ({posts.length})</h2>
         {posts.length === 0 ? (
-          <p className={`${cardClass} text-olive`}>No posts yet. Create your first post above.</p>
+          <p className={`${cardClass} text-olive dark:text-dark-muted`}>No posts yet. Create your first post above.</p>
         ) : (
           <div className="flex flex-col gap-3">
             {posts.map((post) => (
@@ -180,32 +324,33 @@ export default function AdminPostsPage() {
                 key={post.id}
               >
                 <div className="min-w-0 flex-1">
-                  <h3 className="m-0 text-chestnut">{post.title}</h3>
-                  <p className="text-olive">{post.summary || "No summary"}</p>
+                  <h3 className="m-0 text-chestnut dark:text-dark-text">{post.title}</h3>
+                  <p className="text-olive dark:text-dark-muted">{post.summary || "No summary"}</p>
                   <div className="flex flex-wrap items-center gap-2 text-sm">
                     <span
                       className={`rounded-full px-2.5 py-0.5 font-medium ${
                         post.status === "published"
-                          ? "bg-olive/20 text-olive-dark"
+                          ? "bg-olive/20 text-olive-dark dark:bg-olive/30 dark:text-olive-light"
                           : post.status === "draft"
-                            ? "bg-desert-tan-dark/30 text-chestnut-dark"
-                            : "bg-copper/15 text-copper"
+                            ? "bg-desert-tan-dark/30 text-chestnut-dark dark:bg-dark-muted/50 dark:text-dark-muted"
+                            : "bg-copper/15 text-copper dark:bg-copper/25 dark:text-copper-light"
                       }`}
                     >
                       {post.status}
                     </span>
-                    <span className="text-olive">/{post.slug}</span>
+                    <span className="text-olive dark:text-dark-muted">/{post.slug}</span>
                   </div>
                 </div>
                 <div className="flex flex-wrap gap-2">
                   <button
-                    className="rounded-lg border border-chestnut bg-transparent px-3 py-2 text-chestnut transition hover:bg-chestnut/5"
+                    className="rounded-lg border border-chestnut bg-transparent px-3 py-2 text-chestnut transition hover:bg-chestnut/5 dark:border-dark-text dark:text-dark-text dark:hover:bg-dark-bg"
                     onClick={() => handleEdit(post)}
+                    disabled={loadingEdit}
                   >
-                    Edit
+                    {loadingEdit && editingId === post.id ? "Loading..." : "Edit"}
                   </button>
                   <button
-                    className="rounded-lg border border-copper bg-transparent px-3 py-2 text-copper transition hover:bg-copper/10"
+                    className="rounded-lg border border-copper bg-transparent px-3 py-2 text-copper transition hover:bg-copper/10 dark:border-copper dark:text-copper-light dark:hover:bg-copper/20"
                     onClick={() => handleDelete(post.id)}
                   >
                     Delete

@@ -109,14 +109,17 @@ describe("lib/serializers", () => {
         s3_key_original: "uploads/uuid/original.jpg",
         width: 800,
         height: 600,
+        name: "",
         caption: "A photo",
         alt_text: "Alt",
+        description: "",
+        tags: "",
         created_by: 1,
         created_at: "2024-01-01T00:00:00Z"
       });
     });
 
-    it("uses null for optional variant keys and empty strings for caption/alt", () => {
+    it("uses null for optional variant keys and empty strings for caption/alt/name/description/tags", () => {
       const row = {
         id: 2,
         s3Key: "legacy/key.jpg",
@@ -125,8 +128,11 @@ describe("lib/serializers", () => {
         s3KeyOriginal: null,
         width: null,
         height: null,
+        name: null,
         caption: null,
         altText: null,
+        description: null,
+        tags: null,
         createdBy: null,
         createdAt: ""
       };
@@ -136,6 +142,9 @@ describe("lib/serializers", () => {
       expect(out.s3_key_original).toBeNull();
       expect(out.caption).toBe("");
       expect(out.alt_text).toBe("");
+      expect(out.name).toBe("");
+      expect(out.description).toBe("");
+      expect(out.tags).toBe("");
     });
   });
 });
