@@ -50,8 +50,8 @@ Resources:
             Action: "s3:GetObject"
             Resource: !Sub "${CmsBucket.Arn}/*"
             Condition:
-            StringEquals:
-              AWS:SourceArn: !Sub "arn:aws:cloudfront::${AWS::AccountId}:distribution/${CmsDistribution}"
+              StringEquals:
+                AWS:SourceArn: !Sub "arn:aws:cloudfront::${AWS::AccountId}:distribution/${CmsDistribution}"
   CmsOAC:
     Type: AWS::CloudFront::OriginAccessControl
     Properties:
