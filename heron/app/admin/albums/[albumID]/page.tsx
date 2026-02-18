@@ -9,7 +9,6 @@ import type { Album, Image as ImageMeta } from "@/lib/api";
 import type { SortableImage } from "@/components/SortableImageGrid";
 import SortableImageGrid from "@/components/SortableImageGrid";
 import { apiFetch } from "@/lib/api";
-import { buildThumbUrl, buildImageUrl } from "@/lib/images";
 import ImageCropModal from "@/components/ImageCropModal";
 import {
   extractImagesFromZip,
@@ -24,7 +23,7 @@ type PendingFile = { id: string; file: File; preview: string };
 type UploadingFile = { id: string; file: File; progress: number };
 
 const inputClass =
-  "w-full rounded-lg border border-desert-tan-dark bg-white px-3 py-2.5 text-chestnut-dark outline-none transition focus:border-chestnut focus:ring-2 focus:ring-chestnut/10 dark:border-dark-muted dark:bg-dark-bg dark:text-dark-text";
+  "w-full rounded-lg border border-desert-tan-dark bg-white px-3 py-2.5 text-chestnut-dark outline-none transition focus:border-chestnut focus:ring-2 focus:ring-chestnut/10 dark:border-dark-muted dark:bg-dark-bg dark:text-dark-text dark:placeholder:text-dark-muted";
 const labelClass = "text-sm font-medium text-chestnut-dark dark:text-dark-text";
 const cardClass =
   "rounded-xl border border-desert-tan-dark bg-surface p-4 shadow-[0_2px_8px_rgba(72,9,3,0.08)] dark:border-dark-muted dark:bg-dark-surface";
@@ -390,7 +389,7 @@ export default function AdminAlbumEditorPage() {
           className="flex w-full items-center justify-between text-left"
         >
           <h2 className="m-0 text-chestnut dark:text-dark-text">Add photos</h2>
-          <span className="text-sm text-olive dark:text-dark-muted">
+          <span className="text-sm text-olive dark:text-dark-text">
             {addPhotosOpen ? "Hide" : "Show"}
           </span>
         </button>
@@ -420,7 +419,7 @@ export default function AdminAlbumEditorPage() {
             onChange={handleFileChange}
             aria-label="Select photos or zip file"
           />
-          <p className="pointer-events-none m-0 text-sm text-chestnut-dark dark:text-dark-muted">
+          <p className="pointer-events-none m-0 text-sm text-chestnut-dark dark:text-dark-text">
             {extracting ? "Extracting images from zip..." : "Drag and drop images or zip here, or click to browse"}
           </p>
         </div>
@@ -487,7 +486,7 @@ export default function AdminAlbumEditorPage() {
       <section className="flex flex-col gap-4">
         <h2 className="text-chestnut dark:text-dark-text">Images ({images.length})</h2>
         {images.length === 0 && pendingFiles.length === 0 && uploadingFiles.length === 0 ? (
-          <p className={`${cardClass} text-olive dark:text-dark-muted`}>
+          <p className={`${cardClass} text-chestnut-dark dark:text-dark-text`}>
             No images in this album. Add photos above or link images from the Albums page.
           </p>
         ) : (
@@ -505,7 +504,7 @@ export default function AdminAlbumEditorPage() {
 
       {cropImageId && (() => {
         const img = images.find((i) => i.id === cropImageId);
-        const url = img ? buildImageUrl(img.s3_key) : "";
+        const url = img ? `/api/images/${cropImageId}/proxy` : "";
         return img ? (
           <ImageCropModal
             imageUrl={url}

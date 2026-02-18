@@ -61,7 +61,6 @@ export default function ImageCropModal({ imageUrl, onCrop, onCancel }: Props) {
               alt="Crop"
               onLoad={onImageLoad}
               className="max-h-[60vh] w-auto"
-              crossOrigin="anonymous"
             />
           </ReactCrop>
         </div>

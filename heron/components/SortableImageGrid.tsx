@@ -135,7 +135,7 @@ function SortableImageItem({
       </div>
       {(onDelete || onRotate || onCrop) && (
         <div className="flex flex-wrap items-center justify-between gap-2">
-          <p className="m-0 text-xs text-olive dark:text-dark-muted">
+          <p className="m-0 text-xs text-chestnut-dark dark:text-dark-text">
             {onUpdateMetadata ? "Click image to edit metadata" : "Drag image to reorder"}
           </p>
           <div className="flex flex-wrap justify-end gap-1">
@@ -294,7 +294,7 @@ export default function SortableImageGrid({
   return (
     <div className="grid grid-cols-[repeat(auto-fill,minmax(200px,1fr))] gap-4">
       {saving && (
-        <p className="col-span-full text-sm text-olive dark:text-dark-muted">Saving order...</p>
+        <p className="col-span-full text-sm text-chestnut-dark dark:text-dark-text">Saving order...</p>
       )}
       <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
         <SortableContext items={items.map((i) => i.id)} strategy={rectSortingStrategy}>
