@@ -14,10 +14,10 @@ export async function getUserById(id: number) {
   return rows[0] || null;
 }
 
-export async function createUser(email: string) {
+export async function createUser(email: string, name?: string) {
   const created = await getDb()
     .insert(adminUsers)
-    .values({ email, isBaseAdmin: false })
+    .values({ email, name: (name || "").trim(), isBaseAdmin: false })
     .onConflictDoNothing()
     .returning();
 

@@ -12,6 +12,7 @@ export async function GET() {
   return NextResponse.json(
     rows.map((row) => ({
       id: row.id,
+      name: row.name || "",
       email: row.email,
       is_base_admin: row.isBaseAdmin,
       created_at: row.createdAt
@@ -26,12 +27,16 @@ export async function POST(request: Request) {
   }
 
   const payload = await request.json();
+  const name = (payload.name || "").trim();
   const email = (payload.email || "").trim().toLowerCase();
+  if (!name) {
+    return errorResponse("name is required", 400);
+  }
   if (!email) {
     return errorResponse("email is required", 400);
   }
 
-  const created = await createUser(email);
+  const created = await createUser(email, name);
   if (!created) {
     return errorResponse("user already exists", 409);
   }
@@ -39,6 +44,7 @@ export async function POST(request: Request) {
   return NextResponse.json(
     {
       id: created.id,
+      name: created.name || "",
       email: created.email,
       is_base_admin: created.isBaseAdmin,
       created_at: created.createdAt

@@ -9,8 +9,8 @@ export default function HomePage() {
         </p>
       </section>
 
-      <section className="rounded-xl border border-desert-tan-dark bg-surface p-4 shadow-[0_2px_8px_rgba(72,9,3,0.08)]">
-        <h2 className="text-chestnut">About Me</h2>
+      <section className="rounded-xl border border-desert-tan-dark bg-surface p-4 shadow-[0_2px_8px_rgba(72,9,3,0.08)] dark:border-dark-muted dark:bg-dark-surface">
+        <h2 className="text-chestnut dark:text-dark-text">About Me</h2>
         <div className="mt-4 space-y-4 text-[1.05rem] leading-relaxed text-chestnut-dark dark:text-dark-text">
           <p>
             Hello! My name is Sam Lanctot, I&apos;m a software engineer in the DC metro area.
@@ -32,7 +32,7 @@ export default function HomePage() {
       </section>
 
       <section>
-        <h2 className="mb-6 text-chestnut">What I Do</h2>
+        <h2 className="mb-6 text-chestnut dark:text-dark-text">What I Do</h2>
         <div className="grid gap-5 sm:grid-cols-2">
           {[
             { icon: "💻", title: "Software Development", text: "Building robust applications with modern technologies. From backend systems to responsive frontends, I enjoy crafting elegant solutions to complex problems." },
@@ -49,9 +49,9 @@ export default function HomePage() {
         </div>
       </section>
 
-      <section className="rounded-xl border border-desert-tan-dark bg-surface p-4 shadow-[0_2px_8px_rgba(72,9,3,0.08)]">
-        <h2 className="text-chestnut">My Journey</h2>
-        <div className="mt-4 space-y-4 text-[1.05rem] leading-relaxed text-chestnut-dark">
+      <section className="rounded-xl border border-desert-tan-dark bg-surface p-4 shadow-[0_2px_8px_rgba(72,9,3,0.08)] dark:border-dark-muted dark:bg-dark-surface">
+        <h2 className="text-chestnut dark:text-dark-text">My Journey</h2>
+        <div className="mt-4 space-y-4 text-[1.05rem] leading-relaxed text-chestnut-dark dark:text-dark-muted">
           <p>My path has been anything but linear—and I wouldn&apos;t have it any other way. What started as tinkering with computers in my youth has grown into a fulfilling career building software that people actually use. Along the way, I&apos;ve had the privilege of working with talented teams, tackling interesting challenges, and continuously refining my craft.</p>
           <p>I&apos;ve learned that the most rewarding work happens at the intersection of passion and purpose. Whether I&apos;m debugging a tricky issue at 2 AM or capturing the perfect golden hour shot, the common thread is the joy of creating something meaningful.</p>
         </div>
@@ -61,7 +61,7 @@ export default function HomePage() {
         <h2 className="mb-6 text-chestnut dark:text-dark-text">Beyond the Screen</h2>
         <div className="flex flex-wrap justify-center gap-3">
           {[["🏔️", "Hiking & Nature"], ["☕", "Coffee Culture"], ["🎵", "Music Discovery"], ["📖", "Science Fiction"], ["🎮", "Indie Games"], ["✈️", "Travel"]].map(([emoji, label]) => (
-            <div key={String(label)} className="flex items-center gap-2 rounded-full border border-desert-tan-dark bg-surface px-4 py-2.5 text-[0.95rem] transition-all hover:scale-105 hover:bg-white">
+            <div key={String(label)} className="flex items-center gap-2 rounded-full border border-desert-tan-dark bg-surface px-4 py-2.5 text-[0.95rem] text-chestnut-dark transition-all hover:scale-105 hover:bg-white dark:border-dark-muted dark:bg-dark-surface dark:text-dark-text dark:hover:bg-dark-bg">
               <span className="text-xl">{emoji}</span>
               <span>{label}</span>
             </div>
@@ -73,10 +73,10 @@ export default function HomePage() {
         <h2 className="text-chestnut dark:text-dark-text">Let&apos;s Connect</h2>
         <p className="mx-auto mb-6 max-w-[600px] text-[1.05rem] leading-relaxed text-chestnut-dark dark:text-dark-text">I&apos;m always open to interesting conversations, collaboration opportunities, or just saying hello. Whether you have a project in mind, want to discuss photography, or simply want to chat about the latest in tech—feel free to reach out.</p>
         <div className="flex flex-wrap justify-center gap-4">
-          <a href="mailto:lanctotsm@gmail.com" className="flex items-center gap-2 rounded-lg bg-chestnut px-6 py-3 font-semibold text-desert-tan transition-all hover:-translate-y-0.5 hover:bg-chestnut-light"><span className="text-xl">📧</span> Email</a>
-          <a href="https://github.com/samlanctot" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 rounded-lg bg-chestnut px-6 py-3 font-semibold text-desert-tan transition-all hover:-translate-y-0.5 hover:bg-chestnut-light"><span className="text-xl">💻</span> GitHub</a>
-          <a href="https://www.linkedin.com/in/samuel-lanctot/" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 rounded-lg bg-chestnut px-6 py-3 font-semibold text-desert-tan transition-all hover:-translate-y-0.5 hover:bg-chestnut-light"><span className="text-xl">💼</span> LinkedIn</a>
-          <a href="/resume" className="flex items-center gap-2 rounded-lg bg-chestnut px-6 py-3 font-semibold text-desert-tan transition-all hover:-translate-y-0.5 hover:bg-chestnut-light"><span className="text-xl">📄</span> Resume</a>
+          <a href="mailto:lanctotsm@gmail.com" className="flex items-center gap-2 rounded-lg bg-chestnut px-6 py-3 font-semibold text-desert-tan transition-all hover:-translate-y-0.5 hover:bg-chestnut-light dark:bg-caramel dark:text-chestnut-dark dark:hover:bg-caramel-light"><span className="text-xl">📧</span> Email</a>
+          <a href="https://github.com/samlanctot" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 rounded-lg bg-chestnut px-6 py-3 font-semibold text-desert-tan transition-all hover:-translate-y-0.5 hover:bg-chestnut-light dark:bg-caramel dark:text-chestnut-dark dark:hover:bg-caramel-light"><span className="text-xl">💻</span> GitHub</a>
+          <a href="https://www.linkedin.com/in/samuel-lanctot/" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 rounded-lg bg-chestnut px-6 py-3 font-semibold text-desert-tan transition-all hover:-translate-y-0.5 hover:bg-chestnut-light dark:bg-caramel dark:text-chestnut-dark dark:hover:bg-caramel-light"><span className="text-xl">💼</span> LinkedIn</a>
+          <a href="/resume" className="flex items-center gap-2 rounded-lg bg-chestnut px-6 py-3 font-semibold text-desert-tan transition-all hover:-translate-y-0.5 hover:bg-chestnut-light dark:bg-caramel dark:text-chestnut-dark dark:hover:bg-caramel-light"><span className="text-xl">📄</span> Resume</a>
         </div>
       </section>
     </div>

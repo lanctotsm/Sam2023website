@@ -18,8 +18,11 @@ export async function createImage(data: {
   s3KeyOriginal?: string | null;
   width?: number | null;
   height?: number | null;
+  name?: string;
   caption?: string;
   altText?: string;
+  description?: string;
+  tags?: string;
   createdBy: number;
 }) {
   const created = await getDb()
@@ -31,8 +34,11 @@ export async function createImage(data: {
       s3KeyOriginal: data.s3KeyOriginal ?? null,
       width: data.width ?? null,
       height: data.height ?? null,
+      name: (data.name || "").trim(),
       caption: (data.caption || "").trim(),
       altText: (data.altText || "").trim(),
+      description: (data.description || "").trim(),
+      tags: (data.tags || "").trim(),
       createdBy: data.createdBy
     })
     .returning();
@@ -49,8 +55,11 @@ export async function updateImage(
     s3KeyOriginal?: string | null;
     width?: number | null;
     height?: number | null;
+    name?: string;
     caption?: string;
     altText?: string;
+    description?: string;
+    tags?: string;
   }
 ) {
   const updated = await getDb()

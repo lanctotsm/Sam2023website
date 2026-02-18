@@ -22,13 +22,20 @@ vi.mock("@/lib/serializers", () => ({
   serializeImage: (i: unknown) => i
 }));
 
+vi.mock("@/lib/s3", () => ({
+  deleteObjects: vi.fn()
+}));
+
 const { getAuthUser } = await import("@/lib/api-utils");
 const { getImageById, updateImage, deleteImage } = await import("@/services/images");
 
 describe("IMAGES /api/images/[imageID]", () => {
   const image = {
     id: 1,
-    s3Key: "k",
+    s3Key: "uploads/uuid/large.jpg",
+    s3KeyThumb: "uploads/uuid/thumb.jpg",
+    s3KeyLarge: "uploads/uuid/large.jpg",
+    s3KeyOriginal: "uploads/uuid/original.jpg",
     width: 100,
     height: 100,
     caption: null,
@@ -114,10 +121,26 @@ describe("IMAGES /api/images/[imageID]", () => {
       expect(res.status).toBe(400);
     });
 
-    it("returns 200 and calls deleteImage", async () => {
+    it("returns 404 when image not found", async () => {
       vi.mocked(getAuthUser).mockResolvedValue(MOCK_AUTH_USER as never);
+      vi.mocked(getImageById).mockResolvedValue(null);
+      const res = await DELETE(getRequest("http://x"), { params: getParams({ imageID: "1" }) });
+      expect(res.status).toBe(404);
+    });
+
+    it("returns 200, deletes S3 objects, and calls deleteImage", async () => {
+      vi.mocked(getAuthUser).mockResolvedValue(MOCK_AUTH_USER as never);
+      vi.mocked(getImageById).mockResolvedValue(image as never);
+      const { deleteObjects } = await import("@/lib/s3");
       const res = await DELETE(getRequest("http://x"), { params: getParams({ imageID: "1" }) });
       expect(res.status).toBe(200);
+      expect(deleteObjects).toHaveBeenCalledWith(
+        expect.arrayContaining([
+          "uploads/uuid/large.jpg",
+          "uploads/uuid/thumb.jpg",
+          "uploads/uuid/original.jpg"
+        ])
+      );
       expect(deleteImage).toHaveBeenCalledWith(1);
       const data = await res.json();
       expect(data.status).toBe("deleted");

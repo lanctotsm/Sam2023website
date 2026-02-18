@@ -1,10 +1,11 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import Link from "next/link";
 import { toast } from "sonner";
 import type { Album, Image } from "@/lib/api";
 import { apiFetch, createAlbum, getImages, linkAlbumImage } from "@/lib/api";
+import { slugify } from "@/lib/slug";
 
 const emptyAlbum = {
   title: "",
@@ -22,6 +23,9 @@ export default function AdminAlbumsPage() {
   const [sortOrder, setSortOrder] = useState(0);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [linkSectionOpen, setLinkSectionOpen] = useState(false);
+  const [createFormOpen, setCreateFormOpen] = useState(false);
+  const createFormRef = useRef<HTMLDivElement>(null);
 
   const fetchData = async () => {
     try {
@@ -41,6 +45,12 @@ export default function AdminAlbumsPage() {
     fetchData();
   }, []);
 
+  useEffect(() => {
+    if (editingId && createFormRef.current) {
+      createFormRef.current.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+  }, [editingId]);
+
   const handleSubmit = async () => {
     setLoading(true);
     setError("");
@@ -57,6 +67,7 @@ export default function AdminAlbumsPage() {
         setAlbums((prev) => [created, ...prev]);
       }
       setForm(emptyAlbum);
+      setCreateFormOpen(false);
       toast.success(editingId ? "Album updated." : "Album created.");
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Failed to save album";
@@ -69,6 +80,7 @@ export default function AdminAlbumsPage() {
 
   const handleEdit = (album: Album) => {
     setEditingId(album.id);
+    setCreateFormOpen(true);
     setForm({
       title: album.title,
       slug: album.slug,
@@ -91,6 +103,7 @@ export default function AdminAlbumsPage() {
     setEditingId(null);
     setForm(emptyAlbum);
     setError("");
+    setCreateFormOpen(false);
   };
 
   const linkImage = async () => {
@@ -112,106 +125,151 @@ export default function AdminAlbumsPage() {
   };
 
   const inputClass =
-    "w-full rounded-lg border border-desert-tan-dark bg-white px-3 py-2.5 text-chestnut-dark outline-none transition focus:border-chestnut focus:ring-2 focus:ring-chestnut/10";
-  const labelClass = "text-sm font-medium text-chestnut-dark";
+    "w-full rounded-lg border border-desert-tan-dark bg-white px-3 py-2.5 text-chestnut-dark outline-none transition focus:border-chestnut focus:ring-2 focus:ring-chestnut/10 dark:border-dark-muted dark:bg-dark-bg dark:text-dark-text dark:placeholder:text-dark-muted/60";
+  const labelClass = "text-sm font-medium text-chestnut-dark dark:text-dark-text";
   const cardClass =
-    "rounded-xl border border-desert-tan-dark bg-surface p-4 shadow-[0_2px_8px_rgba(72,9,3,0.08)]";
+    "rounded-xl border border-desert-tan-dark bg-surface p-4 shadow-[0_2px_8px_rgba(72,9,3,0.08)] dark:border-dark-muted dark:bg-dark-surface";
+
+  const showCreateForm = createFormOpen || editingId;
 
   return (
     <div className="flex flex-col gap-6">
-      <section className={`${cardClass} flex flex-col gap-4`}>
-        <h2 className="m-0 text-chestnut">{editingId ? "Edit Album" : "Create Album"}</h2>
-        <label className={labelClass}>Title</label>
-        <input
-          className={inputClass}
-          value={form.title}
-          onChange={(e) => setForm({ ...form, title: e.target.value })}
-          placeholder="Album title"
-        />
-        <label className={labelClass}>Slug</label>
-        <input
-          className={inputClass}
-          value={form.slug}
-          onChange={(e) => setForm({ ...form, slug: e.target.value })}
-          placeholder="album-url-slug"
-        />
-        <label className={labelClass}>Description</label>
-        <textarea
-          className={inputClass}
-          value={form.description}
-          onChange={(e) => setForm({ ...form, description: e.target.value })}
-          placeholder="Brief description of the album"
-          rows={3}
-        />
-        {error && <p className="text-copper text-sm">{error}</p>}
-        <div className="flex flex-wrap gap-3">
+      <section ref={createFormRef} className={cardClass}>
+        {showCreateForm ? (
+          <div className="flex flex-col gap-4">
+            <div className="flex items-center justify-between">
+              <h2 className="m-0 text-chestnut dark:text-dark-text">
+                {editingId ? "Edit Album" : "Create Album"}
+              </h2>
+              <button
+                type="button"
+                onClick={handleCancel}
+                className="text-sm text-olive hover:text-chestnut dark:text-dark-muted dark:hover:text-dark-text"
+              >
+                {editingId ? "Cancel" : "Collapse"}
+              </button>
+            </div>
+            <label className={labelClass}>Title</label>
+            <input
+              className={inputClass}
+              value={form.title}
+              onChange={(e) => {
+                const title = e.target.value;
+                setForm((prev) => ({
+                  ...prev,
+                  title,
+                  slug: editingId ? prev.slug : slugify(title)
+                }));
+              }}
+              placeholder="Album title"
+            />
+            <label className={labelClass}>Slug</label>
+            <input
+              className={inputClass}
+              value={form.slug}
+              onChange={(e) => setForm({ ...form, slug: e.target.value })}
+              placeholder="album-url-slug"
+            />
+            <label className={labelClass}>Description</label>
+            <textarea
+              className={inputClass}
+              value={form.description}
+              onChange={(e) => setForm({ ...form, description: e.target.value })}
+              placeholder="Brief description of the album"
+              rows={3}
+            />
+            {error && <p className="text-copper text-sm dark:text-copper-light">{error}</p>}
+            <div className="flex flex-wrap gap-3">
+              <button
+                className="rounded-lg bg-chestnut px-4 py-2.5 text-desert-tan transition hover:bg-chestnut-dark disabled:opacity-60 dark:text-dark-text"
+                disabled={loading}
+                onClick={handleSubmit}
+              >
+                {loading ? "Saving..." : editingId ? "Update Album" : "Create Album"}
+              </button>
+              {editingId && (
+                <button
+                  className="rounded-lg border border-chestnut bg-transparent px-4 py-2.5 text-chestnut transition hover:bg-chestnut/5 dark:border-dark-text dark:text-dark-text dark:hover:bg-dark-bg"
+                  onClick={handleCancel}
+                >
+                  Cancel
+                </button>
+              )}
+            </div>
+          </div>
+        ) : (
           <button
-            className="rounded-lg bg-chestnut px-4 py-2.5 text-desert-tan transition hover:bg-chestnut-dark disabled:opacity-60"
-            disabled={loading}
-            onClick={handleSubmit}
+            type="button"
+            onClick={() => setCreateFormOpen(true)}
+            className="rounded-lg bg-chestnut px-4 py-2.5 font-medium text-desert-tan transition hover:bg-chestnut-dark dark:text-dark-text"
           >
-            {loading ? "Saving..." : editingId ? "Update Album" : "Create Album"}
+            Create Album
           </button>
-          {editingId && (
-            <button
-              className="rounded-lg border border-chestnut bg-transparent px-4 py-2.5 text-chestnut transition hover:bg-chestnut/5"
-              onClick={handleCancel}
-            >
-              Cancel
-            </button>
-          )}
-        </div>
+        )}
       </section>
 
-      <section className={`${cardClass} flex flex-col gap-4`}>
-        <h2 className="m-0 text-chestnut">Link Image to Album</h2>
-        <label className={labelClass}>Album</label>
-        <select
-          className={inputClass}
-          onChange={(e) => setSelectedAlbum(Number(e.target.value))}
-          value={selectedAlbum ?? ""}
-        >
-          <option value="">Select album</option>
-          {albums.map((album) => (
-            <option key={album.id} value={album.id}>
-              {album.title}
-            </option>
-          ))}
-        </select>
-        <label className={labelClass}>Image</label>
-        <select
-          className={inputClass}
-          onChange={(e) => setSelectedImage(Number(e.target.value))}
-          value={selectedImage ?? ""}
-        >
-          <option value="">Select image</option>
-          {images.map((image) => (
-            <option key={image.id} value={image.id}>
-              {image.caption || image.s3_key}
-            </option>
-          ))}
-        </select>
-        <label className={labelClass}>Sort Order</label>
-        <input
-          className={inputClass}
-          type="number"
-          value={sortOrder}
-          onChange={(e) => setSortOrder(Number(e.target.value))}
-          placeholder="0"
-        />
+      <section className={cardClass}>
         <button
-          className="rounded-lg bg-chestnut px-4 py-2.5 text-desert-tan transition hover:bg-chestnut-dark disabled:opacity-60"
-          onClick={linkImage}
-          disabled={!selectedAlbum || !selectedImage || loading}
+          type="button"
+          onClick={() => setLinkSectionOpen((o) => !o)}
+          className="flex w-full items-center justify-between text-left"
         >
-          Link Image to Album
+          <h2 className="m-0 text-chestnut dark:text-dark-text">Link Image to Album</h2>
+          <span className="text-sm text-olive dark:text-dark-muted">
+            {linkSectionOpen ? "Hide" : "Show"}
+          </span>
         </button>
+        {linkSectionOpen && (
+          <div className="mt-4 flex flex-col gap-4">
+            <label className={labelClass}>Album</label>
+            <select
+              className={inputClass}
+              onChange={(e) => setSelectedAlbum(Number(e.target.value))}
+              value={selectedAlbum ?? ""}
+            >
+              <option value="">Select album</option>
+              {albums.map((album) => (
+                <option key={album.id} value={album.id}>
+                  {album.title}
+                </option>
+              ))}
+            </select>
+            <label className={labelClass}>Image</label>
+            <select
+              className={inputClass}
+              onChange={(e) => setSelectedImage(Number(e.target.value))}
+              value={selectedImage ?? ""}
+            >
+              <option value="">Select image</option>
+              {images.map((image) => (
+                <option key={image.id} value={image.id}>
+                  {image.caption || image.s3_key}
+                </option>
+              ))}
+            </select>
+            <label className={labelClass}>Sort Order</label>
+            <input
+              className={inputClass}
+              type="number"
+              value={sortOrder}
+              onChange={(e) => setSortOrder(Number(e.target.value))}
+              placeholder="0"
+            />
+            <button
+              className="rounded-lg bg-chestnut px-4 py-2.5 text-desert-tan transition hover:bg-chestnut-dark disabled:opacity-60 dark:text-dark-text"
+              onClick={linkImage}
+              disabled={!selectedAlbum || !selectedImage || loading}
+            >
+              Link Image to Album
+            </button>
+          </div>
+        )}
       </section>
 
       <section className="flex flex-col gap-4">
-        <h2 className="text-chestnut">All Albums ({albums.length})</h2>
+        <h2 className="text-chestnut dark:text-dark-text">All Albums ({albums.length})</h2>
         {albums.length === 0 ? (
-          <p className={`${cardClass} text-olive`}>No albums yet. Create your first album above.</p>
+          <p className={`${cardClass} text-olive dark:text-dark-muted`}>No albums yet. Create your first album above.</p>
         ) : (
           <div className="flex flex-col gap-3">
             {albums.map((album) => (
@@ -220,29 +278,29 @@ export default function AdminAlbumsPage() {
                 key={album.id}
               >
                 <div className="min-w-0 flex-1">
-                  <h3 className="m-0 text-chestnut">{album.title}</h3>
-                  <p className="text-olive">{album.description || "No description"}</p>
-                  <p className="text-olive text-sm">/{album.slug}</p>
+                  <h3 className="m-0 text-chestnut dark:text-dark-text">{album.title}</h3>
+                  <p className="text-olive dark:text-dark-muted">{album.description || "No description"}</p>
+                  <p className="text-olive text-sm dark:text-dark-muted">/{album.slug}</p>
                 </div>
                 <div className="flex flex-wrap gap-2">
                   <Link href={`/albums/${album.slug}`}>
-                    <button className="rounded-lg border border-chestnut bg-transparent px-3 py-2 text-chestnut transition hover:bg-chestnut/5">
+                    <button className="rounded-lg border border-chestnut bg-transparent px-3 py-2 text-chestnut transition hover:bg-chestnut/5 dark:border-dark-text dark:text-dark-text dark:hover:bg-dark-bg">
                       View
                     </button>
                   </Link>
-                  <Link href={`/admin/albums/${album.id}/images`}>
-                    <button className="rounded-lg border border-olive bg-transparent px-3 py-2 text-olive-dark transition hover:bg-olive/10">
-                      Order images
+                  <Link href={`/admin/albums/${album.id}`}>
+                    <button className="rounded-lg border border-olive bg-transparent px-3 py-2 text-olive-dark transition hover:bg-olive/10 dark:border-dark-muted dark:text-dark-muted dark:hover:bg-dark-bg">
+                      Manage
                     </button>
                   </Link>
                   <button
-                    className="rounded-lg border border-chestnut bg-transparent px-3 py-2 text-chestnut transition hover:bg-chestnut/5"
+                    className="rounded-lg border border-chestnut bg-transparent px-3 py-2 text-chestnut transition hover:bg-chestnut/5 dark:border-dark-text dark:text-dark-text dark:hover:bg-dark-bg"
                     onClick={() => handleEdit(album)}
                   >
                     Edit
                   </button>
                   <button
-                    className="rounded-lg border border-copper bg-transparent px-3 py-2 text-copper transition hover:bg-copper/10"
+                    className="rounded-lg border border-copper bg-transparent px-3 py-2 text-copper transition hover:bg-copper/10 dark:border-copper dark:text-copper-light dark:hover:bg-copper/20"
                     onClick={() => handleDelete(album.id)}
                   >
                     Delete

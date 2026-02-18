@@ -84,8 +84,11 @@ export const images = sqliteTable(
     s3KeyOriginal: text("s3_key_original"),
     width: integer("width"),
     height: integer("height"),
+    name: text("name"),
     caption: text("caption"),
     altText: text("alt_text"),
+    description: text("description"),
+    tags: text("tags"),
     createdBy: integer("created_by").references(() => users.id, { onDelete: "set null" }),
     createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`)
   },
@@ -126,10 +129,30 @@ export const postAlbumLinks = sqliteTable(
   })
 );
 
+export const postInlineImages = sqliteTable(
+  "post_inline_images",
+  {
+    postId: integer("post_id")
+      .notNull()
+      .references(() => posts.id, { onDelete: "cascade" }),
+    imageId: integer("image_id")
+      .notNull()
+      .references(() => images.id, { onDelete: "cascade" }),
+    source: text("source").notNull().default("upload_insert"),
+    createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`)
+  },
+  (table) => ({
+    pk: primaryKey({ columns: [table.postId, table.imageId] }),
+    postIdIdx: index("idx_post_inline_images_post_id").on(table.postId),
+    imageIdIdx: index("idx_post_inline_images_image_id").on(table.imageId)
+  })
+);
+
 export const adminUsers = sqliteTable(
   "admin_users",
   {
     id: integer("id").primaryKey({ autoIncrement: true }),
+    name: text("name"),
     email: text("email").notNull(),
     isBaseAdmin: integer("is_base_admin", { mode: "boolean" }).notNull().default(false),
     createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`)

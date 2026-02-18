@@ -72,3 +72,8 @@ export async function processImage(input: Buffer): Promise<ProcessedImage> {
     }
   };
 }
+
+/** Rotate image buffer by 90, 180, or 270 degrees. Returns new buffer. */
+export async function rotateImage(input: Buffer, degrees: 90 | 180 | 270): Promise<Buffer> {
+  return sharp(input).rotate(degrees).toBuffer();
+}

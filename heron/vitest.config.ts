@@ -5,7 +5,7 @@ export default defineConfig({
   test: {
     environment: "node",
     globals: true,
-    include: ["app/api/**/*.test.ts", "lib/**/*.test.ts"],
+    include: ["app/api/**/*.test.ts", "lib/**/*.test.ts", "services/**/*.test.ts"],
     exclude: ["**/node_modules/**", "tests/**"],
     coverage: {
       provider: "v8",
