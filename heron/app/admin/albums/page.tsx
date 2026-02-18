@@ -125,7 +125,7 @@ export default function AdminAlbumsPage() {
   };
 
   const inputClass =
-    "w-full rounded-lg border border-desert-tan-dark bg-white px-3 py-2.5 text-chestnut-dark outline-none transition focus:border-chestnut focus:ring-2 focus:ring-chestnut/10 dark:border-dark-muted dark:bg-dark-bg dark:text-dark-text dark:placeholder:text-dark-muted/60";
+    "w-full rounded-lg border border-desert-tan-dark bg-white px-3 py-2.5 text-chestnut-dark outline-none transition focus:border-chestnut focus:ring-2 focus:ring-chestnut/10 dark:border-dark-muted dark:bg-dark-bg dark:text-dark-text dark:placeholder:text-dark-muted";
   const labelClass = "text-sm font-medium text-chestnut-dark dark:text-dark-text";
   const cardClass =
     "rounded-xl border border-desert-tan-dark bg-surface p-4 shadow-[0_2px_8px_rgba(72,9,3,0.08)] dark:border-dark-muted dark:bg-dark-surface";
@@ -144,7 +144,7 @@ export default function AdminAlbumsPage() {
               <button
                 type="button"
                 onClick={handleCancel}
-                className="text-sm text-olive hover:text-chestnut dark:text-dark-muted dark:hover:text-dark-text"
+                className="text-sm text-olive hover:text-chestnut dark:text-dark-text dark:hover:text-caramel-light"
               >
                 {editingId ? "Cancel" : "Collapse"}
               </button>
@@ -215,7 +215,7 @@ export default function AdminAlbumsPage() {
           className="flex w-full items-center justify-between text-left"
         >
           <h2 className="m-0 text-chestnut dark:text-dark-text">Link Image to Album</h2>
-          <span className="text-sm text-olive dark:text-dark-muted">
+          <span className="text-sm text-olive dark:text-dark-text">
             {linkSectionOpen ? "Hide" : "Show"}
           </span>
         </button>
@@ -269,7 +269,7 @@ export default function AdminAlbumsPage() {
       <section className="flex flex-col gap-4">
         <h2 className="text-chestnut dark:text-dark-text">All Albums ({albums.length})</h2>
         {albums.length === 0 ? (
-          <p className={`${cardClass} text-olive dark:text-dark-muted`}>No albums yet. Create your first album above.</p>
+          <p className={`${cardClass} text-chestnut-dark dark:text-dark-text`}>No albums yet. Create your first album above.</p>
         ) : (
           <div className="flex flex-col gap-3">
             {albums.map((album) => (
@@ -279,7 +279,7 @@ export default function AdminAlbumsPage() {
               >
                 <div className="min-w-0 flex-1">
                   <h3 className="m-0 text-chestnut dark:text-dark-text">{album.title}</h3>
-                  <p className="text-olive dark:text-dark-muted">{album.description || "No description"}</p>
+                  <p className="text-chestnut-dark dark:text-dark-text">{album.description || "No description"}</p>
                   <p className="text-olive text-sm dark:text-dark-muted">/{album.slug}</p>
                 </div>
                 <div className="flex flex-wrap gap-2">
@@ -289,7 +289,7 @@ export default function AdminAlbumsPage() {
                     </button>
                   </Link>
                   <Link href={`/admin/albums/${album.id}`}>
-                    <button className="rounded-lg border border-olive bg-transparent px-3 py-2 text-olive-dark transition hover:bg-olive/10 dark:border-dark-muted dark:text-dark-muted dark:hover:bg-dark-bg">
+                    <button className="rounded-lg border border-chestnut bg-transparent px-3 py-2 text-chestnut transition hover:bg-chestnut/5 dark:border-dark-text dark:text-dark-text dark:hover:bg-dark-bg">
                       Manage
                     </button>
                   </Link>
