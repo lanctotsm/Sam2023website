@@ -56,7 +56,7 @@ export default function AdminPostsPage() {
         handleEdit(post);
       }
     }
-  }, [searchParams, posts]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [searchParams, posts]);
 
   const handleSubmit = async () => {
     setLoading(true);
