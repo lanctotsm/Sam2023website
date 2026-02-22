@@ -112,6 +112,7 @@ function SortableItem({
               onClick={() => onCrop(image)}
               className="rounded border border-desert-tan-dark px-2 py-1 text-xs transition hover:bg-surface-hover dark:border-dark-muted dark:hover:bg-dark-bg"
               title="Crop image"
+              aria-label="Crop image"
               type="button"
             >
               ✂️
@@ -121,6 +122,7 @@ function SortableItem({
             onClick={() => onDelete(image.id)}
             className="rounded border border-copper px-2 py-1 text-xs text-copper transition hover:bg-copper/10 dark:border-copper dark:text-copper-light dark:hover:bg-copper/20"
             title="Delete image"
+            aria-label="Delete image"
             type="button"
           >
             🗑️
