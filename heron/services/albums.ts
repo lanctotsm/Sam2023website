@@ -1,34 +1,44 @@
-import { desc, eq, sql, asc } from "drizzle-orm";
+import { and, desc, eq, sql } from "drizzle-orm";
 import { getDb } from "@/lib/db";
 import { albums, albumImages, images } from "@/lib/db/schema";
 
 export async function getAllAlbums() {
   const db = getDb();
 
-  // Subquery to find the first image for each album
-  // Drizzle doesn't have a great way to do "DISTINCT ON" in SQLite easily with subqueries
-  // so we'll fetch all and group or use a CTE if needed.
-  // Actually, let's just fetch albums and then their first image.
+  // Single query: use a subquery with ROW_NUMBER() to pick the first image per album,
+  // then LEFT JOIN it to albums to avoid an N+1 query pattern.
+  const coverImageSubquery = db
+    .select({
+      albumId: albumImages.albumId,
+      s3KeyThumb: images.s3KeyThumb,
+      s3Key: images.s3Key,
+      rowNum: sql<number>`ROW_NUMBER() OVER (PARTITION BY ${albumImages.albumId} ORDER BY ${albumImages.sortOrder} ASC, ${images.id} ASC)`.as("row_num")
+    })
+    .from(albumImages)
+    .innerJoin(images, eq(albumImages.imageId, images.id))
+    .as("cover_images");
 
-  const albumRows = await db.select().from(albums).orderBy(desc(albums.createdAt));
-
-  // For each album, find the first image
-  const results = await Promise.all(albumRows.map(async (album) => {
-    const firstImage = await db
-      .select({ s3KeyThumb: images.s3KeyThumb, s3Key: images.s3Key })
-      .from(albumImages)
-      .innerJoin(images, eq(albumImages.imageId, images.id))
-      .where(eq(albumImages.albumId, album.id))
-      .orderBy(asc(albumImages.sortOrder), asc(images.id))
-      .limit(1);
-
-    return {
-      ...album,
-      coverImageS3Key: firstImage[0]?.s3KeyThumb || firstImage[0]?.s3Key || null
-    };
-  }));
-
-  return results;
+  return db
+    .select({
+      id: albums.id,
+      title: albums.title,
+      slug: albums.slug,
+      description: albums.description,
+      createdBy: albums.createdBy,
+      createdAt: albums.createdAt,
+      updatedAt: albums.updatedAt,
+      // Prefer thumbnail key for performance; fall back to full-size key if no thumbnail exists.
+      coverImageS3Key: sql<string | null>`COALESCE(${coverImageSubquery.s3KeyThumb}, ${coverImageSubquery.s3Key})`
+    })
+    .from(albums)
+    .leftJoin(
+      coverImageSubquery,
+      and(
+        eq(coverImageSubquery.albumId, albums.id),
+        eq(coverImageSubquery.rowNum, 1)
+      )
+    )
+    .orderBy(desc(albums.createdAt));
 }
 
 export async function getAlbumBySlug(slug: string) {
