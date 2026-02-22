@@ -85,9 +85,11 @@ export default function AdminAlbumsPage() {
               <button
                 type="button"
                 onClick={handleCancel}
-                className="text-sm text-olive hover:text-chestnut dark:text-dark-text dark:hover:text-caramel-light"
+                className="flex h-8 w-8 items-center justify-center rounded-full text-olive transition-colors hover:bg-olive/5 hover:text-chestnut dark:text-dark-text dark:hover:bg-dark-bg dark:hover:text-caramel-light"
+                aria-label="Collapse"
+                title="Collapse"
               >
-                Collapse
+                ▲
               </button>
             </div>
             <label className={labelClass}>Title</label>

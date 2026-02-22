@@ -65,7 +65,8 @@ export async function PUT(request: Request, { params }: { params: Promise<{ post
     summary: (payload.summary || "").trim(),
     markdown,
     status: payload.status,
-    publishedAt: payload.published_at || null
+    publishedAt: payload.published_at || null,
+    metadata: payload.metadata || null
   });
 
   if (!updated) {

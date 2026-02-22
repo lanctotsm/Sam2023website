@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { GET } from "./route";
-import { getRequest, getParams } from "@/app/api/__tests__/helpers";
+import { getParams } from "../../../__tests__/helpers";
 
 vi.mock("@/lib/api-utils", () => ({
   errorResponse: (message: string, status: number) =>
@@ -17,38 +17,41 @@ vi.mock("@/lib/serializers", () => ({
 
 const { getAlbumBySlug } = await import("@/services/albums");
 
-describe("ALBUMS /api/albums/slug/[slug]", () => {
-  const album = {
-    id: 1,
-    title: "Album",
-    slug: "my-album",
-    description: "D",
-    createdBy: 1,
-    createdAt: "",
-    updatedAt: ""
-  };
-
+describe("GET /api/albums/slug/[slug]", () => {
   beforeEach(() => {
-    vi.mocked(getAlbumBySlug).mockResolvedValue(null);
+    vi.mocked(getAlbumBySlug).mockReset();
   });
 
-  describe("GET (Read by slug)", () => {
-    it("returns 400 when slug missing", async () => {
-      const res = await GET(getRequest("http://x"), { params: getParams({ slug: "" }) });
-      expect(res.status).toBe(400);
-    });
+  it("returns 400 when slug is empty", async () => {
+    const req = new Request("http://x");
+    const res = await GET(req, { params: getParams({ slug: "" }) });
+    expect(res.status).toBe(400);
+  });
 
-    it("returns 404 when album not found", async () => {
-      const res = await GET(getRequest("http://x"), { params: getParams({ slug: "nonexistent" }) });
-      expect(res.status).toBe(404);
-    });
+  it("returns 404 when album not found", async () => {
+    vi.mocked(getAlbumBySlug).mockResolvedValue(null as never);
+    const req = new Request("http://x");
+    const res = await GET(req, { params: getParams({ slug: "missing" }) });
+    expect(res.status).toBe(404);
+  });
 
-    it("returns 200 and album when found", async () => {
-      vi.mocked(getAlbumBySlug).mockResolvedValue(album as never);
-      const res = await GET(getRequest("http://x"), { params: getParams({ slug: "my-album" }) });
-      expect(res.status).toBe(200);
-      const data = await res.json();
-      expect(data.slug).toBe("my-album");
-    });
+  it("returns 200 and album when found", async () => {
+    const album = {
+      id: 1,
+      title: "Beach Trip",
+      slug: "beach-trip",
+      description: "Down the shore",
+      coverImageS3Key: "uploads/thumb.jpg",
+      createdBy: 1,
+      createdAt: "",
+      updatedAt: ""
+    };
+    vi.mocked(getAlbumBySlug).mockResolvedValue(album as never);
+    const req = new Request("http://x");
+    const res = await GET(req, { params: getParams({ slug: "beach-trip" }) });
+    expect(res.status).toBe(200);
+    const data = await res.json();
+    expect(data.title).toBe("Beach Trip");
+    expect(getAlbumBySlug).toHaveBeenCalledWith("beach-trip");
   });
 });

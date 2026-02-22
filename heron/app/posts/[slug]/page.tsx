@@ -4,6 +4,7 @@ import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { serverFetch } from "@/lib/server";
 import type { Post } from "@/lib/api";
+import { renderWithShortcodes } from "@/lib/shortcodes";
 
 type PageProps = {
   params: Promise<{ slug: string }>;
@@ -67,9 +68,23 @@ export default async function PostDetailPage({ params }: PageProps) {
               {readingTime} min read
             </span>
           </div>
+          {post.metadata && Object.keys(post.metadata).length > 0 && (
+            <div className="mt-5 flex flex-wrap gap-2">
+              {Object.entries(post.metadata).map(([key, value]) => (
+                <div
+                  key={key}
+                  className="flex items-center gap-1.5 rounded-md border border-desert-tan-dark bg-white px-2 py-1 text-xs font-medium text-chestnut dark:border-dark-muted dark:bg-dark-surface dark:text-dark-text"
+                >
+                  <span className="text-olive dark:text-dark-muted">{key}:</span>
+                  <span>{value}</span>
+                </div>
+              ))}
+            </div>
+          )}
+          <hr className="mt-6 border-desert-tan-dark dark:border-dark-muted" />
         </header>
         <div className="prose prose-lg max-w-none leading-relaxed prose-headings:text-chestnut prose-p:text-chestnut-dark prose-li:text-chestnut-dark dark:prose-headings:text-dark-text dark:prose-p:text-dark-muted dark:prose-strong:text-dark-text dark:prose-li:text-dark-muted dark:prose-a:text-caramel-light dark:prose-a:hover:text-desert-tan">
-          <ReactMarkdown remarkPlugins={[remarkGfm]}>{post.markdown}</ReactMarkdown>
+          {await renderWithShortcodes(post.markdown)}
         </div>
       </div>
     </article>

@@ -4,4 +4,3 @@ Allow: /
 Disallow: /albums/
 Disallow: /upload
 Disallow: /admin/
-Disallow: /login

@@ -13,6 +13,7 @@ export function serializePost(row: PostRow, options?: { inlineImageIds?: number[
     markdown: row.markdown,
     status: row.status,
     published_at: row.publishedAt ?? null,
+    metadata: row.metadata ?? null,
     created_by: row.createdBy ?? null,
     created_at: row.createdAt,
     updated_at: row.updatedAt
@@ -26,12 +27,13 @@ export function serializePost(row: PostRow, options?: { inlineImageIds?: number[
   return base;
 }
 
-export function serializeAlbum(row: AlbumRow) {
+export function serializeAlbum(row: AlbumRow & { coverImageS3Key?: string | null }) {
   return {
     id: row.id,
     title: row.title,
     slug: row.slug,
     description: row.description || "",
+    cover_image_s3_key: row.coverImageS3Key ?? null,
     created_by: row.createdBy ?? null,
     created_at: row.createdAt,
     updated_at: row.updatedAt
