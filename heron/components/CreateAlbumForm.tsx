@@ -44,17 +44,21 @@ export default function CreateAlbumForm() {
     }));
   };
 
+  const inputClass =
+    "w-full rounded-lg border border-desert-tan-dark bg-white px-3 py-2.5 text-chestnut-dark outline-none transition focus:border-chestnut focus:ring-2 focus:ring-chestnut/10 dark:border-dark-muted dark:bg-dark-bg dark:text-dark-text dark:placeholder:text-dark-muted";
+  const labelClass = "text-sm font-medium text-chestnut-dark dark:text-dark-text";
+
   return (
-    <section className="card">
-      <header className="section-header">
-        <h2 className="section-header__title">Create New Album</h2>
-        <p className="section-header__desc">Start by giving your album a title and description.</p>
+    <section className="rounded-xl border border-desert-tan-dark bg-surface p-4 shadow-[0_2px_8px_rgba(72,9,3,0.08)] dark:border-dark-muted dark:bg-dark-surface">
+      <header className="mb-4">
+        <h2 className="text-chestnut dark:text-dark-text">Create New Album</h2>
+        <p className="mt-2 text-chestnut-dark dark:text-dark-muted">Start by giving your album a title and description.</p>
       </header>
 
-      <form onSubmit={handleSubmit} className="admin-form">
-        <div className="admin-form__row admin-form__row--two-col">
-          <div className="form-group">
-            <label htmlFor="title" className="form-label">Album Title</label>
+      <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+        <div className="grid gap-4 sm:grid-cols-2">
+          <div>
+            <label htmlFor="title" className={labelClass}>Album Title</label>
             <input
               id="title"
               name="title"
@@ -62,13 +66,13 @@ export default function CreateAlbumForm() {
               required
               value={formData.title}
               onChange={handleChange}
-              className="form-control"
+              className={inputClass}
               placeholder="e.g. Summer Vacation 2023"
             />
           </div>
 
-          <div className="form-group">
-            <label htmlFor="slug" className="form-label">Slug (URL path)</label>
+          <div>
+            <label htmlFor="slug" className={labelClass}>Slug (URL path)</label>
             <input
               id="slug"
               name="slug"
@@ -76,30 +80,30 @@ export default function CreateAlbumForm() {
               required
               value={formData.slug}
               onChange={handleChange}
-              className="form-control"
+              className={inputClass}
               placeholder="e.g. summer-2023"
             />
           </div>
         </div>
 
-        <div className="form-group">
-          <label htmlFor="description" className="form-label">Description</label>
+        <div>
+          <label htmlFor="description" className={labelClass}>Description</label>
           <textarea
             id="description"
             name="description"
             rows={3}
             value={formData.description}
             onChange={handleChange}
-            className="form-control"
+            className={inputClass}
             placeholder="A brief description of this album..."
           />
         </div>
 
-        <div className="admin-form__actions">
+        <div className="flex flex-wrap gap-3">
           <button
             type="submit"
             disabled={loading}
-            className="btn btn--primary"
+            className="rounded-lg bg-chestnut px-4 py-2.5 font-semibold text-desert-tan transition hover:bg-chestnut-dark disabled:opacity-60 dark:text-dark-text"
           >
             {loading ? "Creating..." : "Create Album"}
           </button>

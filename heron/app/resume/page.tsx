@@ -18,63 +18,63 @@ function GitHubIcon({ className }: { className?: string }) {
 
 export default function ResumePage() {
   return (
-    <article className="resume">
-      <section className="card resume-header">
-        <h1 className="resume-header__title">Samuel Lanctot</h1>
-        <div className="resume-header__contact">
+    <div className="mx-auto flex max-w-[900px] flex-col gap-6">
+      <section className="rounded-xl border border-desert-tan-dark bg-surface p-4 text-center shadow-[0_2px_8px_rgba(72,9,3,0.08)] dark:border-dark-muted dark:bg-dark-surface">
+        <h1 className="mb-2 text-center text-chestnut dark:text-dark-text">Samuel Lanctot</h1>
+        <p className="mt-2 flex flex-wrap items-center justify-center gap-x-4 gap-y-1 text-sm text-olive-dark dark:text-dark-muted">
           <span>Silver Spring, MD</span>
-          <a href="mailto:lanctotsm@gmail.com" className="resume-header__link">lanctotsm@gmail.com</a>
-          <a href="https://www.linkedin.com/in/samuel-lanctot/" target="_blank" rel="noopener noreferrer" className="resume-header__link" aria-label="LinkedIn">
+          <a href="mailto:lanctotsm@gmail.com" className="text-copper hover:text-chestnut hover:underline dark:text-caramel-light dark:hover:text-desert-tan">lanctotsm@gmail.com</a>
+          <a href="https://www.linkedin.com/in/samuel-lanctot/" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 text-copper hover:text-chestnut hover:underline dark:text-caramel-light dark:hover:text-desert-tan" aria-label="LinkedIn">
             <LinkedInIcon className={iconClass} />
             LinkedIn
           </a>
-          <a href="https://github.com/samlanctot" target="_blank" rel="noopener noreferrer" className="resume-header__link" aria-label="GitHub">
+          <a href="https://github.com/samlanctot" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 text-copper hover:text-chestnut hover:underline dark:text-caramel-light dark:hover:text-desert-tan" aria-label="GitHub">
             <GitHubIcon className={iconClass} />
             GitHub
           </a>
-        </div>
+        </p>
       </section>
 
-      <section className="card">
-        <h2 className="resume-section__title">Experience</h2>
-        <div className="resume-item">
-          <div className="resume-item__header">
-            <h3 className="resume-item__title">Senior Software Engineer</h3>
-            <span className="resume-item__company">GEICO</span>
-            <span className="resume-item__period">Present</span>
+      <section className="rounded-xl border border-desert-tan-dark bg-surface p-4 shadow-[0_2px_8px_rgba(72,9,3,0.08)] dark:border-dark-muted dark:bg-dark-surface">
+        <h2 className="text-chestnut dark:text-dark-text">Experience</h2>
+        <div className="border-b border-desert-tan-dark pb-6 pt-4 last:border-b-0 last:pb-0 dark:border-dark-muted">
+          <div className="mb-2 flex flex-wrap items-baseline gap-3">
+            <h3 className="m-0 text-xl text-chestnut dark:text-dark-text">Senior Software Engineer</h3>
+            <span className="text-base font-semibold text-olive-dark dark:text-dark-muted">GEICO</span>
+            <span className="ml-auto text-sm italic text-olive dark:text-dark-muted">Present</span>
           </div>
           <p className="m-0 leading-relaxed text-chestnut-dark dark:text-dark-muted">Working on commercial software dealing with DuckCreek and Next.js based service applications. Building robust, scalable solutions for commercial insurance products.</p>
         </div>
-        <div className="resume-item">
-          <div className="resume-item__header">
-            <h3 className="resume-item__title">Software Engineer</h3>
-            <span className="resume-item__company">Capital One</span>
-            <span className="resume-item__period">Previous</span>
+        <div className="border-b border-desert-tan-dark pb-6 pt-4 last:border-b-0 last:pb-0 dark:border-dark-muted">
+          <div className="mb-2 flex flex-wrap items-baseline gap-3">
+            <h3 className="m-0 text-xl text-chestnut dark:text-dark-text">Software Engineer</h3>
+            <span className="text-base font-semibold text-olive-dark dark:text-dark-muted">Capital One</span>
+            <span className="ml-auto text-sm italic text-olive dark:text-dark-muted">Previous</span>
           </div>
           <p className="m-0 leading-relaxed text-chestnut-dark dark:text-dark-muted">Full stack development with Node.js, Python, and Scala. Built and maintained microservices and distributed systems in a cloud-native environment.</p>
         </div>
       </section>
 
-      <section className="card">
-        <h2 className="resume-section__title">Technical Skills</h2>
-        <div className="resume-skill-grid">
-          <div className="resume-skill-group">
-            <h3 className="resume-skill-group__title">Languages</h3>
+      <section className="rounded-xl border border-desert-tan-dark bg-surface p-4 shadow-[0_2px_8px_rgba(72,9,3,0.08)] dark:border-dark-muted dark:bg-dark-surface">
+        <h2 className="text-chestnut dark:text-dark-text">Technical Skills</h2>
+        <div className="mt-4 grid gap-5">
+          <div>
+            <h3 className="mb-2 text-xs uppercase tracking-wide text-olive-dark dark:text-dark-muted">Languages</h3>
             <p className="m-0 leading-relaxed text-chestnut-dark dark:text-dark-muted">.NET (C#), JavaScript/TypeScript, Node.js, Python, Scala, SQL</p>
           </div>
-          <div className="resume-skill-group">
-            <h3 className="resume-skill-group__title">Frameworks & Technologies</h3>
+          <div>
+            <h3 className="mb-2 text-xs uppercase tracking-wide text-olive-dark dark:text-dark-muted">Frameworks & Technologies</h3>
             <p className="m-0 leading-relaxed text-chestnut-dark dark:text-dark-muted">Next.js, React, DuckCreek, .NET Core, ASP.NET, REST APIs, Microservices</p>
           </div>
-          <div className="resume-skill-group">
-            <h3 className="resume-skill-group__title">Tools & Platforms</h3>
+          <div>
+            <h3 className="mb-2 text-xs uppercase tracking-wide text-olive-dark dark:text-dark-muted">Tools & Platforms</h3>
             <p className="m-0 leading-relaxed text-chestnut-dark dark:text-dark-muted">Git, Docker, AWS, CI/CD, Agile/Scrum</p>
           </div>
         </div>
       </section>
 
-      <section className="card">
-        <h2 className="resume-section__title">Experience Summary</h2>
+      <section className="rounded-xl border border-desert-tan-dark bg-surface p-4 shadow-[0_2px_8px_rgba(72,9,3,0.08)] dark:border-dark-muted dark:bg-dark-surface">
+        <h2 className="text-chestnut dark:text-dark-text">Experience Summary</h2>
         <ul className="mt-4 list-outside pl-6 leading-relaxed text-chestnut-dark dark:text-dark-muted [&>li]:mb-2">
           <li>7+ years of full stack .NET development experience</li>
           <li>2+ years of Node.js/Python/Scala development experience</li>
@@ -84,6 +84,6 @@ export default function ResumePage() {
           <li>Strong background in microservices architecture and distributed systems</li>
         </ul>
       </section>
-    </article>
+    </div>
   );
 }

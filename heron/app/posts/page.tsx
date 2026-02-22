@@ -19,48 +19,45 @@ export default async function PostsPage() {
   const posts = postsData || [];
 
   return (
-    <article className="grid gap-6">
-      <header className="section-header">
-        <h1 className="section-header__title">Posts</h1>
-      </header>
-
+    <div className="grid gap-8">
+      <h1 className="m-0 text-3xl font-bold text-chestnut dark:text-dark-text">Posts</h1>
       {posts.length === 0 ? (
-        <section className="card empty-state">
-          <p className="empty-state__text">
+        <div className="rounded-xl border border-desert-tan-dark bg-surface p-8 text-center dark:border-dark-muted dark:bg-dark-surface">
+          <p className="text-olive-dark dark:text-dark-muted">
             No posts yet. Check back soon for new content.
           </p>
-        </section>
+        </div>
       ) : (
-        <div className="post-list">
+        <div className="grid gap-6 lg:grid-cols-2">
           {posts.map((post) => (
-            <section
+            <article
               key={post.id}
-              className="card post-card"
+              className="group rounded-xl border border-desert-tan-dark bg-surface p-6 shadow-[0_2px_8px_rgba(72,9,3,0.08)] transition-all hover:-translate-y-0.5 hover:border-caramel hover:shadow-[0_8px_24px_rgba(72,9,3,0.12)] dark:border-dark-muted dark:bg-dark-surface dark:hover:border-caramel/50 dark:hover:shadow-[0_8px_24px_rgba(0,0,0,0.3)]"
             >
-              <div className="post-card__meta">
+              <div className="mb-3 flex flex-wrap items-center gap-2">
                 <time
                   dateTime={post.published_at || post.created_at}
-                  className="post-card__date"
+                  className="rounded-full bg-desert-tan/50 px-2.5 py-0.5 text-xs font-medium text-chestnut-dark dark:bg-dark-muted/40 dark:text-dark-text"
                 >
                   {formatPostDate(post.published_at || post.created_at)}
                 </time>
               </div>
-              <h2 className="post-card__title">
+              <h2 className="text-xl font-semibold leading-tight text-chestnut dark:text-dark-text">
                 {post.title}
               </h2>
-              <p className="post-card__summary">
+              <p className="mt-3 line-clamp-3 text-[0.98rem] leading-relaxed text-chestnut-dark dark:text-dark-muted">
                 {post.summary}
               </p>
               <Link
                 href={`/posts/${post.slug}`}
-                className="post-card__action"
+                className="mt-5 inline-block font-medium text-copper transition-colors hover:text-chestnut dark:text-caramel-light dark:hover:text-desert-tan"
               >
                 Read more →
               </Link>
-            </section>
+            </article>
           ))}
         </div>
       )}
-    </article>
+    </div>
   );
 }

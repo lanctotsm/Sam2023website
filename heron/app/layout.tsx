@@ -45,15 +45,13 @@ export default function RootLayout({ children }: { children: ReactNode }) {
           href={`${baseUrl.replace(/\/+$/, "")}/feed.xml`}
         />
       </head>
-      <body className="body-layout">
+      <body className="m-0 bg-caramel-light text-chestnut-dark dark:bg-dark-bg dark:text-dark-text">
         <Providers>
-          <header className="site-header">
-            <Navigation />
-          </header>
-          <main className="main-content container">
+          <Navigation />
+          <main className="mx-auto flex min-h-[calc(100vh-4rem)] max-w-[1100px] flex-col px-5 py-8 pb-6">
             {children}
+            <Footer />
           </main>
-          <Footer />
         </Providers>
       </body>
     </html>

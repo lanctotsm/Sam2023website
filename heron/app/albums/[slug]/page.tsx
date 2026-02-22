@@ -25,48 +25,46 @@ export default async function AlbumDetailPage({ params }: PageProps) {
   }
 
   return (
-    <article className="album-detail">
+    <div className="grid gap-4">
       <Link
         href="/albums"
-        className="album-detail__back"
+        className="inline-flex items-center gap-1.5 text-sm font-medium text-copper transition-colors hover:text-chestnut dark:text-caramel-light dark:hover:text-desert-tan"
       >
         ← Back to Albums
       </Link>
 
-      <header className="album-detail__header">
-        <div className="album-detail__info">
-          <h1 className="album-detail__title">{album.title}</h1>
-          <p className="album-detail__description">{album.description}</p>
-          <p className="album-detail__stats">{images.length} photos</p>
+      <header className="flex flex-wrap items-start justify-between gap-4">
+        <div>
+          <h1 className="text-chestnut dark:text-dark-text">{album.title}</h1>
+          <p className="text-chestnut-dark dark:text-dark-muted">{album.description}</p>
+          <p className="text-olive dark:text-dark-muted">{images.length} photos</p>
         </div>
         {user && (
           <Link
             href={`/admin/albums/${album.id}`}
-            className="album-detail__manage"
+            className="rounded-lg border border-chestnut bg-transparent px-4 py-2 text-chestnut transition hover:bg-chestnut/5 dark:border-dark-text dark:text-dark-text dark:hover:bg-dark-bg"
           >
             Manage album
           </Link>
         )}
       </header>
 
-      <section className="album-detail__content">
-        {images.length === 0 ? (
-          <div className="album-detail__empty">
-            {user ? (
-              <>
-                This album is empty.{" "}
-                <Link href={`/admin/albums/${album.id}`} className="font-medium text-chestnut hover:underline dark:text-caramel-light dark:hover:text-desert-tan">
-                  Add photos
-                </Link>
-              </>
-            ) : (
-              "This album is empty."
-            )}
-          </div>
-        ) : (
-          <AlbumViewer images={images} />
-        )}
-      </section>
-    </article>
+      {images.length === 0 ? (
+        <p className="rounded-xl border border-desert-tan-dark bg-surface p-4 text-olive shadow-[0_2px_8px_rgba(72,9,3,0.08)] dark:border-dark-muted dark:bg-dark-surface dark:text-dark-muted">
+          {user ? (
+            <>
+              This album is empty.{" "}
+              <Link href={`/admin/albums/${album.id}`} className="font-medium text-chestnut hover:underline dark:text-caramel-light dark:hover:text-desert-tan">
+                Add photos
+              </Link>
+            </>
+          ) : (
+            "This album is empty."
+          )}
+        </p>
+      ) : (
+        <AlbumViewer images={images} />
+      )}
+    </div>
   );
 }

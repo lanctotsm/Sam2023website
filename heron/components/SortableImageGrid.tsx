@@ -68,13 +68,11 @@ function SortableItem({
     transition
   };
 
-  const itemClasses = `sortable-grid__item ${isDragging ? "sortable-grid__item--dragging" : ""} ${isOverlay ? "sortable-grid__item--overlay" : ""}`;
-
   return (
     <div
       ref={setNodeRef}
       style={style}
-      className={`group relative flex flex-col gap-3 ${cardClass} ${isDragging ? "opacity-60 shadow-lg" : ""}`}
+      className={`group relative flex flex-col gap-3 rounded-xl border border-desert-tan-dark bg-surface p-3 shadow-[0_2px_8px_rgba(72,9,3,0.08)] dark:border-dark-muted dark:bg-dark-surface ${cardClass} ${isDragging ? "opacity-60 shadow-lg" : ""}`}
     >
       <div
         {...attributes}
@@ -103,7 +101,7 @@ function SortableItem({
                 e.stopPropagation();
                 onRotate(image.id);
               }}
-              className="rounded px-2 py-1 text-xs font-medium text-white transition hover:bg-chestnut/80"
+              className="rounded bg-chestnut px-2 py-1 text-xs font-medium text-desert-tan transition hover:bg-chestnut-dark dark:bg-caramel dark:text-chestnut-dark dark:hover:bg-caramel-light"
               aria-label="Rotate"
             >
               Rotate
@@ -112,7 +110,7 @@ function SortableItem({
           {onCrop && (
             <button
               onClick={() => onCrop(image)}
-              className="sortable-grid__btn"
+              className="rounded border border-desert-tan-dark px-2 py-1 text-xs transition hover:bg-surface-hover dark:border-dark-muted dark:hover:bg-dark-bg"
               title="Crop image"
               type="button"
             >
@@ -121,7 +119,7 @@ function SortableItem({
           )}
           <button
             onClick={() => onDelete(image.id)}
-            className="sortable-grid__btn sortable-grid__btn--danger"
+            className="rounded border border-copper px-2 py-1 text-xs text-copper transition hover:bg-copper/10 dark:border-copper dark:text-copper-light dark:hover:bg-copper/20"
             title="Delete image"
             type="button"
           >
@@ -135,7 +133,7 @@ function SortableItem({
               e.stopPropagation();
               onUpdateMetadata(image);
             }}
-            className="btn btn--primary btn--sm mt-auto mb-4"
+            className="mt-auto mb-4 rounded-lg bg-chestnut px-3 py-1.5 text-sm font-semibold text-desert-tan transition hover:bg-chestnut-dark disabled:opacity-60 dark:text-dark-text"
             type="button"
           >
             Edit Info
@@ -143,8 +141,8 @@ function SortableItem({
         )}
       </div>
       {(image.name || image.alt_text) && (
-        <div className="sortable-grid__info">
-          <p className="truncate m-0">{image.name || image.alt_text}</p>
+        <div className="min-w-0">
+          <p className="m-0 truncate text-xs text-olive-dark dark:text-dark-muted">{image.name || image.alt_text}</p>
         </div>
       )}
     </div>
@@ -218,12 +216,12 @@ export default function SortableImageGrid({
         })
       }}>
         {activeImage ? (
-          <div className="sortable-grid__item sortable-grid__item--dragging">
+          <div className="relative h-[150px] w-[200px] overflow-hidden rounded-xl border border-desert-tan-dark bg-surface shadow-lg dark:border-dark-muted dark:bg-dark-surface">
             <Image
               src={buildImageUrl(activeImage.s3_key)}
               alt=""
               fill
-              className="sortable-grid__image"
+              className="object-cover"
             />
           </div>
         ) : null}
