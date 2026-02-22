@@ -44,7 +44,9 @@ export async function GET(_: Request, { params }: { params: Promise<{ imageID: s
     const buffer = await getObject(key);
     const contentType = getContentType(key);
 
-    return new NextResponse(buffer as any, {
+    const body = new Blob([Uint8Array.from(buffer)]);
+
+    return new NextResponse(body, {
       headers: {
         "Content-Type": contentType,
         "Cache-Control": "private, max-age=60"

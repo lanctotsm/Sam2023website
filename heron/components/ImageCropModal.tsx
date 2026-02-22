@@ -91,6 +91,15 @@ async function getCroppedBlob(image: HTMLImageElement, crop: Crop): Promise<Blob
   const ctx = canvas.getContext("2d");
   if (!ctx) return null;
 
+  if (
+    crop.x == null ||
+    crop.y == null ||
+    crop.width == null ||
+    crop.height == null
+  ) {
+    return null;
+  }
+
   const scaleX = image.naturalWidth / image.width;
   const scaleY = image.naturalHeight / image.height;
 

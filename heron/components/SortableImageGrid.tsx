@@ -42,6 +42,7 @@ interface ItemProps {
   onCrop?: (img: SortableImage) => void;
   onUpdateMetadata?: (img: SortableImage) => void;
   isOverlay?: boolean;
+  cardClass?: string;
 }
 
 function SortableItem({
@@ -50,7 +51,8 @@ function SortableItem({
   onRotate,
   onCrop,
   onUpdateMetadata,
-  isOverlay
+  isOverlay,
+  cardClass = ""
 }: ItemProps) {
   const {
     attributes,
@@ -72,27 +74,41 @@ function SortableItem({
     <div
       ref={setNodeRef}
       style={style}
-      className={itemClasses}
-      {...attributes}
-      {...listeners}
+      className={`group relative flex flex-col gap-3 ${cardClass} ${isDragging ? "opacity-60 shadow-lg" : ""}`}
     >
-      <Image
-        src={buildImageUrl(image.s3_key)}
-        alt={image.alt_text || ""}
-        fill
-        className="sortable-grid__image"
-        sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-      />
-      <div className="sortable-grid__overlay">
-        <div className="sortable-grid__actions" onClick={(e) => e.stopPropagation()}>
-          <button
-            onClick={() => onRotate(image.id)}
-            className="sortable-grid__btn"
-            title="Rotate image"
-            type="button"
-          >
-            🔄
-          </button>
+      <div
+        {...attributes}
+        {...listeners}
+        className="cursor-grab touch-none active:cursor-grabbing"
+        aria-label="Drag to reorder"
+      >
+        <Image
+          src={buildImageUrl(image.s3_key)}
+          alt={image.alt_text || image.caption || "Image"}
+          width={image.width || 300}
+          height={image.height || 200}
+          className="block h-[150px] w-full rounded-lg object-cover"
+          unoptimized
+        />
+      </div>
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <p className="m-0 text-xs text-olive dark:text-dark-muted">
+          {onUpdateMetadata ? "Click image to edit metadata" : "Drag image to reorder"}
+        </p>
+        <div className="flex flex-wrap justify-end gap-1">
+          {onRotate && (
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                onRotate(image.id);
+              }}
+              className="rounded px-2 py-1 text-xs font-medium text-white transition hover:bg-chestnut/80"
+              aria-label="Rotate"
+            >
+              Rotate
+            </button>
+          )}
           {onCrop && (
             <button
               onClick={() => onCrop(image)}
@@ -141,7 +157,8 @@ export default function SortableImageGrid({
   onDelete,
   onRotate,
   onCrop,
-  onUpdateMetadata
+  onUpdateMetadata,
+  cardClass
 }: Props) {
   const [activeId, setActiveId] = useState<number | null>(null);
 
@@ -175,14 +192,9 @@ export default function SortableImageGrid({
   const activeImage = activeId ? images.find((img) => img.id === activeId) : null;
 
   return (
-    <DndContext
-      sensors={sensors}
-      collisionDetection={closestCenter}
-      onDragStart={handleDragStart}
-      onDragEnd={handleDragEnd}
-    >
-      <SortableContext items={images.map((img) => img.id)} strategy={rectSortingStrategy}>
-        <div className="sortable-grid">
+    <div className="grid grid-cols-[repeat(auto-fill,minmax(200px,1fr))] gap-4">
+      <DndContext sensors={sensors} collisionDetection={closestCenter} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
+        <SortableContext items={images.map((i) => i.id)} strategy={rectSortingStrategy}>
           {images.map((image) => (
             <SortableItem
               key={image.id}
@@ -191,10 +203,10 @@ export default function SortableImageGrid({
               onRotate={onRotate}
               onCrop={onCrop}
               onUpdateMetadata={onUpdateMetadata}
+              cardClass={cardClass}
             />
           ))}
-        </div>
-      </SortableContext>
+        </SortableContext>
 
       <DragOverlay dropAnimation={{
         sideEffects: defaultDropAnimationSideEffects({
@@ -217,5 +229,6 @@ export default function SortableImageGrid({
         ) : null}
       </DragOverlay>
     </DndContext>
+    </div>
   );
 }
