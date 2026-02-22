@@ -155,7 +155,7 @@ export default function AdminPostsPage() {
           }
         }
       },
-      cancel: { label: "Cancel", onClick: () => { } }
+      cancel: { label: "Cancel", onClick: () => {} }
     });
   };
 
