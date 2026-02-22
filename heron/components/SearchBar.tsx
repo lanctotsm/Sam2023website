@@ -85,6 +85,8 @@ export default function SearchBar() {
         <div className="absolute top-full left-0 z-50 mt-1 w-80 rounded-xl border border-desert-tan-dark bg-surface py-2 shadow-lg dark:border-dark-muted dark:bg-dark-surface">
           {loading ? (
             <div className="px-4 py-6 text-center text-sm text-olive dark:text-dark-muted">Searching...</div>
+          ) : results == null ? (
+            <div className="px-4 py-6 text-center text-sm text-olive dark:text-dark-muted">Type to search</div>
           ) : !hasResults ? (
             <div className="px-4 py-6 text-center text-sm text-olive dark:text-dark-muted">No results found for &quot;{query}&quot;</div>
           ) : (
