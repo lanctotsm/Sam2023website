@@ -49,6 +49,8 @@ jobs:
           NEXT_PUBLIC_IMAGE_BASE_URL: ${{ secrets.S3_PUBLIC_BASE_URL }}
           NEXTAUTH_URL: ${{ secrets.NEXTAUTH_URL }}
           NEXTAUTH_SECRET: ${{ secrets.NEXTAUTH_SECRET }}
+          # Site title (GitHub Environment variable, not a secret)
+          SITE_TITLE: ${{ vars.SITE_TITLE }}
         run: npm run build
         working-directory: heron
 

@@ -21,6 +21,9 @@ function formatRfc822(dateStr: string): string {
   return d.toUTCString();
 }
 
+const siteTitle =
+  (typeof process !== "undefined" && process.env.SITE_TITLE?.trim()) || "Sam's website";
+
 export async function GET() {
   const rows = await getAllPosts({});
   const posts = Array.isArray(rows) ? rows.map((row) => serializePost(row)) : [];
@@ -28,7 +31,7 @@ export async function GET() {
   const xml = `<?xml version="1.0" encoding="UTF-8"?>
 <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
   <channel>
-    <title>Heron</title>
+    <title>${escapeXml(siteTitle)}</title>
     <link>${escapeXml(baseUrl.replace(/\/+$/, ""))}</link>
     <description>RSS feed for published posts</description>
     <language>en-us</language>
