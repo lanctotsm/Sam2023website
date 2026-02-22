@@ -20,7 +20,7 @@ import {
 } from "@dnd-kit/sortable";
 import type { Image as ImageType } from "@/lib/api";
 import { buildImageUrl } from "@/lib/images";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Image from "next/image";
 
 export type SortableImage = ImageType;
@@ -161,7 +161,12 @@ export default function SortableImageGrid({
   onUpdateMetadata,
   cardClass
 }: Props) {
+  const [items, setItems] = useState<SortableImage[]>(images);
   const [activeId, setActiveId] = useState<number | null>(null);
+
+  useEffect(() => {
+    setItems(images);
+  }, [images]);
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -183,20 +188,21 @@ export default function SortableImageGrid({
     setActiveId(null);
 
     if (active.id !== over?.id) {
-      const oldIndex = images.findIndex((img) => img.id === active.id);
-      const newIndex = images.findIndex((img) => img.id === over.id);
-      const newImages = arrayMove(images, oldIndex, newIndex);
-      onReorder(newImages.map(img => img.id));
+      const oldIndex = items.findIndex((img) => img.id === active.id);
+      const newIndex = items.findIndex((img) => img.id === over.id);
+      const newItems = arrayMove(items, oldIndex, newIndex);
+      setItems(newItems);
+      onReorder(newItems.map(img => img.id));
     }
   }
 
-  const activeImage = activeId ? images.find((img) => img.id === activeId) : null;
+  const activeImage = activeId ? items.find((img) => img.id === activeId) : null;
 
   return (
     <div className="grid grid-cols-[repeat(auto-fill,minmax(200px,1fr))] gap-4">
       <DndContext sensors={sensors} collisionDetection={closestCenter} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
-        <SortableContext items={images.map((i) => i.id)} strategy={rectSortingStrategy}>
-          {images.map((image) => (
+        <SortableContext items={items.map((i) => i.id)} strategy={rectSortingStrategy}>
+          {items.map((image) => (
             <SortableItem
               key={image.id}
               image={image}
