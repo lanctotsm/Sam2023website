@@ -3,7 +3,7 @@ import { test, expect } from "@playwright/test";
 test.describe("Public Routes", () => {
   test("Home page loads and shows navigation", async ({ page }) => {
     await page.goto("/");
-    await expect(page).toHaveTitle(/Heron/);
+    await expect(page).toHaveTitle(/Sam's website/);
     await expect(page.getByRole("navigation").first()).toBeVisible();
     await expect(page.getByRole("link", { name: /About/i }).first()).toBeVisible();
   });
@@ -28,6 +28,6 @@ test.describe("Admin Protection", () => {
   test("Admin shows sign-in prompt when not authenticated", async ({ page }) => {
     await page.goto("/admin");
     await expect(page).toHaveURL(/\/admin/);
-    await expect(page.getByRole("heading", { name: /Admin/i })).toBeVisible();
+    await expect(page.getByRole("heading", { name: /Admin/i }).first()).toBeVisible();
   });
 });

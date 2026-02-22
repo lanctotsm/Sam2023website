@@ -9,8 +9,11 @@ const baseUrl =
   (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "http://localhost:3000") ||
   "http://localhost:3000";
 
+const siteTitle =
+  (typeof process !== "undefined" && process.env.SITE_TITLE?.trim()) || "Sam's website";
+
 export const metadata = {
-  title: "Heron",
+  title: siteTitle,
   description: "Modern SQLite CMS",
   metadataBase: new URL(baseUrl),
   alternates: {

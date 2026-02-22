@@ -4,7 +4,7 @@ import { NextResponse } from "next/server";
 
 import { errorResponse, getAuthUser } from "@/lib/api-utils";
 import { serializeImage } from "@/lib/serializers";
-import { createImage } from "@/services/images";
+import { createImage, updateImage, deleteImage } from "@/services/images";
 import { addAlbumImage } from "@/services/albumImages";
 import { putObject, deleteObjects } from "@/lib/s3";
 import { processImage } from "@/lib/image-processing";
@@ -13,7 +13,6 @@ const MAX_FILE_BYTES = Number(process.env.MAX_UPLOAD_BYTES) || 100 * 1024 * 1024
 const ALLOWED_TYPES = /^image\/(jpeg|jpg|png|gif|webp|bmp)$/i;
 
 async function rollback(uploadedKeys: string[], createdImageIds: number[]) {
-  const { deleteImage } = await import("@/services/images");
   for (const id of createdImageIds) {
     try {
       await deleteImage(id);
@@ -86,44 +85,77 @@ export async function POST(request: Request) {
       const buffer = Buffer.from(await file.arrayBuffer());
       const processed = await processImage(buffer);
 
-      const uuid = randomUUID();
+      // 1. Create image record first with placeholder keys to get the ID
+      const placeholderUuid = randomUUID();
       const ext = path.extname(file.name) || ".jpg";
-      const keyThumb = `uploads/${uuid}/thumb.jpg`;
-      const keyLarge = `uploads/${uuid}/large.jpg`;
-      const keyOriginal = `uploads/${uuid}/original${ext}`;
+      // Use a unique placeholder to satisfy unique constraint
+      const placeholderKey = `pending/${placeholderUuid}/placeholder${ext}`;
 
-      await putObject({
-        key: keyThumb,
-        body: processed.thumb.buffer,
-        contentType: "image/jpeg"
-      });
-      uploadedKeys.push(keyThumb);
-      await putObject({
-        key: keyLarge,
-        body: processed.large.buffer,
-        contentType: "image/jpeg"
-      });
-      uploadedKeys.push(keyLarge);
-      await putObject({
-        key: keyOriginal,
-        body: processed.original.buffer,
-        contentType: processed.original.contentType
-      });
-      uploadedKeys.push(keyOriginal);
+      let row;
+      try {
+        row = await createImage({
+          s3Key: placeholderKey,
+          s3KeyThumb: null,
+          s3KeyLarge: null,
+          s3KeyOriginal: null,
+          width: processed.large.width,
+          height: processed.large.height,
+          caption,
+          altText,
+          createdBy: user.id
+        });
+        createdImageIds.push(row.id);
+      } catch (err) {
+        // limit reached? db error?
+        throw new Error("failed to create db record");
+      }
 
-      const row = await createImage({
-        s3Key: keyLarge,
+      // 2. Generate ID-based keys
+      const id = row.id;
+      const keyThumb = `uploads/${id}-thumb.jpg`;
+      const keyLarge = `uploads/${id}-large.jpg`;
+      const keyOriginal = `uploads/${id}-original${ext}`;
+
+      // 3. Upload to S3
+      try {
+        await putObject({
+          key: keyThumb,
+          body: processed.thumb.buffer,
+          contentType: "image/jpeg"
+        });
+        uploadedKeys.push(keyThumb);
+
+        await putObject({
+          key: keyLarge,
+          body: processed.large.buffer,
+          contentType: "image/jpeg"
+        });
+        uploadedKeys.push(keyLarge);
+
+        await putObject({
+          key: keyOriginal,
+          body: processed.original.buffer,
+          contentType: processed.original.contentType
+        });
+        uploadedKeys.push(keyOriginal);
+      } catch (err) {
+        throw new Error("failed to upload to storage");
+      }
+
+      // 4. Update image record with real keys
+      const updated = await updateImage(id, {
+        s3Key: keyLarge, // Use large as main key for now
         s3KeyThumb: keyThumb,
         s3KeyLarge: keyLarge,
-        s3KeyOriginal: keyOriginal,
-        width: processed.large.width,
-        height: processed.large.height,
-        caption,
-        altText,
-        createdBy: user.id
+        s3KeyOriginal: keyOriginal
       });
-      createdImages.push(row);
-      createdImageIds.push(row.id);
+
+      if (updated) {
+        createdImages.push(updated);
+      } else {
+        // Should not happen
+        createdImages.push(row);
+      }
     }
 
     if (albumId != null && Number.isInteger(albumId) && albumId > 0) {
