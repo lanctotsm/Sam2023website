@@ -9,6 +9,7 @@ vi.mock("@/lib/api-utils", () => ({
 }));
 vi.mock("@/services/images", () => ({
   createImage: vi.fn(),
+  updateImage: vi.fn(),
   deleteImage: vi.fn()
 }));
 vi.mock("@/services/albumImages", () => ({ addAlbumImage: vi.fn() }));
@@ -19,7 +20,7 @@ vi.mock("@/lib/image-processing", () => ({
 vi.mock("@/lib/serializers", () => ({ serializeImage: (i: unknown) => i }));
 
 const { getAuthUser } = await import("@/lib/api-utils");
-const { createImage } = await import("@/services/images");
+const { createImage, updateImage } = await import("@/services/images");
 const { addAlbumImage } = await import("@/services/albumImages");
 const { putObject } = await import("@/lib/s3");
 const { processImage } = await import("@/lib/image-processing");
@@ -55,10 +56,23 @@ describe("POST /api/images/upload", () => {
     vi.mocked(putObject).mockResolvedValue(undefined);
     vi.mocked(createImage).mockResolvedValue({
       id: 42,
-      s3Key: "uploads/uuid/large.jpg",
-      s3KeyThumb: "uploads/uuid/thumb.jpg",
-      s3KeyLarge: "uploads/uuid/large.jpg",
-      s3KeyOriginal: "uploads/uuid/original.jpg",
+      s3Key: "pending/uuid/placeholder.jpg",
+      s3KeyThumb: null,
+      s3KeyLarge: null,
+      s3KeyOriginal: null,
+      width: 800,
+      height: 600,
+      caption: null,
+      altText: null,
+      createdBy: 1,
+      createdAt: "2024-01-01T00:00:00Z"
+    } as never);
+    vi.mocked(updateImage).mockResolvedValue({
+      id: 42,
+      s3Key: "uploads/42-large.jpg",
+      s3KeyThumb: "uploads/42-thumb.jpg",
+      s3KeyLarge: "uploads/42-large.jpg",
+      s3KeyOriginal: "uploads/42-original.jpg",
       width: 800,
       height: 600,
       caption: null,
@@ -107,13 +121,22 @@ describe("POST /api/images/upload", () => {
     expect(putObject).toHaveBeenCalledTimes(3); // thumb, large, original
     expect(createImage).toHaveBeenCalledWith(
       expect.objectContaining({
-        s3Key: expect.stringMatching(/uploads\/.+\/large\.jpg/),
-        s3KeyThumb: expect.stringMatching(/uploads\/.+\/thumb\.jpg/),
-        s3KeyLarge: expect.stringMatching(/uploads\/.+\/large\.jpg/),
-        s3KeyOriginal: expect.stringMatching(/uploads\/.+\/original\.jpg/),
+        s3Key: expect.stringMatching(/pending\/.+\/placeholder\.jpg/),
+        s3KeyThumb: null,
+        s3KeyLarge: null,
+        s3KeyOriginal: null,
         width: 800,
         height: 600,
         createdBy: 1
+      })
+    );
+    expect(updateImage).toHaveBeenCalledWith(
+      42,
+      expect.objectContaining({
+        s3Key: "uploads/42-large.jpg",
+        s3KeyThumb: "uploads/42-thumb.jpg",
+        s3KeyLarge: "uploads/42-large.jpg",
+        s3KeyOriginal: "uploads/42-original.jpg"
       })
     );
     expect(addAlbumImage).not.toHaveBeenCalled();
@@ -141,7 +164,7 @@ describe("POST /api/images/upload", () => {
     const file = new File([new Blob(["x"])], "test.jpg", { type: "image/jpeg" });
     const form = new FormData();
     form.append("files", file);
-    
+
     // Create request with oversized Content-Length header
     const maxBytes = Number(process.env.MAX_UPLOAD_BYTES) || 100 * 1024 * 1024;
     const req = new Request("http://x/api/images/upload", {
@@ -151,7 +174,7 @@ describe("POST /api/images/upload", () => {
         "content-length": String(maxBytes * 2) // Double the limit
       }
     });
-    
+
     const res = await POST(req);
     expect(res.status).toBe(413);
     const data = await res.json();
@@ -165,7 +188,7 @@ describe("POST /api/images/upload", () => {
     // Create a file with actual large content
     const largeBuffer = Buffer.alloc(maxBytes + 1024); // slightly over limit
     const largeFile = new File([largeBuffer], "large.jpg", { type: "image/jpeg" });
-    
+
     const res = await POST(formRequestWithFiles([largeFile]));
     expect(res.status).toBe(400);
     const data = await res.json();

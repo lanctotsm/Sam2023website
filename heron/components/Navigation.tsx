@@ -1,8 +1,8 @@
 "use client";
 
+import { useMemo, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useMemo, useState } from "react";
 import { signOut, useSession } from "next-auth/react";
 import ThemeToggle from "@/components/ThemeToggle";
 import SearchBar from "@/components/SearchBar";
@@ -39,95 +39,69 @@ export default function Navigation() {
     router.refresh();
   };
 
-  const navLinkClass = (item: NavItem) =>
-    `block py-2 text-desert-tan transition-colors hover:text-caramel-light dark:text-dark-text dark:hover:text-desert-tan md:py-0 ${
-      pathname === item.href
-        ? "font-semibold text-caramel-light underline decoration-2 underline-offset-4 dark:text-desert-tan"
-        : ""
-    }`;
-
   return (
-    <nav
-      className={`flex flex-wrap items-center justify-between gap-4 border-b px-5 py-5 ${
-        user
-          ? "border-chestnut-dark bg-chestnut dark:border-dark-muted dark:bg-dark-surface"
-          : "bg-chestnut-light dark:bg-dark-surface dark:border-dark-muted dark:border-b"
-      }`}
-    >
-      <div className="flex flex-1 items-center justify-between md:flex-initial md:justify-start">
-        <div className="hidden items-center gap-4 md:flex">
+    <nav className={`main-nav ${user ? "main-nav--authenticated" : ""}`} aria-label="Main navigation">
+      <div className="main-nav__brand">
+        <ul className="main-nav__list">
           {filteredItems.map((item) => (
-            <Link key={item.href} className={navLinkClass(item)} href={item.href}>
-              {item.label}
-            </Link>
+            <li key={item.href} className="main-nav__item">
+              <Link
+                href={item.href}
+                className={`main-nav__link ${pathname === item.href ? "main-nav__link--active" : ""}`}
+              >
+                {item.label}
+              </Link>
+            </li>
           ))}
-        </div>
+        </ul>
+
         <button
           type="button"
           onClick={() => setMobileOpen((o) => !o)}
-          className="flex flex-col gap-1.5 rounded p-2 md:hidden"
+          className="main-nav__toggle md:hidden flex flex-col gap-1.5 p-2"
           aria-label={mobileOpen ? "Close menu" : "Open menu"}
           aria-expanded={mobileOpen}
         >
-          <span
-            className={`block h-0.5 w-5 bg-desert-tan transition-transform ${
-              mobileOpen ? "translate-y-1 rotate-45" : ""
-            }`}
-          />
-          <span
-            className={`block h-0.5 w-5 bg-desert-tan transition-opacity ${
-              mobileOpen ? "opacity-0" : ""
-            }`}
-          />
-          <span
-            className={`block h-0.5 w-5 bg-desert-tan transition-transform ${
-              mobileOpen ? "-translate-y-1 -rotate-45" : ""
-            }`}
-          />
+          <span className={`block h-0.5 w-5 bg-desert-tan transition-transform ${mobileOpen ? "translate-y-1 rotate-45" : ""}`} />
+          <span className={`block h-0.5 w-5 bg-desert-tan transition-opacity ${mobileOpen ? "opacity-0" : ""}`} />
+          <span className={`block h-0.5 w-5 bg-desert-tan transition-transform ${mobileOpen ? "-translate-y-1 -rotate-45" : ""}`} />
         </button>
       </div>
 
       {mobileOpen && (
-        <div className="w-full md:hidden">
-          <div className="mb-3 flex flex-col border-t border-desert-tan/30 pt-4 sm:hidden dark:border-dark-muted/30">
+        <div className="main-nav__mobile w-full md:hidden">
+          <div className="main-nav__mobile-search mb-3 sm:hidden">
             <SearchBar />
           </div>
-          <div className="flex flex-col gap-2 border-t border-desert-tan/30 pt-4 dark:border-dark-muted/30">
+          <ul className="main-nav__mobile-list flex flex-col gap-2 pt-4 border-t border-desert-tan/30">
             {filteredItems.map((item) => (
-              <Link
-                key={item.href}
-                className={navLinkClass(item)}
-                href={item.href}
-                onClick={() => setMobileOpen(false)}
-              >
-                {item.label}
-              </Link>
+              <li key={item.href}>
+                <Link
+                  href={item.href}
+                  className={`main-nav__link ${pathname === item.href ? "main-nav__link--active" : ""}`}
+                  onClick={() => setMobileOpen(false)}
+                >
+                  {item.label}
+                </Link>
+              </li>
             ))}
-          </div>
+          </ul>
         </div>
       )}
 
-      <div className="flex items-center gap-3 text-sm text-desert-tan dark:text-dark-text">
-        <div className="hidden sm:block">
+      <div className="main-nav__actions">
+        <div className="main-nav__search hidden sm:block">
           <SearchBar />
         </div>
         <ThemeToggle />
         {status === "loading" ? (
-          <span className="rounded-full border border-olive-dark bg-chestnut-light px-2.5 py-1.5 text-desert-tan dark:border-dark-muted dark:bg-dark-bg dark:text-dark-text">
-            Checking session...
-          </span>
+          <span className="main-nav__status">Checking session...</span>
         ) : user ? (
           <>
-            <span
-              className="hidden max-w-[140px] truncate rounded-full border border-olive-dark bg-chestnut-light px-2.5 py-1.5 text-desert-tan sm:inline-block dark:border-dark-muted dark:bg-dark-bg dark:text-dark-text"
-              title={user.email || undefined}
-            >
+            <span className="main-nav__user hidden sm:inline-block" title={user.email || undefined}>
               {user.email || "Signed in"}
             </span>
-            <button
-              className="rounded-lg border border-desert-tan bg-transparent px-4 py-2.5 font-semibold text-desert-tan transition-colors hover:bg-desert-tan/10 dark:border-dark-text dark:text-dark-text dark:hover:bg-dark-surface"
-              onClick={handleLogout}
-            >
+            <button className="main-nav__logout" onClick={handleLogout}>
               Logout
             </button>
           </>

@@ -39,39 +39,41 @@ export default async function PostDetailPage({ params }: PageProps) {
   const readingTime = estimateReadingTime(post.markdown);
 
   return (
-    <article className="mx-auto grid w-full max-w-3xl gap-6">
+    <article className="post-article">
       <Link
         href="/posts"
-        className="inline-flex items-center gap-1.5 text-sm font-medium text-copper transition-colors hover:text-chestnut dark:text-caramel-light dark:hover:text-desert-tan"
+        className="post-article__back"
       >
         ← Back to Posts
       </Link>
-      <div className="rounded-xl border border-desert-tan-dark bg-surface p-6 shadow-[0_2px_8px_rgba(72,9,3,0.08)] dark:border-dark-muted dark:bg-dark-surface md:p-8">
-        <header className="mb-6">
-          <h1 className="text-3xl font-bold leading-tight text-chestnut dark:text-dark-text md:text-4xl">
+
+      <section className="card">
+        <header className="post-article__header">
+          <h1 className="post-article__title">
             {post.title}
           </h1>
           {post.summary && (
-            <p className="mt-3 text-lg leading-relaxed text-chestnut-dark dark:text-dark-muted">
+            <p className="post-article__summary">
               {post.summary}
             </p>
           )}
-          <div className="mt-5 flex flex-wrap items-center gap-3 text-sm font-medium text-olive-dark dark:text-dark-muted">
+          <div className="post-article__meta">
             {publishedDate && (
-              <time dateTime={post.published_at || post.created_at} className="rounded-full bg-desert-tan/50 px-2.5 py-0.5 dark:bg-dark-muted/40 dark:text-dark-text">
+              <time dateTime={post.published_at || post.created_at} className="post-article__date">
                 {publishedDate}
               </time>
             )}
-            {publishedDate && <span aria-hidden>·</span>}
-            <span className="rounded-full bg-desert-tan/50 px-2.5 py-0.5 dark:bg-dark-muted/40 dark:text-dark-text">
+            {publishedDate && <span className="post-article__divider" aria-hidden>·</span>}
+            <span className="post-article__reading-time">
               {readingTime} min read
             </span>
           </div>
         </header>
-        <div className="prose prose-lg max-w-none leading-relaxed prose-headings:text-chestnut prose-p:text-chestnut-dark prose-li:text-chestnut-dark dark:prose-headings:text-dark-text dark:prose-p:text-dark-muted dark:prose-strong:text-dark-text dark:prose-li:text-dark-muted dark:prose-a:text-caramel-light dark:prose-a:hover:text-desert-tan">
+
+        <div className="prose prose-lg post-article__content dark:prose-invert max-w-none">
           <ReactMarkdown remarkPlugins={[remarkGfm]}>{post.markdown}</ReactMarkdown>
         </div>
-      </div>
+      </section>
     </article>
   );
 }

@@ -2,7 +2,7 @@ import { test, expect } from "@playwright/test";
 
 test("has title", async ({ page }) => {
   await page.goto("/");
-  await expect(page).toHaveTitle(/Heron/);
+  await expect(page).toHaveTitle(/Sam's website/);
 });
 
 test("navigation links are present", async ({ page }) => {

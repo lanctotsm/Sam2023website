@@ -22,39 +22,48 @@ export default async function AlbumsPage() {
   );
 
   return (
-    <div className="grid gap-4">
-      <h1 className="text-chestnut dark:text-dark-text">Albums</h1>
-      <div className="grid grid-cols-[repeat(auto-fit,minmax(240px,1fr))] gap-4">
+    <article className="grid gap-6">
+      <header className="section-header">
+        <h1 className="section-header__title">Albums</h1>
+      </header>
+
+      <div className="album-list">
         {albumCards.map(({ album, count, thumbnail }) => (
-          <article
+          <section
             key={album.id}
-            className="rounded-xl border border-desert-tan-dark bg-surface p-4 shadow-[0_2px_8px_rgba(72,9,3,0.08)] dark:border-dark-muted dark:bg-dark-surface"
+            className="card album-card"
           >
             <Link
               href={`/albums/${album.slug}`}
-              className="block overflow-hidden rounded-xl border border-desert-tan-dark bg-desert-tan-dark dark:border-dark-muted dark:bg-dark-bg"
+              className="album-card__link"
             >
               {thumbnail ? (
                 // eslint-disable-next-line @next/next/no-img-element
-                <img src={buildImageUrl(thumbnail.s3_key)} alt={thumbnail.alt_text || album.title} className="block h-44 w-full object-cover" />
+                <img
+                  src={buildImageUrl(thumbnail.s3_key)}
+                  alt={thumbnail.alt_text || album.title}
+                  className="album-card__image"
+                />
               ) : (
-                <div className="grid h-44 place-items-center text-olive dark:text-dark-muted">
+                <div className="album-card__empty">
                   No photos yet
                 </div>
               )}
             </Link>
-            <h2 className="mt-3 text-chestnut dark:text-dark-text">{album.title}</h2>
-            <p className="text-chestnut-dark dark:text-dark-muted">{album.description}</p>
-            <p className="text-olive dark:text-dark-muted">{count} photos</p>
+            <div className="album-card__info">
+              <h2 className="album-card__title">{album.title}</h2>
+              <p className="album-card__desc">{album.description}</p>
+              <p className="album-card__stats">{count} photos</p>
+            </div>
             <Link
               href={`/albums/${album.slug}`}
-              className="font-medium text-copper hover:text-chestnut dark:text-caramel-light dark:hover:text-desert-tan"
+              className="album-card__action"
             >
-              View album
+              View album →
             </Link>
-          </article>
+          </section>
         ))}
       </div>
-    </div>
+    </article>
   );
 }
