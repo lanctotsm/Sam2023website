@@ -8,11 +8,61 @@ import AlbumViewer from "@/components/AlbumViewer";
 
 const SHORTCODE_REGEX = /\[\[(\w+):([\w-]+)\]\]/g;
 
+/**
+ * Parses a markdown string containing [[type:identifier]] shortcodes and
+ * returns an array of React nodes. Each shortcode is replaced by the result
+ * of calling `renderShortcode(type, identifier, key)`. The caller is
+ * responsible for rendering the shortcode appropriately (server vs. client).
+ */
+export function parseShortcodes(
+    markdown: string,
+    renderShortcode: (type: string, identifier: string, key: string) => React.ReactNode
+): React.ReactNode[] {
+    const parts: React.ReactNode[] = [];
+    let lastIndex = 0;
+    let match;
+    let keyCounter = 0;
+
+    // Reset regex state (regex is module-level, must reset before each use)
+    SHORTCODE_REGEX.lastIndex = 0;
+
+    while ((match = SHORTCODE_REGEX.exec(markdown)) !== null) {
+        const textBefore = markdown.slice(lastIndex, match.index);
+        if (textBefore.trim()) {
+            parts.push(
+                <ReactMarkdown key={`md-${keyCounter++}`} remarkPlugins={[remarkGfm]}>
+                    {textBefore}
+                </ReactMarkdown>
+            );
+        }
+
+        const type = match[1];
+        const identifier = match[2];
+        parts.push(renderShortcode(type, identifier, `shortcode-${keyCounter++}`));
+
+        lastIndex = match.index + match[0].length;
+    }
+
+    const textAfter = markdown.slice(lastIndex);
+    if (textAfter.trim()) {
+        parts.push(
+            <ReactMarkdown key={`md-${keyCounter++}`} remarkPlugins={[remarkGfm]}>
+                {textAfter}
+            </ReactMarkdown>
+        );
+    }
+
+    return parts;
+}
+
+// ---------------------------------------------------------------------------
+// Server-side album embed (hits the DB directly, used on the public post page)
+// ---------------------------------------------------------------------------
+
 async function AlbumEmbed({ slug }: { slug: string }) {
     try {
         const db = getDb();
 
-        // Find album
         const albumRows = await db.select().from(albums).where(eq(albums.slug, slug)).limit(1);
         const album = albumRows[0];
 
@@ -24,7 +74,6 @@ async function AlbumEmbed({ slug }: { slug: string }) {
             );
         }
 
-        // Fetch images for album
         const rows = await db
             .select({
                 id: images.id,
@@ -83,55 +132,25 @@ async function AlbumEmbed({ slug }: { slug: string }) {
     }
 }
 
+// ---------------------------------------------------------------------------
+// Public server-side renderer (used by app/posts/[slug]/page.tsx)
+// ---------------------------------------------------------------------------
+
 export async function renderWithShortcodes(markdown: string) {
-    const parts = [];
-    let lastIndex = 0;
-    let match;
-
-    // Reset regex state
-    SHORTCODE_REGEX.lastIndex = 0;
-
-    let keyCounter = 0;
-
-    while ((match = SHORTCODE_REGEX.exec(markdown)) !== null) {
-        const textBefore = markdown.slice(lastIndex, match.index);
-        if (textBefore.trim()) {
-            parts.push(
-                <ReactMarkdown key={`md-${keyCounter++}`} remarkPlugins={[remarkGfm]}>
-                    {textBefore}
-                </ReactMarkdown>
-            );
-        }
-
-        const type = match[1];
-        const identifier = match[2];
-
+    const parts = parseShortcodes(markdown, (type, identifier, key) => {
         if (type === "album") {
-            parts.push(
-                <div key={`shortcode-${keyCounter++}`}>
+            return (
+                <div key={key}>
                     <AlbumEmbed slug={identifier} />
                 </div>
             );
-        } else {
-            // Unknown shortcode, render as text
-            parts.push(
-                <p key={`unknown-${keyCounter++}`} className="text-copper">
-                    [Unknown shortcode: {match[0]}]
-                </p>
-            );
         }
-
-        lastIndex = match.index + match[0].length;
-    }
-
-    const textAfter = markdown.slice(lastIndex);
-    if (textAfter.trim()) {
-        parts.push(
-            <ReactMarkdown key={`md-${keyCounter++}`} remarkPlugins={[remarkGfm]}>
-                {textAfter}
-            </ReactMarkdown>
+        return (
+            <p key={key} className="text-copper">
+                [Unknown shortcode: [[{type}:{identifier}]]]
+            </p>
         );
-    }
+    });
 
     return <>{parts}</>;
 }
