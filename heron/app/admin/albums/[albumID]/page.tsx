@@ -43,6 +43,15 @@ export default function AdminAlbumEditorPage() {
   const [uploadError, setUploadError] = useState("");
   const [cropImageId, setCropImageId] = useState<number | null>(null);
   const [addPhotosOpen, setAddPhotosOpen] = useState(false);
+  const [editMetadataImage, setEditMetadataImage] = useState<SortableImage | null>(null);
+  const [editMetadataForm, setEditMetadataForm] = useState({
+    name: "",
+    caption: "",
+    alt_text: "",
+    description: "",
+    tags: ""
+  });
+  const [editMetadataSaving, setEditMetadataSaving] = useState(false);
   const [allImages, setAllImages] = useState<ImageMeta[]>([]);
   const [selectedImage, setSelectedImage] = useState<number | null>(null);
   const [sortOrder, setSortOrder] = useState(0);
@@ -161,11 +170,46 @@ export default function AdminAlbumEditorPage() {
     }
   };
 
-  const handleUpdateImageMetadata = async (image: SortableImage) => {
-    // This would typically open a modal or prompt. 
-    // For this refactor, we maintain existing callback structure but ensure type safety.
-    // In a full implementation, this might prompt for alt_text, caption, etc.
-    toast.info("Metadata editing triggered for image: " + (image.name || image.id));
+  const handleUpdateImageMetadata = (image: SortableImage) => {
+    setEditMetadataImage(image);
+    setEditMetadataForm({
+      name: image.name ?? "",
+      caption: image.caption ?? "",
+      alt_text: image.alt_text ?? "",
+      description: image.description ?? "",
+      tags: image.tags ?? ""
+    });
+  };
+
+  const handleEditMetadataSave = async () => {
+    if (!editMetadataImage) return;
+    const payload = {
+      name: editMetadataForm.name.trim(),
+      caption: editMetadataForm.caption.trim(),
+      alt_text: editMetadataForm.alt_text.trim(),
+      description: editMetadataForm.description.trim(),
+      tags: editMetadataForm.tags.trim()
+    };
+    const hasAny = Object.values(payload).some((v) => v !== "");
+    if (!hasAny) {
+      toast.error("Enter at least one field to update.");
+      return;
+    }
+    setEditMetadataSaving(true);
+    try {
+      await apiFetch(`/images/${editMetadataImage.id}`, {
+        method: "PATCH",
+        body: JSON.stringify(payload)
+      });
+      await fetchData();
+      setEditMetadataImage(null);
+      toast.success("Image info updated.");
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Failed to update image info";
+      toast.error(msg);
+    } finally {
+      setEditMetadataSaving(false);
+    }
   };
 
   const processSelectedFiles = useCallback(async (selectedFiles: File[]) => {
@@ -587,6 +631,83 @@ export default function AdminAlbumEditorPage() {
           />
         ) : null;
       })()}
+
+      {editMetadataImage && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
+          <div className="w-full max-w-md rounded-xl border border-desert-tan-dark bg-surface p-4 shadow-xl dark:border-dark-muted dark:bg-dark-surface">
+            <h3 className="mb-4 text-chestnut dark:text-dark-text">Edit image info</h3>
+            <div className="flex flex-col gap-3">
+              <div>
+                <label className={labelClass} htmlFor="edit-name">Name</label>
+                <input
+                  id="edit-name"
+                  className={inputClass}
+                  value={editMetadataForm.name}
+                  onChange={(e) => setEditMetadataForm((f) => ({ ...f, name: e.target.value }))}
+                  placeholder="Short name"
+                />
+              </div>
+              <div>
+                <label className={labelClass} htmlFor="edit-caption">Caption</label>
+                <input
+                  id="edit-caption"
+                  className={inputClass}
+                  value={editMetadataForm.caption}
+                  onChange={(e) => setEditMetadataForm((f) => ({ ...f, caption: e.target.value }))}
+                  placeholder="Caption"
+                />
+              </div>
+              <div>
+                <label className={labelClass} htmlFor="edit-alt">Alt text</label>
+                <input
+                  id="edit-alt"
+                  className={inputClass}
+                  value={editMetadataForm.alt_text}
+                  onChange={(e) => setEditMetadataForm((f) => ({ ...f, alt_text: e.target.value }))}
+                  placeholder="Accessibility description"
+                />
+              </div>
+              <div>
+                <label className={labelClass} htmlFor="edit-description">Description</label>
+                <input
+                  id="edit-description"
+                  className={inputClass}
+                  value={editMetadataForm.description}
+                  onChange={(e) => setEditMetadataForm((f) => ({ ...f, description: e.target.value }))}
+                  placeholder="Longer description"
+                />
+              </div>
+              <div>
+                <label className={labelClass} htmlFor="edit-tags">Tags</label>
+                <input
+                  id="edit-tags"
+                  className={inputClass}
+                  value={editMetadataForm.tags}
+                  onChange={(e) => setEditMetadataForm((f) => ({ ...f, tags: e.target.value }))}
+                  placeholder="Comma-separated tags"
+                />
+              </div>
+            </div>
+            <div className="mt-4 flex flex-wrap gap-2">
+              <button
+                type="button"
+                disabled={editMetadataSaving}
+                onClick={handleEditMetadataSave}
+                className="rounded-lg bg-chestnut px-4 py-2.5 font-semibold text-desert-tan transition hover:bg-chestnut-dark disabled:opacity-60 dark:text-dark-text"
+              >
+                {editMetadataSaving ? "Saving..." : "Save"}
+              </button>
+              <button
+                type="button"
+                onClick={() => setEditMetadataImage(null)}
+                className="rounded-lg border border-chestnut bg-transparent px-4 py-2.5 text-chestnut transition hover:bg-chestnut/5 dark:border-dark-text dark:text-dark-text dark:hover:bg-dark-bg"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </article>
   );
 }
