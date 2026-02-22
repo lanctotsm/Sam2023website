@@ -42,6 +42,7 @@ export async function POST(request: Request) {
       markdown,
       status: payload.status,
       publishedAt: payload.published_at || null,
+      metadata: payload.metadata || null,
       createdBy: user.id
     });
     if (inlineImageIds) {

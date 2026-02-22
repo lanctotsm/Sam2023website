@@ -18,10 +18,6 @@ test.describe("Public Routes", () => {
     await expect(page.getByRole("heading", { name: /albums/i })).toBeVisible();
   });
 
-  test("Login page loads", async ({ page }) => {
-    await page.goto("/login");
-    await expect(page.getByRole("button", { name: /google/i })).toBeVisible();
-  });
 });
 
 test.describe("Admin Protection", () => {

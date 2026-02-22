@@ -1,0 +1,48 @@
+{
+  "version": "7",
+  "dialect": "sqlite",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "6",
+      "when": 1700000000000,
+      "tag": "0000_init",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "6",
+      "when": 1710000000000,
+      "tag": "0001_add_image_variant_keys",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1720000000000,
+      "tag": "0002_add_image_metadata_fields",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "6",
+      "when": 1730000000000,
+      "tag": "0003_add_admin_user_name",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "6",
+      "when": 1740000000000,
+      "tag": "0004_add_post_inline_images",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "6",
+      "when": 1771766368593,
+      "tag": "0005_add_post_metadata",
+      "breakpoints": true
+    }
+  ]
+}

@@ -10,14 +10,34 @@ import type { Post } from "@/lib/api";
 import { apiFetch, createPost, uploadImages } from "@/lib/api";
 import { slugify } from "@/lib/slug";
 import { buildImageUrl } from "@/lib/images";
+import AlbumSelectModal from "@/components/AlbumSelectModal";
+import MarkdownPreview from "@/components/MarkdownPreview";
 
 const emptyPost = {
   title: "",
   slug: "",
   summary: "",
   markdown: "",
-  status: "draft"
+  status: "draft",
+  published_at: "",
+  metadata: {} as Record<string, string>
 };
+
+function toDateTimeLocal(isoString?: string | null) {
+  if (!isoString) return "";
+  const d = new Date(isoString);
+  if (isNaN(d.getTime())) return "";
+  // Adjust for local timezone offset to show correct local time in input
+  const tzOffset = d.getTimezoneOffset() * 60000;
+  return new Date(d.getTime() - tzOffset).toISOString().slice(0, 16);
+}
+
+function fromDateTimeLocal(localString?: string) {
+  if (!localString) return null;
+  const d = new Date(localString);
+  if (isNaN(d.getTime())) return null;
+  return d.toISOString();
+}
 
 export default function AdminPostsPage() {
   const searchParams = useSearchParams();
@@ -29,8 +49,12 @@ export default function AdminPostsPage() {
   const [loadingEdit, setLoadingEdit] = useState(false);
   const [uploadingInline, setUploadingInline] = useState(false);
   const [error, setError] = useState("");
+  const [isAlbumModalOpen, setIsAlbumModalOpen] = useState(false);
   const markdownRef = useRef<HTMLTextAreaElement>(null);
   const inlineUploadInputRef = useRef<HTMLInputElement>(null);
+
+  const [newMetaKey, setNewMetaKey] = useState("");
+  const [newMetaValue, setNewMetaValue] = useState("");
 
   const fetchPosts = async () => {
     try {
@@ -62,23 +86,21 @@ export default function AdminPostsPage() {
     setLoading(true);
     setError("");
     try {
+      const payload = {
+        ...form,
+        published_at: fromDateTimeLocal(form.published_at),
+        inline_image_ids: ownedImageIds || []
+      };
+
       if (editingId) {
-        // Update existing post
         const updated = await apiFetch<Post>(`/posts/${editingId}`, {
           method: "PUT",
-          body: JSON.stringify({
-            ...form,
-            ...(ownedImageIds ? { inline_image_ids: ownedImageIds } : {})
-          })
+          body: JSON.stringify(payload)
         });
         setPosts((prev) => prev.map((p) => (p.id === editingId ? updated : p)));
         setEditingId(null);
       } else {
-        // Create new post
-        const created = await createPost({
-          ...form,
-          inline_image_ids: ownedImageIds || []
-        });
+        const created = await createPost(payload);
         setPosts((prev) => [created, ...prev]);
       }
       setForm(emptyPost);
@@ -103,7 +125,9 @@ export default function AdminPostsPage() {
         slug: fullPost.slug,
         summary: fullPost.summary || "",
         markdown: fullPost.markdown,
-        status: fullPost.status
+        status: fullPost.status,
+        published_at: toDateTimeLocal(fullPost.published_at),
+        metadata: fullPost.metadata || {}
       });
       setOwnedImageIds(fullPost.inline_image_ids || []);
     } catch (err) {
@@ -140,6 +164,28 @@ export default function AdminPostsPage() {
     setForm(emptyPost);
     setOwnedImageIds([]);
     setError("");
+    setNewMetaKey("");
+    setNewMetaValue("");
+  };
+
+  const addMetadata = () => {
+    const k = newMetaKey.trim();
+    const v = newMetaValue.trim();
+    if (!k || !v) return;
+    setForm((prev) => ({
+      ...prev,
+      metadata: { ...prev.metadata, [k]: v }
+    }));
+    setNewMetaKey("");
+    setNewMetaValue("");
+  };
+
+  const removeMetadata = (key: string) => {
+    setForm((prev) => {
+      const nextMeta = { ...prev.metadata };
+      delete nextMeta[key];
+      return { ...prev, metadata: nextMeta };
+    });
   };
 
   const insertMarkdownAtCursor = (snippet: string) => {
@@ -164,6 +210,11 @@ export default function AdminPostsPage() {
       markdownRef.current.selectionStart = nextCursorPos;
       markdownRef.current.selectionEnd = nextCursorPos;
     });
+  };
+
+  const handleAlbumSelect = (slug: string) => {
+    insertMarkdownAtCursor(`[[album:${slug}]]`);
+    setIsAlbumModalOpen(false);
   };
 
   const handleUploadAndInsert = async (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -198,6 +249,12 @@ export default function AdminPostsPage() {
     } finally {
       setUploadingInline(false);
     }
+  };
+
+  const getPostDisplayStatus = (post: Post) => {
+    if (post.status !== "published") return post.status;
+    if (post.published_at && new Date(post.published_at) > new Date()) return "scheduled";
+    return "published";
   };
 
   const inputClass =
@@ -249,6 +306,14 @@ export default function AdminPostsPage() {
           >
             {uploadingInline ? "Uploading..." : "Upload & Insert Image"}
           </button>
+          <button
+            type="button"
+            onClick={() => setIsAlbumModalOpen(true)}
+            className="rounded-lg border border-chestnut bg-transparent px-3 py-1.5 text-sm text-chestnut transition hover:bg-chestnut/5 dark:border-dark-text dark:text-dark-text dark:hover:bg-dark-bg"
+            disabled={loading}
+          >
+            Insert Album
+          </button>
           <input
             ref={inlineUploadInputRef}
             type="file"
@@ -259,9 +324,6 @@ export default function AdminPostsPage() {
             disabled={uploadingInline || loading}
           />
         </div>
-        <p className="m-0 text-xs text-olive dark:text-dark-muted">
-          Uploaded images are inserted as markdown and tracked as post-owned for cleanup on delete.
-        </p>
         <div className="grid gap-4 md:grid-cols-2">
           <textarea
             ref={markdownRef}
@@ -273,27 +335,85 @@ export default function AdminPostsPage() {
           />
           <div className="rounded-lg border border-desert-tan-dark bg-white px-3 py-2.5 dark:border-dark-muted dark:bg-dark-bg">
             <p className="mb-2 text-xs font-medium text-olive dark:text-dark-muted">Preview</p>
-            <div className="prose prose-sm max-h-[280px] max-w-none overflow-y-auto prose-headings:text-chestnut prose-p:text-chestnut-dark dark:prose-headings:text-dark-text dark:prose-p:text-dark-muted">
+            <div className="max-h-[280px] overflow-y-auto">
               {form.markdown ? (
-                <ReactMarkdown remarkPlugins={[remarkGfm]}>{form.markdown}</ReactMarkdown>
+                <MarkdownPreview markdown={form.markdown} />
               ) : (
                 <p className="text-olive dark:text-dark-muted">Preview will appear here...</p>
               )}
             </div>
           </div>
         </div>
-        <label className={labelClass}>Status</label>
-        <select
-          className={inputClass}
-          value={form.status}
-          onChange={(e) => setForm({ ...form, status: e.target.value })}
-        >
-          <option value="draft">Draft</option>
-          <option value="published">Published</option>
-          <option value="archived">Archived</option>
-        </select>
+
+        <div className="grid gap-4 md:grid-cols-2 mt-2">
+          <div>
+            <label className={labelClass}>Status</label>
+            <select
+              className={inputClass}
+              value={form.status}
+              onChange={(e) => setForm({ ...form, status: e.target.value })}
+            >
+              <option value="draft">Draft</option>
+              <option value="published">Published</option>
+              <option value="archived">Archived</option>
+            </select>
+          </div>
+          <div>
+            <label className={labelClass}>Publish Date (Local Time)</label>
+            <input
+              type="datetime-local"
+              className={inputClass}
+              value={form.published_at}
+              onChange={(e) => setForm({ ...form, published_at: e.target.value })}
+            />
+            <p className="mt-1 text-xs text-olive dark:text-dark-muted">
+              Set a future date with &apos;Published&apos; status to schedule.
+            </p>
+          </div>
+        </div>
+
+        <div className="mt-4 border-t border-desert-tan-dark pt-4 dark:border-dark-muted">
+          <h3 className="text-sm font-semibold text-chestnut-dark dark:text-dark-text mb-3">Custom Fields (Metadata)</h3>
+          <div className="flex flex-col gap-2">
+            {Object.entries(form.metadata).map(([key, val]) => (
+              <div key={key} className="flex items-center gap-2">
+                <input className={`${inputClass} !py-1.5`} value={key} disabled />
+                <input className={`${inputClass} !py-1.5`} value={val} disabled />
+                <button
+                  type="button"
+                  onClick={() => removeMetadata(key)}
+                  className="rounded px-2 text-copper hover:bg-copper/10"
+                >
+                  ✕
+                </button>
+              </div>
+            ))}
+            <div className="flex items-center gap-2 mt-2">
+              <input
+                className={`${inputClass} !py-1.5`}
+                placeholder="Key (e.g., seo_title)"
+                value={newMetaKey}
+                onChange={(e) => setNewMetaKey(e.target.value)}
+              />
+              <input
+                className={`${inputClass} !py-1.5`}
+                placeholder="Value"
+                value={newMetaValue}
+                onChange={(e) => setNewMetaValue(e.target.value)}
+              />
+              <button
+                type="button"
+                className="rounded-lg bg-olive px-3 py-1.5 text-sm text-white transition hover:bg-olive-dark"
+                onClick={addMetadata}
+              >
+                Add
+              </button>
+            </div>
+          </div>
+        </div>
+
         {error && <p className="text-copper text-sm dark:text-copper-light">{error}</p>}
-        <div className="flex flex-wrap gap-3">
+        <div className="flex flex-wrap gap-3 mt-4">
           <button
             className="rounded-lg bg-chestnut px-4 py-2.5 text-desert-tan transition hover:bg-chestnut-dark disabled:opacity-60 dark:text-dark-text"
             disabled={loading}
@@ -318,49 +438,59 @@ export default function AdminPostsPage() {
           <p className={`${cardClass} text-olive dark:text-dark-muted`}>No posts yet. Create your first post above.</p>
         ) : (
           <div className="flex flex-col gap-3">
-            {posts.map((post) => (
-              <article
-                className={`${cardClass} flex flex-wrap items-center justify-between gap-4`}
-                key={post.id}
-              >
-                <div className="min-w-0 flex-1">
-                  <h3 className="m-0 text-chestnut dark:text-dark-text">{post.title}</h3>
-                  <p className="text-olive dark:text-dark-muted">{post.summary || "No summary"}</p>
-                  <div className="flex flex-wrap items-center gap-2 text-sm">
-                    <span
-                      className={`rounded-full px-2.5 py-0.5 font-medium ${
-                        post.status === "published"
+            {posts.map((post) => {
+              const displayStatus = getPostDisplayStatus(post);
+              return (
+                <article
+                  className={`${cardClass} flex flex-wrap items-center justify-between gap-4`}
+                  key={post.id}
+                >
+                  <div className="min-w-0 flex-1">
+                    <h3 className="m-0 text-chestnut dark:text-dark-text">{post.title}</h3>
+                    <p className="text-olive dark:text-dark-muted">{post.summary || "No summary"}</p>
+                    <div className="flex flex-wrap items-center gap-2 text-sm">
+                      <span
+                        className={`rounded-full px-2.5 py-0.5 font-medium uppercase text-xs tracking-wider ${displayStatus === "published"
                           ? "bg-olive/20 text-olive-dark dark:bg-olive/30 dark:text-olive-light"
-                          : post.status === "draft"
-                            ? "bg-desert-tan-dark/30 text-chestnut-dark dark:bg-dark-muted/50 dark:text-dark-muted"
-                            : "bg-copper/15 text-copper dark:bg-copper/25 dark:text-copper-light"
-                      }`}
-                    >
-                      {post.status}
-                    </span>
-                    <span className="text-olive dark:text-dark-muted">/{post.slug}</span>
+                          : displayStatus === "scheduled"
+                            ? "bg-blue-500/20 text-blue-700 dark:bg-blue-500/30 dark:text-blue-300"
+                            : displayStatus === "draft"
+                              ? "bg-desert-tan-dark/50 text-chestnut-dark dark:bg-dark-muted/50 dark:text-dark-muted"
+                              : "bg-copper/15 text-copper dark:bg-copper/25 dark:text-copper-light"
+                          }`}
+                      >
+                        {displayStatus}
+                      </span>
+                      <span className="text-olive dark:text-dark-muted">/{post.slug}</span>
+                    </div>
                   </div>
-                </div>
-                <div className="flex flex-wrap gap-2">
-                  <button
-                    className="rounded-lg border border-chestnut bg-transparent px-3 py-2 text-chestnut transition hover:bg-chestnut/5 dark:border-dark-text dark:text-dark-text dark:hover:bg-dark-bg"
-                    onClick={() => handleEdit(post)}
-                    disabled={loadingEdit}
-                  >
-                    {loadingEdit && editingId === post.id ? "Loading..." : "Edit"}
-                  </button>
-                  <button
-                    className="rounded-lg border border-copper bg-transparent px-3 py-2 text-copper transition hover:bg-copper/10 dark:border-copper dark:text-copper-light dark:hover:bg-copper/20"
-                    onClick={() => handleDelete(post.id)}
-                  >
-                    Delete
-                  </button>
-                </div>
-              </article>
-            ))}
+                  <div className="flex flex-wrap gap-2">
+                    <button
+                      className="rounded-lg border border-chestnut bg-transparent px-3 py-2 text-chestnut transition hover:bg-chestnut/5 dark:border-dark-text dark:text-dark-text dark:hover:bg-dark-bg"
+                      onClick={() => handleEdit(post)}
+                      disabled={loadingEdit}
+                    >
+                      {loadingEdit && editingId === post.id ? "Loading..." : "Edit"}
+                    </button>
+                    <button
+                      className="rounded-lg border border-copper bg-transparent px-3 py-2 text-copper transition hover:bg-copper/10 dark:border-copper dark:text-copper-light dark:hover:bg-copper/20"
+                      onClick={() => handleDelete(post.id)}
+                    >
+                      Delete
+                    </button>
+                  </div>
+                </article>
+              );
+            })}
           </div>
         )}
       </section>
+
+      <AlbumSelectModal
+        isOpen={isAlbumModalOpen}
+        onClose={() => setIsAlbumModalOpen(false)}
+        onSelect={handleAlbumSelect}
+      />
     </div>
   );
 }

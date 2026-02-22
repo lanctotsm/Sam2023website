@@ -7,6 +7,7 @@ export type Post = {
   inline_image_ids?: number[];
   status: string;
   published_at?: string | null;
+  metadata?: Record<string, string> | null;
   created_at: string;
   updated_at: string;
 };
@@ -16,6 +17,7 @@ export type Album = {
   title: string;
   slug: string;
   description?: string;
+  cover_image_s3_key?: string | null;
   created_at: string;
   updated_at: string;
 };

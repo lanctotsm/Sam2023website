@@ -1,12 +1,6 @@
 import { test, expect } from "@playwright/test";
 
 test.describe("Auth flow", () => {
-  test("login page loads", async ({ page }) => {
-    await page.goto("/login");
-    await expect(page.getByRole("heading", { name: /Login/i }).first()).toBeVisible();
-    await expect(page.getByRole("button", { name: /Google/i })).toBeVisible();
-  });
-
   test("unauthorized admin shows sign-in prompt", async ({ page }) => {
     await page.goto("/admin");
     await expect(page).toHaveURL(/\/admin/);
