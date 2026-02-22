@@ -78,19 +78,25 @@ export default function AlbumViewer({ images }: AlbumViewerProps) {
                         {images.map((image, idx) => (
                             <figure
                                 key={image.id}
-                                className="m-0 cursor-pointer overflow-hidden rounded-xl border border-desert-tan-dark bg-surface p-3 shadow-[0_2px_8px_rgba(72,9,3,0.08)] transition-all hover:-translate-y-0.5 hover:border-caramel hover:shadow-[0_8px_24px_rgba(72,9,3,0.15)] dark:border-dark-muted dark:bg-dark-surface dark:hover:border-caramel/50"
-                                onClick={() => openLightbox(idx)}
+                                className="m-0"
                             >
-                                <div className="relative block h-[220px] w-full overflow-hidden rounded-lg">
-                                    <Image
-                                        src={buildThumbUrl(image)}
-                                        alt={image.alt_text || image.caption || "Album image"}
-                                        fill
-                                        className="object-cover"
-                                        sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-                                        unoptimized
-                                    />
-                                </div>
+                                <button
+                                    type="button"
+                                    onClick={() => openLightbox(idx)}
+                                    className="w-full cursor-pointer overflow-hidden rounded-xl border border-desert-tan-dark bg-surface p-3 text-left shadow-[0_2px_8px_rgba(72,9,3,0.08)] transition-all hover:-translate-y-0.5 hover:border-caramel hover:shadow-[0_8px_24px_rgba(72,9,3,0.15)] dark:border-dark-muted dark:bg-dark-surface dark:hover:border-caramel/50"
+                                    aria-label={image.alt_text || image.caption || `View image ${idx + 1} of ${images.length}`}
+                                >
+                                    <span className="relative block h-[220px] w-full overflow-hidden rounded-lg">
+                                        <Image
+                                            src={buildThumbUrl(image)}
+                                            alt={image.alt_text || image.caption || "Album image"}
+                                            fill
+                                            className="object-cover"
+                                            sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+                                            unoptimized
+                                        />
+                                    </span>
+                                </button>
                                 {image.caption && <figcaption className="sr-only">{image.caption}</figcaption>}
                             </figure>
                         ))}
@@ -100,19 +106,25 @@ export default function AlbumViewer({ images }: AlbumViewerProps) {
                         {images.map((image, idx) => (
                             <figure
                                 key={image.id}
-                                className="m-0 cursor-pointer overflow-hidden rounded-xl border border-desert-tan-dark bg-surface p-3 shadow-[0_2px_8px_rgba(72,9,3,0.08)] transition-all hover:-translate-y-0.5 hover:border-caramel hover:shadow-[0_8px_24px_rgba(72,9,3,0.15)] dark:border-dark-muted dark:bg-dark-surface dark:hover:border-caramel/50"
-                                onClick={() => openLightbox(idx)}
+                                className="m-0"
                             >
-                                <Image
-                                    src={buildThumbUrl(image)}
-                                    alt={image.alt_text || image.caption || "Album image"}
-                                    width={image.width || 600}
-                                    height={image.height || 400}
-                                    className="block w-full rounded-lg object-cover"
-                                    style={{ height: "220px" }}
-                                    sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-                                    unoptimized
-                                />
+                                <button
+                                    type="button"
+                                    onClick={() => openLightbox(idx)}
+                                    className="w-full cursor-pointer overflow-hidden rounded-xl border border-desert-tan-dark bg-surface p-3 text-left shadow-[0_2px_8px_rgba(72,9,3,0.08)] transition-all hover:-translate-y-0.5 hover:border-caramel hover:shadow-[0_8px_24px_rgba(72,9,3,0.15)] dark:border-dark-muted dark:bg-dark-surface dark:hover:border-caramel/50"
+                                    aria-label={image.alt_text || image.caption || `View image ${idx + 1} of ${images.length}`}
+                                >
+                                    <Image
+                                        src={buildThumbUrl(image)}
+                                        alt={image.alt_text || image.caption || "Album image"}
+                                        width={image.width || 600}
+                                        height={image.height || 400}
+                                        className="block w-full rounded-lg object-cover"
+                                        style={{ height: "220px" }}
+                                        sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+                                        unoptimized
+                                    />
+                                </button>
                                 {image.caption && <figcaption className="sr-only">{image.caption}</figcaption>}
                             </figure>
                         ))}
