@@ -124,6 +124,7 @@ function SortableItem({
             title="Delete image"
             aria-label="Delete image"
             type="button"
+            aria-label="Delete image"
           >
             🗑️
           </button>
