@@ -16,7 +16,7 @@ export default function SearchBar() {
   const [loading, setLoading] = useState(false);
   const [showResults, setShowResults] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
-  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const performSearch = useCallback(async (searchQuery: string) => {
     if (searchQuery.length < 2) {
