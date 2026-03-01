@@ -13,6 +13,19 @@ import { buildImageUrl } from "@/lib/images";
 import AlbumSelectModal from "@/components/AlbumSelectModal";
 import MarkdownPreview from "@/components/MarkdownPreview";
 
+const COMMON_META_KEYS = [
+  "seo_title",
+  "seo_description",
+  "og_image",
+  "og_title",
+  "og_description",
+  "author",
+  "canonical_url",
+  "twitter_card",
+  "keywords",
+  "robots"
+];
+
 const emptyPost = {
   title: "",
   slug: "",
@@ -172,6 +185,10 @@ export default function AdminPostsPage() {
     const k = newMetaKey.trim();
     const v = newMetaValue.trim();
     if (!k || !v) return;
+    if (Object.prototype.hasOwnProperty.call(form.metadata, k)) {
+      toast.error(`Metadata key "${k}" already exists.`);
+      return;
+    }
     setForm((prev) => ({
       ...prev,
       metadata: { ...prev.metadata, [k]: v }
@@ -389,9 +406,15 @@ export default function AdminPostsPage() {
               </div>
             ))}
             <div className="flex items-center gap-2 mt-2">
+              <datalist id="meta-key-suggestions">
+                {COMMON_META_KEYS.map((k) => (
+                  <option key={k} value={k} />
+                ))}
+              </datalist>
               <input
                 className={`${inputClass} !py-1.5`}
                 placeholder="Key (e.g., seo_title)"
+                list="meta-key-suggestions"
                 value={newMetaKey}
                 onChange={(e) => setNewMetaKey(e.target.value)}
               />
