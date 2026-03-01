@@ -10,8 +10,11 @@ export async function getAllPosts(options: { user?: any; status?: string } = {})
   let query = db.select().from(posts).orderBy(desc(posts.createdAt));
 
   if (!user) {
-    // Public view: only published posts
-    return query.where(eq(posts.status, "published"));
+    // Public view: only published posts whose published_at is in the past
+    const now = new Date().toISOString();
+    return query.where(
+      sql`${posts.status} = 'published' AND (${posts.publishedAt} IS NULL OR ${posts.publishedAt} <= ${now})`
+    );
   }
 
   if (status) {
@@ -39,6 +42,7 @@ export async function createPost(data: {
   markdown: string;
   status?: string;
   publishedAt?: string | null;
+  metadata?: Record<string, string> | null;
   createdBy: number;
 }) {
   const created = await getDb()
@@ -50,6 +54,7 @@ export async function createPost(data: {
       markdown: data.markdown,
       status: normalizeStatus(data.status),
       publishedAt: data.publishedAt,
+      metadata: data.metadata || {},
       createdBy: data.createdBy
     })
     .returning();
@@ -66,6 +71,7 @@ export async function updatePost(
     markdown: string;
     status?: string;
     publishedAt?: string | null;
+    metadata?: Record<string, string> | null;
   }
 ) {
   const updated = await getDb()

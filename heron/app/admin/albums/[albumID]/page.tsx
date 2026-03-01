@@ -448,8 +448,12 @@ export default function AdminAlbumEditorPage() {
           className="flex w-full items-center justify-between text-left"
         >
           <h2 className="m-0 text-chestnut dark:text-dark-text">Add Photos</h2>
-          <span className="text-sm font-semibold text-copper">
-            {addPhotosOpen ? "Hide" : "Show Upload Options"}
+          <span
+            className="text-sm font-semibold text-copper h-8 w-8 flex items-center justify-center rounded-full transition-colors hover:bg-copper/5"
+            aria-label={addPhotosOpen ? "Hide" : "Show Upload Options"}
+            title={addPhotosOpen ? "Hide" : "Show Upload Options"}
+          >
+            {addPhotosOpen ? "▲" : "▼"}
           </span>
         </button>
         {addPhotosOpen && (
@@ -460,9 +464,8 @@ export default function AdminAlbumEditorPage() {
               onDragOver={handleDragOver}
               onDragLeave={handleDragOver}
               onDrop={handleDrop}
-              className={`relative rounded-xl border-2 border-dashed p-4 text-center transition-colors ${
-                extracting ? "border-chestnut bg-chestnut/10" : "border-desert-tan-dark hover:border-chestnut/50 dark:border-dark-muted dark:hover:border-chestnut/50"
-              }`}
+              className={`relative rounded-xl border-2 border-dashed p-4 text-center transition-colors ${extracting ? "border-chestnut bg-chestnut/10" : "border-desert-tan-dark hover:border-chestnut/50 dark:border-dark-muted dark:hover:border-chestnut/50"
+                }`}
               onKeyDown={(e) => {
                 if (e.key === "Enter" || e.key === " ") {
                   e.preventDefault();
@@ -544,8 +547,12 @@ export default function AdminAlbumEditorPage() {
           className="flex w-full items-center justify-between text-left"
         >
           <h2 className="m-0 text-chestnut dark:text-dark-text">Link Existing Assets</h2>
-          <span className="text-sm text-olive dark:text-dark-text">
-            {linkSectionOpen ? "Hide" : "Show Gallery Picker"}
+          <span
+            className="text-sm text-olive dark:text-dark-text h-8 w-8 flex items-center justify-center rounded-full transition-colors hover:bg-olive/5 dark:hover:bg-dark-bg"
+            aria-label={linkSectionOpen ? "Hide" : "Show Gallery Picker"}
+            title={linkSectionOpen ? "Hide" : "Show Gallery Picker"}
+          >
+            {linkSectionOpen ? "▲" : "▼"}
           </span>
         </button>
         {linkSectionOpen && (

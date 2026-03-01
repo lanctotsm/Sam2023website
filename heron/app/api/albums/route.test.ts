@@ -28,7 +28,16 @@ describe("ALBUMS /api/albums", () => {
   describe("GET", () => {
     it("returns 200 and list of albums", async () => {
       const albums = [
-        { id: 1, title: "Album", slug: "album", description: "", createdBy: 1, createdAt: "", updatedAt: "" }
+        {
+          id: 1,
+          title: "Album",
+          slug: "album",
+          description: "",
+          coverImageS3Key: "uploads/thumb.jpg",
+          createdBy: 1,
+          createdAt: "",
+          updatedAt: ""
+        }
       ];
       vi.mocked(getAllAlbums).mockResolvedValue(albums as never);
       const res = await GET();
@@ -36,6 +45,14 @@ describe("ALBUMS /api/albums", () => {
       const data = await res.json();
       expect(data).toHaveLength(1);
       expect(data[0].title).toBe("Album");
+    });
+
+    it("returns 200 with empty array when no albums", async () => {
+      vi.mocked(getAllAlbums).mockResolvedValue([] as never);
+      const res = await GET();
+      expect(res.status).toBe(200);
+      const data = await res.json();
+      expect(data).toEqual([]);
     });
   });
 

@@ -75,7 +75,7 @@ export const authOptions: NextAuthOptions = {
     strategy: "jwt"
   },
   pages: {
-    signIn: "/login"
+    signIn: "/admin"
   },
   providers: [
     GoogleProvider({
@@ -84,30 +84,30 @@ export const authOptions: NextAuthOptions = {
     }),
     ...(isDevAuthEnabled
       ? [
-          CredentialsProvider({
-            name: "Dev Login",
-            credentials: {
-              email: { label: "Email", type: "email" }
-            },
-            async authorize(credentials) {
-              if (process.env.DEV_AUTH_BYPASS !== "true") {
-                return null;
-              }
-
-              const email = normalizeEmail(credentials?.email);
-              if (!email) {
-                return null;
-              }
-
-              if (!(await isAllowedUserEmail(email))) {
-                return null;
-              }
-
-              const id = await ensureUserRecord({ email, googleId: `local:${email}` });
-              return id ? ({ id: id.toString(), email } as User) : null;
+        CredentialsProvider({
+          name: "Dev Login",
+          credentials: {
+            email: { label: "Email", type: "email" }
+          },
+          async authorize(credentials) {
+            if (process.env.DEV_AUTH_BYPASS !== "true") {
+              return null;
             }
-          })
-        ]
+
+            const email = normalizeEmail(credentials?.email);
+            if (!email) {
+              return null;
+            }
+
+            if (!(await isAllowedUserEmail(email))) {
+              return null;
+            }
+
+            const id = await ensureUserRecord({ email, googleId: `local:${email}` });
+            return id ? ({ id: id.toString(), email } as User) : null;
+          }
+        })
+      ]
       : [])
   ],
   callbacks: {

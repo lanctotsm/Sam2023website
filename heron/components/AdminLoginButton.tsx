@@ -32,10 +32,12 @@ export default function AdminLoginButton() {
   const handleDevLogin = async () => {
     setLoading(true);
     try {
-      const email = window.prompt("Enter admin email for local dev:", "dev@local");
-      if (email) {
-        const res = await signIn("credentials", { email, redirect: false });
-        if (res?.error) toast.error(res.error);
+      const email = "dev@local";
+      const res = await signIn("credentials", { email, redirect: false });
+      if (res?.error) {
+        toast.error(res.error);
+      } else {
+        window.location.reload();
       }
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Login failed");

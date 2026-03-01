@@ -47,6 +47,7 @@ export const posts = sqliteTable(
     markdown: text("markdown").notNull(),
     status: text("status").notNull().default("draft"),
     publishedAt: text("published_at"),
+    metadata: text("metadata", { mode: "json" }).$type<Record<string, string>>(),
     createdBy: integer("created_by").references(() => users.id, { onDelete: "set null" }),
     createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
     updatedAt: text("updated_at").notNull().default(sql`CURRENT_TIMESTAMP`)

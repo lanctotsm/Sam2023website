@@ -12,6 +12,7 @@ describe("lib/serializers", () => {
         markdown: "# Hi",
         status: "published" as const,
         publishedAt: "2024-01-15T00:00:00Z",
+        metadata: null,
         createdBy: 1,
         createdAt: "2024-01-01T00:00:00Z",
         updatedAt: "2024-01-15T00:00:00Z"
@@ -24,6 +25,7 @@ describe("lib/serializers", () => {
         markdown: "# Hi",
         status: "published",
         published_at: "2024-01-15T00:00:00Z",
+        metadata: null,
         created_by: 1,
         created_at: "2024-01-01T00:00:00Z",
         updated_at: "2024-01-15T00:00:00Z"
@@ -39,6 +41,7 @@ describe("lib/serializers", () => {
         markdown: "",
         status: "draft" as const,
         publishedAt: null,
+        metadata: null,
         createdBy: null,
         createdAt: "2024-01-01T00:00:00Z",
         updatedAt: "2024-01-01T00:00:00Z"
@@ -46,7 +49,44 @@ describe("lib/serializers", () => {
       const out = serializePost(row);
       expect(out.summary).toBe("");
       expect(out.published_at).toBeNull();
+      expect(out.metadata).toBeNull();
       expect(out.created_by).toBeNull();
+    });
+
+    it("serializes populated metadata", () => {
+      const row = {
+        id: 3,
+        title: "Meta Post",
+        slug: "meta-post",
+        summary: "Sum",
+        markdown: "MD",
+        status: "published" as const,
+        publishedAt: "2024-01-01T00:00:00Z",
+        metadata: { seo_title: "SEO", og_image: "img.jpg" },
+        createdBy: 1,
+        createdAt: "2024-01-01T00:00:00Z",
+        updatedAt: "2024-01-01T00:00:00Z"
+      };
+      const out = serializePost(row);
+      expect(out.metadata).toEqual({ seo_title: "SEO", og_image: "img.jpg" });
+    });
+
+    it("includes inline_image_ids when provided in options", () => {
+      const row = {
+        id: 4,
+        title: "Inline Post",
+        slug: "inline-post",
+        summary: "",
+        markdown: "",
+        status: "published" as const,
+        publishedAt: null,
+        metadata: null,
+        createdBy: null,
+        createdAt: "",
+        updatedAt: ""
+      };
+      const out = serializePost(row, { inlineImageIds: [10, 20] });
+      expect(out).toHaveProperty("inline_image_ids", [10, 20]);
     });
   });
 
@@ -57,6 +97,7 @@ describe("lib/serializers", () => {
         title: "Trip",
         slug: "trip",
         description: "A trip",
+        coverImageS3Key: "uploads/uuid/thumb.jpg",
         createdBy: 1,
         createdAt: "2024-01-01T00:00:00Z",
         updatedAt: "2024-01-01T00:00:00Z"
@@ -66,6 +107,7 @@ describe("lib/serializers", () => {
         title: "Trip",
         slug: "trip",
         description: "A trip",
+        cover_image_s3_key: "uploads/uuid/thumb.jpg",
         created_by: 1,
         created_at: "2024-01-01T00:00:00Z",
         updated_at: "2024-01-01T00:00:00Z"
@@ -78,11 +120,28 @@ describe("lib/serializers", () => {
         title: "Empty",
         slug: "empty",
         description: null,
+        coverImageS3Key: undefined,
         createdBy: null,
         createdAt: "",
         updatedAt: ""
       };
-      expect(serializeAlbum(row).description).toBe("");
+      const out = serializeAlbum(row);
+      expect(out.description).toBe("");
+      expect(out.cover_image_s3_key).toBeNull();
+    });
+
+    it("returns null cover_image_s3_key when album has no images", () => {
+      const row = {
+        id: 3,
+        title: "No Images",
+        slug: "no-images",
+        description: null,
+        coverImageS3Key: null,
+        createdBy: null,
+        createdAt: "",
+        updatedAt: ""
+      };
+      expect(serializeAlbum(row).cover_image_s3_key).toBeNull();
     });
   });
 
