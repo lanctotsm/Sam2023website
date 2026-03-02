@@ -116,13 +116,16 @@ heron/.samples/
 *.msm
 *.msp
 
-# Test results
+# Test results and Playwright
 TestResults/
 *.trx
 *.coverage
 *.coveragexml
+junit.xml
 test-results/
 playwright-report/
+blob-report/
+playwright-report.zip
 playwright/.cache/
 
 # JetBrains Rider
@@ -141,3 +144,8 @@ playwright/.cache/
 
 # Built Visual Studio Code Extensions
 *.vsix
+
+# Agent configuration and skills
+.agent/
+.agents/
+**/skills/
