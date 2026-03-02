@@ -163,3 +163,9 @@ export const adminUsers = sqliteTable(
     baseAdminIdx: index("idx_admin_users_base_admin").on(table.isBaseAdmin)
   })
 );
+
+export const settings = sqliteTable("settings", {
+  key: text("key").primaryKey(),
+  value: text("value").notNull().default(""),
+  updatedAt: text("updated_at").notNull().default(sql`CURRENT_TIMESTAMP`)
+});

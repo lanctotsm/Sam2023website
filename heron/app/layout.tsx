@@ -4,6 +4,7 @@ import { Roboto } from "next/font/google";
 import Navigation from "@/components/Navigation";
 import Footer from "@/components/Footer";
 import Providers from "@/app/providers";
+import { getSetting } from "@/services/settings";
 
 const roboto = Roboto({ weight: "500", subsets: ["latin"] });
 
@@ -12,19 +13,22 @@ const baseUrl =
   (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "http://localhost:3000") ||
   "http://localhost:3000";
 
-const siteTitle =
+const defaultTitle =
   (typeof process !== "undefined" && process.env.SITE_TITLE?.trim()) || "Sam's website";
 
-export const metadata = {
-  title: siteTitle,
-  description: "Modern SQLite CMS",
-  metadataBase: new URL(baseUrl),
-  alternates: {
-    types: {
-      "application/rss+xml": "/feed.xml"
+export async function generateMetadata() {
+  const dbTitle = await getSetting("site_title");
+  return {
+    title: dbTitle || defaultTitle,
+    description: "Modern SQLite CMS",
+    metadataBase: new URL(baseUrl),
+    alternates: {
+      types: {
+        "application/rss+xml": "/feed.xml"
+      }
     }
-  }
-};
+  };
+}
 
 const themeScript = `
 (function() {
