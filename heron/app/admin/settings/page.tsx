@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { apiFetch } from "@/lib/api";
-import { defaultFrontPage, type FrontPageSettings, type CardItem, type InterestItem, type ContactLink } from "@/lib/frontPageDefaults";
+import { defaultFrontPage, parseFrontPageConfig, type FrontPageSettings, type CardItem, type InterestItem, type ContactLink } from "@/lib/frontPageDefaults";
 import IconPicker from "@/components/IconPicker";
 import LucideIcon from "@/components/LucideIcon";
 
@@ -26,19 +26,7 @@ export default function AdminSettingsPage() {
                 if (data.site_title) setSiteTitle(data.site_title);
                 if (data.footer_text) setFooterText(data.footer_text);
                 if (data.front_page) {
-                    try {
-                        const parsed = JSON.parse(data.front_page);
-                        setConfig({
-                            hero: { ...defaultFrontPage.hero, ...parsed.hero },
-                            about: { ...defaultFrontPage.about, ...parsed.about },
-                            cards: { ...defaultFrontPage.cards, ...parsed.cards },
-                            journey: { ...defaultFrontPage.journey, ...parsed.journey },
-                            interests: { ...defaultFrontPage.interests, ...parsed.interests },
-                            contact: { ...defaultFrontPage.contact, ...parsed.contact }
-                        });
-                    } catch {
-                        // invalid JSON, use defaults
-                    }
+                    setConfig(parseFrontPageConfig(data.front_page));
                 }
             } catch {
                 // settings not saved yet
@@ -177,8 +165,8 @@ export default function AdminSettingsPage() {
             {toast && (
                 <div
                     className={`fixed right-4 top-4 z-50 rounded-lg px-4 py-3 text-sm font-medium shadow-lg ${toast.type === "success"
-                            ? "bg-green-600 text-white"
-                            : "bg-red-600 text-white"
+                        ? "bg-green-600 text-white"
+                        : "bg-red-600 text-white"
                         }`}
                 >
                     {toast.message}

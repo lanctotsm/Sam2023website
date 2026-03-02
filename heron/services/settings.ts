@@ -1,7 +1,7 @@
 import { eq, inArray, sql } from "drizzle-orm";
 import { getDb } from "@/lib/db";
 import { settings } from "@/lib/db/schema";
-import { unstable_cache } from "next/cache";
+import { unstable_cache, revalidateTag } from "next/cache";
 
 export async function getSetting(key: string): Promise<string | null> {
     return unstable_cache(
@@ -20,12 +20,12 @@ export async function getSettings(keys: string[]): Promise<Record<string, string
 
     // Sort keys so the cache key is deterministic regardless of request order
     const sortedKeys = [...keys].sort();
-    const cacheKey = sortedKeys.join("-");
+    const cacheKey = JSON.stringify(sortedKeys);
 
     return unstable_cache(
         async () => {
             const db = getDb();
-            const rows = await db.select().from(settings).where(inArray(settings.key, keys));
+            const rows = await db.select().from(settings).where(inArray(settings.key, sortedKeys));
             const result: Record<string, string> = {};
             for (const row of rows) {
                 result[row.key] = row.value;
@@ -33,7 +33,7 @@ export async function getSettings(keys: string[]): Promise<Record<string, string
             return result;
         },
         [`settings-batch-${cacheKey}`],
-        { tags: ["settings", ...keys.map(k => `setting-${k}`)] }
+        { tags: ["settings", ...sortedKeys.map(k => `setting-${k}`)] }
     )();
 }
 
@@ -46,17 +46,22 @@ export async function updateSetting(key: string, value: string): Promise<void> {
             target: settings.key,
             set: { value, updatedAt: sql`CURRENT_TIMESTAMP` }
         });
+    revalidateTag("settings");
 }
 
 export async function updateSettings(entries: Record<string, string>): Promise<void> {
     const db = getDb();
-    for (const [key, value] of Object.entries(entries)) {
-        await db
-            .insert(settings)
-            .values({ key, value, updatedAt: sql`CURRENT_TIMESTAMP` })
-            .onConflictDoUpdate({
-                target: settings.key,
-                set: { value, updatedAt: sql`CURRENT_TIMESTAMP` }
-            });
-    }
+    await db.transaction(async (tx) => {
+        for (const [key, value] of Object.entries(entries)) {
+            await tx
+                .insert(settings)
+                .values({ key, value, updatedAt: sql`CURRENT_TIMESTAMP` })
+                .onConflictDoUpdate({
+                    target: settings.key,
+                    set: { value, updatedAt: sql`CURRENT_TIMESTAMP` }
+                });
+        }
+    });
+    revalidateTag("settings");
 }
+

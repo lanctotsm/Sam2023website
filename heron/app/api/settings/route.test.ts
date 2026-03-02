@@ -28,12 +28,19 @@ describe("SETTINGS /api/settings", () => {
     });
 
     describe("GET", () => {
+        it("returns 401 when unauthenticated", async () => {
+            const res = await GET(getRequest("http://localhost:3000/api/settings?key=site_title"));
+            expect(res.status).toBe(401);
+        });
+
         it("returns 400 when no key or keys param given", async () => {
+            vi.mocked(getAuthUser).mockResolvedValue(MOCK_AUTH_USER as never);
             const res = await GET(getRequest("http://localhost:3000/api/settings"));
             expect(res.status).toBe(400);
         });
 
         it("returns single setting by key", async () => {
+            vi.mocked(getAuthUser).mockResolvedValue(MOCK_AUTH_USER as never);
             vi.mocked(getSetting).mockResolvedValue("My Site");
             const res = await GET(getRequest("http://localhost:3000/api/settings?key=site_title"));
             expect(res.status).toBe(200);
@@ -43,14 +50,16 @@ describe("SETTINGS /api/settings", () => {
         });
 
         it("returns null value for missing key", async () => {
+            vi.mocked(getAuthUser).mockResolvedValue(MOCK_AUTH_USER as never);
             vi.mocked(getSetting).mockResolvedValue(null);
-            const res = await GET(getRequest("http://localhost:3000/api/settings?key=missing"));
+            const res = await GET(getRequest("http://localhost:3000/api/settings?key=missing_key"));
             expect(res.status).toBe(200);
             const data = await res.json();
-            expect(data).toEqual({ key: "missing", value: null });
+            expect(data).toEqual({ key: "missing_key", value: null });
         });
 
         it("returns multiple settings by keys", async () => {
+            vi.mocked(getAuthUser).mockResolvedValue(MOCK_AUTH_USER as never);
             vi.mocked(getSettings).mockResolvedValue({ site_title: "My Site", footer_text: "Footer" });
             const res = await GET(getRequest("http://localhost:3000/api/settings?keys=site_title,footer_text"));
             expect(res.status).toBe(200);

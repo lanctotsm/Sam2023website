@@ -1,9 +1,21 @@
 import { NextResponse } from "next/server";
 import { errorResponse, getAuthUser } from "@/lib/api-utils";
 import { getSetting, getSettings, updateSetting, updateSettings } from "@/services/settings";
-import { revalidateTag } from "next/cache";
+
+const ALLOWED_SETTING_KEYS = new Set([
+    "site_title",
+    "footer_text",
+    "front_page",
+]);
+
+const MAX_VALUE_LENGTH = 100_000; // 100 KB
 
 export async function GET(request: Request) {
+    const user = await getAuthUser();
+    if (!user) {
+        return errorResponse("unauthorized", 401);
+    }
+
     const { searchParams } = new URL(request.url);
     const key = searchParams.get("key");
     const keys = searchParams.get("keys");
@@ -32,15 +44,28 @@ export async function PUT(request: Request) {
 
     // Single key update: { key: "...", value: "..." }
     if (payload.key && typeof payload.value === "string") {
+        if (!ALLOWED_SETTING_KEYS.has(payload.key)) {
+            return errorResponse(`unknown setting key: ${payload.key}`, 400);
+        }
+        if (payload.value.length > MAX_VALUE_LENGTH) {
+            return errorResponse("value too large", 400);
+        }
         await updateSetting(payload.key, payload.value);
-        revalidateTag("settings");
         return NextResponse.json({ ok: true });
     }
 
     // Batch update: { settings: { key1: "val1", key2: "val2" } }
     if (payload.settings && typeof payload.settings === "object") {
-        await updateSettings(payload.settings);
-        revalidateTag("settings");
+        const entries = payload.settings as Record<string, string>;
+        for (const [key, value] of Object.entries(entries)) {
+            if (!ALLOWED_SETTING_KEYS.has(key)) {
+                return errorResponse(`unknown setting key: ${key}`, 400);
+            }
+            if (typeof value !== "string" || value.length > MAX_VALUE_LENGTH) {
+                return errorResponse(`invalid or too-large value for key: ${key}`, 400);
+            }
+        }
+        await updateSettings(entries);
         return NextResponse.json({ ok: true });
     }
 

@@ -1,6 +1,4 @@
 import React from "react";
-import ReactMarkdown from "react-markdown";
-import remarkGfm from "remark-gfm";
 import { parseShortcodes } from "./shortcodes-parser";
 import { getDb } from "@/lib/db";
 import { albums, albumImages, images } from "@/lib/db/schema";

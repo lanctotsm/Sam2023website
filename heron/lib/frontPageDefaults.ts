@@ -141,3 +141,24 @@ export const defaultFrontPage: FrontPageSettings = {
         ]
     }
 };
+
+/**
+ * Parse a raw JSON string (from the DB) into a FrontPageSettings object,
+ * merging with defaults so missing keys always have a fallback.
+ */
+export function parseFrontPageConfig(raw: string | null): FrontPageSettings {
+    if (!raw) return defaultFrontPage;
+    try {
+        const parsed = JSON.parse(raw);
+        return {
+            hero: { ...defaultFrontPage.hero, ...parsed.hero },
+            about: { ...defaultFrontPage.about, ...parsed.about },
+            cards: { ...defaultFrontPage.cards, ...parsed.cards },
+            journey: { ...defaultFrontPage.journey, ...parsed.journey },
+            interests: { ...defaultFrontPage.interests, ...parsed.interests },
+            contact: { ...defaultFrontPage.contact, ...parsed.contact },
+        };
+    } catch {
+        return defaultFrontPage;
+    }
+}

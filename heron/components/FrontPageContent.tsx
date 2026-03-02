@@ -9,12 +9,15 @@ type Props = {
 
 function heroStyle(hero: FrontPageSettings["hero"]): React.CSSProperties {
     switch (hero.backgroundType) {
-        case "image":
+        case "image": {
+            const isSafe = /^https?:\/\/|^\//.test(hero.backgroundImage);
+            if (!isSafe) return {};
             return {
                 backgroundImage: `url(${hero.backgroundImage})`,
                 backgroundSize: "cover",
                 backgroundPosition: "center"
             };
+        }
         case "color":
             return { backgroundColor: hero.backgroundColor };
         case "gradient":
@@ -76,9 +79,9 @@ export default function FrontPageContent({ config }: Props) {
             <section>
                 <h2 className="mb-6 text-chestnut dark:text-dark-text">{cards.heading}</h2>
                 <div className={`grid gap-5 ${gridCols}`}>
-                    {cards.items.map((item) => (
+                    {cards.items.map((item, idx) => (
                         <div
-                            key={item.title}
+                            key={idx}
                             className="rounded-xl border border-desert-tan-dark bg-surface p-6 text-center shadow-[0_2px_8px_rgba(72,9,3,0.08)] transition-all hover:-translate-y-1 hover:shadow-[0_12px_32px_rgba(72,9,3,0.12)] dark:border-dark-muted dark:bg-dark-surface dark:hover:shadow-none"
                         >
                             <div className="mb-3 flex justify-center text-chestnut dark:text-dark-text">
@@ -107,9 +110,9 @@ export default function FrontPageContent({ config }: Props) {
             <section>
                 <h2 className="mb-6 text-chestnut dark:text-dark-text">{interests.heading}</h2>
                 <div className="flex flex-wrap justify-center gap-3">
-                    {interests.items.map((item) => (
+                    {interests.items.map((item, idx) => (
                         <div
-                            key={item.label}
+                            key={idx}
                             className="flex items-center gap-2 rounded-full border border-desert-tan-dark bg-surface px-4 py-2.5 text-[0.95rem] text-chestnut-dark transition-all hover:scale-105 hover:bg-white dark:border-dark-muted dark:bg-dark-surface dark:text-dark-text dark:hover:bg-dark-bg"
                         >
                             <LucideIcon name={item.icon} size={20} />
