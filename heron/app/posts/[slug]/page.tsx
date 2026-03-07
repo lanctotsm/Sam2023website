@@ -52,7 +52,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
       title: ogTitle,
       description: ogDescription
     };
-    if (meta.og_image) {
+    if (meta.og_image && metadata.twitter) {
       metadata.twitter.images = [meta.og_image];
     }
   }

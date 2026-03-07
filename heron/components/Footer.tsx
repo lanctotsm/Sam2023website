@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { getSetting } from "@/services/settings";
 
 const footerLinks = [
   { href: "/", label: "About" },
@@ -7,8 +8,10 @@ const footerLinks = [
   { href: "/albums", label: "Albums" }
 ];
 
-export default function Footer() {
+export default async function Footer() {
   const year = new Date().getFullYear();
+  const customFooter = await getSetting("footer_text");
+  const footerText = customFooter || `© ${year} Samuel Lanctot. All rights reserved.`;
 
   return (
     <footer className="mt-auto shrink-0 border-t border-desert-tan-dark bg-surface px-5 py-6 dark:border-dark-muted dark:bg-dark-surface">
@@ -25,7 +28,7 @@ export default function Footer() {
           ))}
         </nav>
         <p className="text-sm text-olive dark:text-dark-muted">
-          © {year} Samuel Lanctot. All rights reserved.
+          {footerText}
         </p>
       </div>
     </footer>

@@ -19,7 +19,8 @@ const navItems: NavItem[] = [
   { href: "/posts", label: "Posts" },
   { href: "/albums", label: "Albums" },
   { href: "/upload", label: "Upload", authOnly: true },
-  { href: "/admin", label: "Admin", authOnly: true }
+  { href: "/admin", label: "Admin", authOnly: true },
+  { href: "/admin/settings", label: "Settings", authOnly: true }
 ];
 
 export default function Navigation() {
@@ -40,19 +41,17 @@ export default function Navigation() {
   };
 
   const navLinkClass = (item: NavItem) =>
-    `block py-2 text-desert-tan transition-colors hover:text-caramel-light dark:text-dark-text dark:hover:text-desert-tan md:py-0 ${
-      pathname === item.href
-        ? "font-semibold text-caramel-light underline decoration-2 underline-offset-4 dark:text-desert-tan"
-        : ""
+    `block py-2 text-desert-tan transition-colors hover:text-caramel-light dark:text-dark-text dark:hover:text-desert-tan md:py-0 ${pathname === item.href
+      ? "font-semibold text-caramel-light underline decoration-2 underline-offset-4 dark:text-desert-tan"
+      : ""
     }`;
 
   return (
     <nav
-      className={`flex flex-wrap items-center justify-between gap-4 border-b px-5 py-5 ${
-        user
+      className={`flex flex-wrap items-center justify-between gap-4 border-b px-5 py-5 ${user
           ? "border-chestnut-dark bg-chestnut dark:border-dark-muted dark:bg-dark-surface"
           : "bg-chestnut-light dark:bg-dark-surface dark:border-dark-muted dark:border-b"
-      }`}
+        }`}
     >
       <div className="flex flex-1 items-center justify-between md:flex-initial md:justify-start">
         <div className="hidden items-center gap-4 md:flex">
@@ -70,19 +69,16 @@ export default function Navigation() {
           aria-expanded={mobileOpen}
         >
           <span
-            className={`block h-0.5 w-5 bg-desert-tan transition-transform ${
-              mobileOpen ? "translate-y-1 rotate-45" : ""
-            }`}
+            className={`block h-0.5 w-5 bg-desert-tan transition-transform ${mobileOpen ? "translate-y-1 rotate-45" : ""
+              }`}
           />
           <span
-            className={`block h-0.5 w-5 bg-desert-tan transition-opacity ${
-              mobileOpen ? "opacity-0" : ""
-            }`}
+            className={`block h-0.5 w-5 bg-desert-tan transition-opacity ${mobileOpen ? "opacity-0" : ""
+              }`}
           />
           <span
-            className={`block h-0.5 w-5 bg-desert-tan transition-transform ${
-              mobileOpen ? "-translate-y-1 -rotate-45" : ""
-            }`}
+            className={`block h-0.5 w-5 bg-desert-tan transition-transform ${mobileOpen ? "-translate-y-1 -rotate-45" : ""
+              }`}
           />
         </button>
       </div>
