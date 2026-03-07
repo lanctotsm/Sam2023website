@@ -145,18 +145,180 @@ export const defaultFrontPage: FrontPageSettings = {
 /**
  * Parse a raw JSON string (from the DB) into a FrontPageSettings object,
  * merging with defaults so missing keys always have a fallback.
+ *
+ * This function also performs light runtime validation/coercion on nested
+ * array fields so that malformed JSON (e.g. wrong shapes or types for
+ * paragraphs/items/links) falls back to defaults instead of causing
+ * runtime errors in components that iterate over these arrays.
  */
+
+function isStringArray(value: unknown): value is string[] {
+    return Array.isArray(value) && value.every((item) => typeof item === "string");
+}
+
+function sanitizeStringArray(
+    value: unknown,
+    fallback: string[]
+): string[] {
+    if (isStringArray(value)) {
+        return value;
+    }
+    return fallback;
+}
+
+function sanitizeCardItems(
+    value: unknown,
+    fallback: CardItem[]
+): CardItem[] {
+    if (!Array.isArray(value)) return fallback;
+    const items: CardItem[] = [];
+    for (const item of value) {
+        if (
+            item &&
+            typeof item === "object" &&
+            typeof (item as any).icon === "string" &&
+            typeof (item as any).title === "string" &&
+            typeof (item as any).text === "string"
+        ) {
+            items.push({
+                icon: (item as any).icon,
+                title: (item as any).title,
+                text: (item as any).text,
+            });
+        }
+    }
+    return items.length > 0 ? items : fallback;
+}
+
+function sanitizeInterestItems(
+    value: unknown,
+    fallback: InterestItem[]
+): InterestItem[] {
+    if (!Array.isArray(value)) return fallback;
+    const items: InterestItem[] = [];
+    for (const item of value) {
+        if (
+            item &&
+            typeof item === "object" &&
+            typeof (item as any).icon === "string" &&
+            typeof (item as any).label === "string"
+        ) {
+            items.push({
+                icon: (item as any).icon,
+                label: (item as any).label,
+            });
+        }
+    }
+    return items.length > 0 ? items : fallback;
+}
+
+function sanitizeContactLinks(
+    value: unknown,
+    fallback: ContactLink[]
+): ContactLink[] {
+    if (!Array.isArray(value)) return fallback;
+    const links: ContactLink[] = [];
+    for (const item of value) {
+        if (
+            item &&
+            typeof item === "object" &&
+            typeof (item as any).icon === "string" &&
+            typeof (item as any).label === "string" &&
+            typeof (item as any).url === "string"
+        ) {
+            links.push({
+                icon: (item as any).icon,
+                label: (item as any).label,
+                url: (item as any).url,
+            });
+        }
+    }
+    return links.length > 0 ? links : fallback;
+}
+
 export function parseFrontPageConfig(raw: string | null): FrontPageSettings {
     if (!raw) return defaultFrontPage;
     try {
         const parsed = JSON.parse(raw);
+
+        const root = parsed && typeof parsed === "object" ? (parsed as any) : {};
+
+        // Hero: flat object, shallow merge is sufficient.
+        const hero: HeroSettings = {
+            ...defaultFrontPage.hero,
+            ...(root.hero && typeof root.hero === "object" ? root.hero : {}),
+        };
+
+        // About: ensure paragraphs is an array of strings.
+        const rawAbout = root.about && typeof root.about === "object" ? root.about : {};
+        const { paragraphs: aboutParagraphsRaw, ...aboutRest } = rawAbout as any;
+        const about: AboutSettings = {
+            ...defaultFrontPage.about,
+            ...aboutRest,
+            paragraphs: sanitizeStringArray(
+                aboutParagraphsRaw,
+                defaultFrontPage.about.paragraphs
+            ),
+        };
+
+        // Cards: ensure items is an array of CardItem.
+        const rawCards = root.cards && typeof root.cards === "object" ? root.cards : {};
+        const { items: cardsItemsRaw, ...cardsRest } = rawCards as any;
+        const cards: CardsSettings = {
+            ...defaultFrontPage.cards,
+            ...cardsRest,
+            items: sanitizeCardItems(
+                cardsItemsRaw,
+                defaultFrontPage.cards.items
+            ),
+        };
+
+        // Journey: ensure paragraphs is an array of strings.
+        const rawJourney =
+            root.journey && typeof root.journey === "object" ? root.journey : {};
+        const { paragraphs: journeyParagraphsRaw, ...journeyRest } = rawJourney as any;
+        const journey: JourneySettings = {
+            ...defaultFrontPage.journey,
+            ...journeyRest,
+            paragraphs: sanitizeStringArray(
+                journeyParagraphsRaw,
+                defaultFrontPage.journey.paragraphs
+            ),
+        };
+
+        // Interests: ensure items is an array of InterestItem.
+        const rawInterests =
+            root.interests && typeof root.interests === "object" ? root.interests : {};
+        const { items: interestsItemsRaw, ...interestsRest } = rawInterests as any;
+        const interests: InterestsSettings = {
+            ...defaultFrontPage.interests,
+            ...interestsRest,
+            items: sanitizeInterestItems(
+                interestsItemsRaw,
+                defaultFrontPage.interests.items
+            ),
+        };
+
+        // Contact: ensure links is an array of ContactLink.
+        const rawContact =
+            root.contact && typeof root.contact === "object" ? root.contact : {};
+        const { links: contactLinksRaw, ...contactRest } = rawContact as any;
+        const contact: ContactSettings = {
+            ...defaultFrontPage.contact,
+            ...contactRest,
+            links: sanitizeContactLinks(
+                contactLinksRaw,
+                defaultFrontPage.contact.links
+            ),
+        };
+
         return {
-            hero: { ...defaultFrontPage.hero, ...parsed.hero },
-            about: { ...defaultFrontPage.about, ...parsed.about },
-            cards: { ...defaultFrontPage.cards, ...parsed.cards },
-            journey: { ...defaultFrontPage.journey, ...parsed.journey },
-            interests: { ...defaultFrontPage.interests, ...parsed.interests },
-            contact: { ...defaultFrontPage.contact, ...parsed.contact },
+            hero,
+            about,
+            cards,
+            journey,
+            interests,
+            contact,
         };
     } catch {
         return defaultFrontPage;
