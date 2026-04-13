@@ -41,22 +41,29 @@ export default function Navigation() {
   };
 
   const navLinkClass = (item: NavItem) =>
-    `block py-2 text-desert-tan transition-colors hover:text-caramel-light dark:text-dark-text dark:hover:text-desert-tan md:py-0 ${pathname === item.href
-      ? "font-semibold text-caramel-light underline decoration-2 underline-offset-4 dark:text-desert-tan"
-      : ""
+    `block py-2 transition-colors hover:opacity-80 md:py-0 ${
+      pathname === item.href
+        ? "font-semibold underline decoration-2 underline-offset-4"
+        : ""
     }`;
+
+  const navLinkStyle: React.CSSProperties = {
+    color: "var(--nav-text, var(--color-desert-tan))",
+  };
 
   return (
     <nav
-      className={`flex flex-wrap items-center justify-between gap-4 border-b px-5 py-5 ${user
-          ? "border-chestnut-dark bg-chestnut dark:border-dark-muted dark:bg-dark-surface"
-          : "bg-chestnut-light dark:bg-dark-surface dark:border-dark-muted dark:border-b"
-        }`}
+      className="flex flex-wrap items-center justify-between gap-4 border-b px-5 py-5"
+      style={{
+        backgroundColor: "var(--nav-bg, var(--color-chestnut-light))",
+        borderColor: "var(--nav-bg-dark, var(--color-chestnut-dark))",
+        fontFamily: "var(--nav-font, inherit)",
+      }}
     >
       <div className="flex flex-1 items-center justify-between md:flex-initial md:justify-start">
         <div className="hidden items-center gap-4 md:flex">
           {filteredItems.map((item) => (
-            <Link key={item.href} className={navLinkClass(item)} href={item.href}>
+            <Link key={item.href} className={navLinkClass(item)} style={navLinkStyle} href={item.href}>
               {item.label}
             </Link>
           ))}
@@ -88,11 +95,12 @@ export default function Navigation() {
           <div className="mb-3 flex flex-col border-t border-desert-tan/30 pt-4 sm:hidden dark:border-dark-muted/30">
             <SearchBar />
           </div>
-          <div className="flex flex-col gap-2 border-t border-desert-tan/30 pt-4 dark:border-dark-muted/30">
+          <div className="flex flex-col gap-2 border-t pt-4"  style={{ borderColor: "var(--nav-text, var(--color-desert-tan))", opacity: 0.3 }}>
             {filteredItems.map((item) => (
               <Link
                 key={item.href}
                 className={navLinkClass(item)}
+                style={navLinkStyle}
                 href={item.href}
                 onClick={() => setMobileOpen(false)}
               >
@@ -103,7 +111,7 @@ export default function Navigation() {
         </div>
       )}
 
-      <div className="flex items-center gap-3 text-sm text-desert-tan dark:text-dark-text">
+      <div className="flex items-center gap-3 text-sm" style={{ color: "var(--nav-text, var(--color-desert-tan))" }}>
         <div className="hidden sm:block">
           <SearchBar />
         </div>

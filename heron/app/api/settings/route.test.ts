@@ -110,5 +110,44 @@ describe("SETTINGS /api/settings", () => {
             );
             expect(res.status).toBe(400);
         });
+
+        it("accepts page_backgrounds as a batch setting key", async () => {
+            vi.mocked(getAuthUser).mockResolvedValue(MOCK_AUTH_USER as never);
+            const bgJson = JSON.stringify({ home: { backgroundType: "none", backgroundColor: "", backgroundImage: "", gradientFrom: "", gradientTo: "" }, albums: { backgroundType: "none", backgroundColor: "", backgroundImage: "", gradientFrom: "", gradientTo: "" }, posts: { backgroundType: "none", backgroundColor: "", backgroundImage: "", gradientFrom: "", gradientTo: "" }, resume: { backgroundType: "none", backgroundColor: "", backgroundImage: "", gradientFrom: "", gradientTo: "" } });
+            const res = await PUT(
+                jsonRequest("PUT", "http://localhost:3000/api/settings", { settings: { page_backgrounds: bgJson } })
+            );
+            expect(res.status).toBe(200);
+            expect(updateSettings).toHaveBeenCalledWith({ page_backgrounds: bgJson });
+        });
+
+        it("accepts page_styles as a batch setting key", async () => {
+            vi.mocked(getAuthUser).mockResolvedValue(MOCK_AUTH_USER as never);
+            const defaultEntry = { background: { backgroundType: "none", backgroundColor: "", backgroundImage: "", gradientFrom: "", gradientTo: "" }, style: { headingFont: "", bodyFont: "", h1Color: "", h1ColorDark: "", h2Color: "", h2ColorDark: "", bodyColor: "", bodyColorDark: "", linkColor: "", linkColorDark: "", cardBg: "", cardBgDark: "", cardBorder: "", cardBorderDark: "" } };
+            const stylesJson = JSON.stringify({ home: defaultEntry, albums: defaultEntry, posts: defaultEntry, resume: defaultEntry });
+            const res = await PUT(
+                jsonRequest("PUT", "http://localhost:3000/api/settings", { settings: { page_styles: stylesJson } })
+            );
+            expect(res.status).toBe(200);
+            expect(updateSettings).toHaveBeenCalledWith({ page_styles: stylesJson });
+        });
+
+        it("accepts nav_styles as a batch setting key", async () => {
+            vi.mocked(getAuthUser).mockResolvedValue(MOCK_AUTH_USER as never);
+            const navJson = JSON.stringify({ bgColor: "red", font: "Inter" });
+            const res = await PUT(
+                jsonRequest("PUT", "http://localhost:3000/api/settings", { settings: { nav_styles: navJson } })
+            );
+            expect(res.status).toBe(200);
+            expect(updateSettings).toHaveBeenCalledWith({ nav_styles: navJson });
+        });
+
+        it("rejects unknown setting keys even in batch", async () => {
+            vi.mocked(getAuthUser).mockResolvedValue(MOCK_AUTH_USER as never);
+            const res = await PUT(
+                jsonRequest("PUT", "http://localhost:3000/api/settings", { settings: { evil_key: "hack" } })
+            );
+            expect(res.status).toBe(400);
+        });
     });
 });

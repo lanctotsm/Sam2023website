@@ -25,7 +25,7 @@ export async function POST(request: Request) {
     const formData = await request.formData();
     const file = formData.get("file");
 
-    if (!file || !(file instanceof File)) {
+    if (!file || typeof file === "string" || !('arrayBuffer' in file)) {
       return errorResponse("file is required", 400);
     }
 
@@ -60,6 +60,7 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ url: publicUrl }, { status: 201 });
   } catch (err) {
+    console.error("BACKGROUND IMAGE UPLOAD ERROR:", err);
     const message = err instanceof Error ? err.message : "upload failed";
     return errorResponse(message, 500);
   }
