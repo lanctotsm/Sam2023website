@@ -63,6 +63,12 @@ export default async function AdminLayout({ children }: { children: ReactNode })
             Users
           </Link>
           <Link
+            href="/admin/settings"
+            className="rounded-lg border border-desert-tan-dark bg-white px-4 py-2 text-chestnut transition-colors hover:border-caramel hover:bg-desert-tan dark:border-dark-muted dark:bg-dark-bg dark:text-dark-text dark:hover:bg-dark-surface"
+          >
+            Settings
+          </Link>
+          <Link
             href="/upload"
             className="rounded-lg border border-desert-tan-dark bg-white px-4 py-2 text-chestnut transition-colors hover:border-caramel hover:bg-desert-tan dark:border-dark-muted dark:bg-dark-bg dark:text-dark-text dark:hover:bg-dark-surface"
           >

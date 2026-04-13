@@ -174,7 +174,7 @@ export default function AdminSettingsPage() {
             )}
 
             <div className="flex items-center justify-between">
-                <h1 className="text-2xl font-bold text-chestnut dark:text-dark-text">Site Settings</h1>
+                <h1 className="text-2xl font-bold text-chestnut dark:text-dark-text">Admin Settings</h1>
                 <button
                     onClick={handleSave}
                     disabled={saving}
@@ -253,7 +253,81 @@ export default function AdminSettingsPage() {
                     {config.hero.backgroundType === "image" && (
                         <div>
                             <label className={labelClass}>Background Image URL</label>
-                            <input className={inputClass} value={config.hero.backgroundImage} onChange={(e) => updateHero({ backgroundImage: e.target.value })} placeholder="https://…" />
+                            
+                            <div className="space-y-3">
+                                <div className="flex flex-col items-center justify-center rounded-lg border-2 border-dashed border-desert-tan-dark bg-white/50 p-6 text-center transition-colors hover:bg-white dark:border-dark-muted dark:bg-dark-bg/50 dark:hover:bg-dark-surface">
+                                    <LucideIcon name="Upload" size={24} className="mb-2 text-olive dark:text-dark-muted" />
+                                    <p className="mb-2 text-sm text-chestnut-dark dark:text-dark-muted">
+                                        Drag & drop an image here, or click to select
+                                    </p>
+                                    <input
+                                        type="file"
+                                        accept="image/jpeg,image/png,image/webp,image/gif"
+                                        className="hidden"
+                                        id="bg-image-upload"
+                                        onChange={async (e) => {
+                                            const file = e.target.files?.[0];
+                                            if (!file) return;
+                                            
+                                            // Optional: quick client-side validation could go here
+                                            
+                                            try {
+                                                // Create a toast to show uploading state
+                                                showToast("Uploading background image...", "success");
+                                                
+                                                const formData = new FormData();
+                                                formData.append("file", file);
+                                                
+                                                const res = await fetch("/api/settings/background-image", {
+                                                    method: "POST",
+                                                    body: formData,
+                                                });
+                                                
+                                                if (!res.ok) {
+                                                    throw new Error(await res.text());
+                                                }
+                                                const data = await res.json() as { url: string };
+                                                
+                                                if (data && data.url) {
+                                                    updateHero({ backgroundImage: data.url });
+                                                    showToast("Background image uploaded successfully!", "success");
+                                                }
+                                            } catch (err) {
+                                                showToast("Failed to upload background image", "error");
+                                            }
+                                        }}
+                                    />
+                                    <button
+                                        type="button"
+                                        onClick={() => document.getElementById("bg-image-upload")?.click()}
+                                        className={btnAdd}
+                                    >
+                                        Select Image
+                                    </button>
+                                </div>
+
+                                <div className="flex items-center gap-2">
+                                    <span className="text-sm font-medium text-chestnut-dark dark:text-dark-text shrink-0">URL:</span>
+                                    <input 
+                                        className={inputClass} 
+                                        value={config.hero.backgroundImage} 
+                                        onChange={(e) => updateHero({ backgroundImage: e.target.value })} 
+                                        placeholder="https://…" 
+                                    />
+                                </div>
+                                {config.hero.backgroundImage && (
+                                    <div className="mt-2 text-sm text-olive-dark dark:text-dark-muted">
+                                        <p>Current image preview:</p>
+                                        <img 
+                                            src={config.hero.backgroundImage} 
+                                            alt="Background preview" 
+                                            className="mt-2 max-h-48 w-full rounded-lg object-cover border border-desert-tan-dark dark:border-dark-muted"
+                                            onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+                                            onLoad={(e) => { (e.target as HTMLImageElement).style.display = 'block'; }}
+                                        />
+                                    </div>
+                                )}
+                            </div>
                         </div>
                     )}
                 </div>
