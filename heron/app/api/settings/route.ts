@@ -43,7 +43,7 @@ export async function PUT(request: Request) {
     const payload = await request.json();
 
     // Single key update: { key: "...", value: "..." }
-    if (payload.key && typeof payload.value === "string") {
+    if (typeof payload.key === "string" && payload.key.length > 0 && typeof payload.value === "string") {
         if (!ALLOWED_SETTING_KEYS.has(payload.key)) {
             return errorResponse(`unknown setting key: ${payload.key}`, 400);
         }
@@ -55,7 +55,7 @@ export async function PUT(request: Request) {
     }
 
     // Batch update: { settings: { key1: "val1", key2: "val2" } }
-    if (payload.settings && typeof payload.settings === "object") {
+    if (payload.settings !== null && typeof payload.settings === "object" && !Array.isArray(payload.settings)) {
         const entries = payload.settings as Record<string, string>;
         for (const [key, value] of Object.entries(entries)) {
             if (!ALLOWED_SETTING_KEYS.has(key)) {
