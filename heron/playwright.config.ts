@@ -1,8 +1,6 @@
 import { defineConfig, devices } from "@playwright/test";
 
-// E2E tests expect the app on localhost:3000. Use Docker (includes MinIO, DB):
-//   docker compose -f docker-compose.dev.yml up --build
-// Then: npm run test:e2e
+// `npm run test:e2e` now ensures MinIO/local DB deps and starts/reuses the app.
 
 export default defineConfig({
   testDir: "./tests",
