@@ -51,15 +51,17 @@ export async function updateSetting(key: string, value: string): Promise<void> {
 
 export async function updateSettings(entries: Record<string, string>): Promise<void> {
     const db = getDb();
-    for (const [key, value] of Object.entries(entries)) {
-        await db
-            .insert(settings)
-            .values({ key, value, updatedAt: sql`CURRENT_TIMESTAMP` })
-            .onConflictDoUpdate({
-                target: settings.key,
-                set: { value, updatedAt: sql`CURRENT_TIMESTAMP` }
-            });
-    }
+    await db.transaction(async (tx) => {
+        for (const [key, value] of Object.entries(entries)) {
+            await tx
+                .insert(settings)
+                .values({ key, value, updatedAt: sql`CURRENT_TIMESTAMP` })
+                .onConflictDoUpdate({
+                    target: settings.key,
+                    set: { value, updatedAt: sql`CURRENT_TIMESTAMP` }
+                });
+        }
+    });
     revalidateTag("settings");
 }
 

@@ -51,19 +51,28 @@ export default function Navigation() {
     color: "var(--nav-text, var(--color-desert-tan))",
   };
 
+  // Active links use the accent color when one is configured, otherwise fall through to text color
+  const navLinkActiveStyle: React.CSSProperties = {
+    color: "var(--nav-accent, var(--nav-text, var(--color-desert-tan)))",
+  };
+
   return (
     <nav
-      className="flex flex-wrap items-center justify-between gap-4 border-b px-5 py-5"
+      className="flex flex-wrap items-center justify-between gap-4 border-b border-chestnut-dark px-5 py-5 dark:border-dark-muted"
       style={{
         backgroundColor: "var(--nav-bg, var(--color-chestnut-light))",
-        borderColor: "var(--nav-bg-dark, var(--color-chestnut-dark))",
         fontFamily: "var(--nav-font, inherit)",
       }}
     >
       <div className="flex flex-1 items-center justify-between md:flex-initial md:justify-start">
         <div className="hidden items-center gap-4 md:flex">
           {filteredItems.map((item) => (
-            <Link key={item.href} className={navLinkClass(item)} style={navLinkStyle} href={item.href}>
+            <Link
+              key={item.href}
+              className={navLinkClass(item)}
+              style={pathname === item.href ? navLinkActiveStyle : navLinkStyle}
+              href={item.href}
+            >
               {item.label}
             </Link>
           ))}
@@ -95,12 +104,12 @@ export default function Navigation() {
           <div className="mb-3 flex flex-col border-t border-desert-tan/30 pt-4 sm:hidden dark:border-dark-muted/30">
             <SearchBar />
           </div>
-          <div className="flex flex-col gap-2 border-t pt-4"  style={{ borderColor: "var(--nav-text, var(--color-desert-tan))", opacity: 0.3 }}>
+          <div className="flex flex-col gap-2 border-t border-desert-tan/30 pt-4 dark:border-dark-muted/30">
             {filteredItems.map((item) => (
               <Link
                 key={item.href}
                 className={navLinkClass(item)}
-                style={navLinkStyle}
+                style={pathname === item.href ? navLinkActiveStyle : navLinkStyle}
                 href={item.href}
                 onClick={() => setMobileOpen(false)}
               >
