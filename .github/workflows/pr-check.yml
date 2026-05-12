@@ -58,6 +58,7 @@ jobs:
 
       - name: Run E2E tests
         run: npm run test:e2e:docker
+        working-directory: heron
         env:
           CI: true
 
