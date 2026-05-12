@@ -44,6 +44,10 @@ jobs:
         run: npm run typecheck
         working-directory: heron
 
+      - name: Unit tests
+        run: npm test
+        working-directory: heron
+
       - name: Build Heron app
         env:
           NEXT_PUBLIC_IMAGE_BASE_URL: ${{ secrets.S3_PUBLIC_BASE_URL }}

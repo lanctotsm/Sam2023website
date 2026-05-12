@@ -41,22 +41,38 @@ export default function Navigation() {
   };
 
   const navLinkClass = (item: NavItem) =>
-    `block py-2 text-desert-tan transition-colors hover:text-caramel-light dark:text-dark-text dark:hover:text-desert-tan md:py-0 ${pathname === item.href
-      ? "font-semibold text-caramel-light underline decoration-2 underline-offset-4 dark:text-desert-tan"
-      : ""
+    `block py-2 transition-colors hover:opacity-80 md:py-0 ${
+      pathname === item.href
+        ? "font-semibold underline decoration-2 underline-offset-4"
+        : ""
     }`;
+
+  const navLinkStyle: React.CSSProperties = {
+    color: "var(--nav-text, var(--color-desert-tan))",
+  };
+
+  // Active links use the accent color when one is configured, otherwise fall through to text color
+  const navLinkActiveStyle: React.CSSProperties = {
+    color: "var(--nav-accent, var(--nav-text, var(--color-desert-tan)))",
+  };
 
   return (
     <nav
-      className={`flex flex-wrap items-center justify-between gap-4 border-b px-5 py-5 ${user
-          ? "border-chestnut-dark bg-chestnut dark:border-dark-muted dark:bg-dark-surface"
-          : "bg-chestnut-light dark:bg-dark-surface dark:border-dark-muted dark:border-b"
-        }`}
+      className="flex flex-wrap items-center justify-between gap-4 border-b border-chestnut-dark px-5 py-5 dark:border-dark-muted"
+      style={{
+        backgroundColor: "var(--nav-bg, var(--color-chestnut-light))",
+        fontFamily: "var(--nav-font, inherit)",
+      }}
     >
       <div className="flex flex-1 items-center justify-between md:flex-initial md:justify-start">
         <div className="hidden items-center gap-4 md:flex">
           {filteredItems.map((item) => (
-            <Link key={item.href} className={navLinkClass(item)} href={item.href}>
+            <Link
+              key={item.href}
+              className={navLinkClass(item)}
+              style={pathname === item.href ? navLinkActiveStyle : navLinkStyle}
+              href={item.href}
+            >
               {item.label}
             </Link>
           ))}
@@ -93,6 +109,7 @@ export default function Navigation() {
               <Link
                 key={item.href}
                 className={navLinkClass(item)}
+                style={pathname === item.href ? navLinkActiveStyle : navLinkStyle}
                 href={item.href}
                 onClick={() => setMobileOpen(false)}
               >
@@ -103,7 +120,7 @@ export default function Navigation() {
         </div>
       )}
 
-      <div className="flex items-center gap-3 text-sm text-desert-tan dark:text-dark-text">
+      <div className="flex items-center gap-3 text-sm" style={{ color: "var(--nav-text, var(--color-desert-tan))" }}>
         <div className="hidden sm:block">
           <SearchBar />
         </div>
