@@ -1,4 +1,4 @@
-const iconClass = "inline-block size-5 shrink-0 align-middle";
+import PageStyleProvider from "@/components/PageStyleProvider";
 
 function LinkedInIcon({ className }: { className?: string }) {
   return (
@@ -16,74 +16,80 @@ function GitHubIcon({ className }: { className?: string }) {
   );
 }
 
+const iconClass = "inline-block size-5 shrink-0 align-middle";
+
+const sectionCard = "rounded-xl border border-[var(--page-card-border,var(--color-desert-tan-dark))] bg-[var(--page-card-bg,var(--color-surface))] p-4 shadow-[0_2px_8px_rgba(72,9,3,0.08)] dark:border-[var(--page-card-border-dark,var(--color-dark-muted))] dark:bg-[var(--page-card-bg-dark,var(--color-dark-surface))]";
+
 export default function ResumePage() {
   return (
-    <div className="mx-auto flex max-w-[900px] flex-col gap-6">
-      <section className="rounded-xl border border-desert-tan-dark bg-surface p-4 text-center shadow-[0_2px_8px_rgba(72,9,3,0.08)] dark:border-dark-muted dark:bg-dark-surface">
-        <h1 className="mb-2 text-center text-chestnut dark:text-dark-text">Samuel Lanctot</h1>
-        <p className="mt-2 flex flex-wrap items-center justify-center gap-x-4 gap-y-1 text-sm text-olive-dark dark:text-dark-muted">
-          <span>Silver Spring, MD</span>
-          <a href="mailto:lanctotsm@gmail.com" className="text-copper hover:text-chestnut hover:underline dark:text-caramel-light dark:hover:text-desert-tan">lanctotsm@gmail.com</a>
-          <a href="https://www.linkedin.com/in/samuel-lanctot/" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 text-copper hover:text-chestnut hover:underline dark:text-caramel-light dark:hover:text-desert-tan" aria-label="LinkedIn">
-            <LinkedInIcon className={iconClass} />
-            LinkedIn
-          </a>
-          <a href="https://github.com/samlanctot" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 text-copper hover:text-chestnut hover:underline dark:text-caramel-light dark:hover:text-desert-tan" aria-label="GitHub">
-            <GitHubIcon className={iconClass} />
-            GitHub
-          </a>
-        </p>
-      </section>
+    <PageStyleProvider page="resume">
+      <div className="mx-auto flex max-w-[900px] flex-col gap-6">
+        <section className={sectionCard + " text-center"}>
+          <h1 className="mb-2 text-center text-[var(--page-h1-color,var(--color-chestnut))] dark:text-[var(--page-h1-color-dark,var(--color-dark-text))]" style={{ fontFamily: "var(--page-heading-font, inherit)" }}>Samuel Lanctot</h1>
+          <p className="mt-2 flex flex-wrap items-center justify-center gap-x-4 gap-y-1 text-sm text-[var(--page-body-color,var(--color-olive-dark))] dark:text-[var(--page-body-color-dark,var(--color-dark-muted))]" style={{ fontFamily: "var(--page-body-font, inherit)" }}>
+            <span>Silver Spring, MD</span>
+            <a href="mailto:lanctotsm@gmail.com" className="text-[var(--page-link-color,var(--color-copper))] hover:underline dark:text-[var(--page-link-color-dark,var(--color-caramel-light))]">lanctotsm@gmail.com</a>
+            <a href="https://www.linkedin.com/in/samuel-lanctot/" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 text-[var(--page-link-color,var(--color-copper))] hover:underline dark:text-[var(--page-link-color-dark,var(--color-caramel-light))]" aria-label="LinkedIn">
+              <LinkedInIcon className={iconClass} />
+              LinkedIn
+            </a>
+            <a href="https://github.com/samlanctot" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 text-[var(--page-link-color,var(--color-copper))] hover:underline dark:text-[var(--page-link-color-dark,var(--color-caramel-light))]" aria-label="GitHub">
+              <GitHubIcon className={iconClass} />
+              GitHub
+            </a>
+          </p>
+        </section>
 
-      <section className="rounded-xl border border-desert-tan-dark bg-surface p-4 shadow-[0_2px_8px_rgba(72,9,3,0.08)] dark:border-dark-muted dark:bg-dark-surface">
-        <h2 className="text-chestnut dark:text-dark-text">Experience</h2>
-        <div className="border-b border-desert-tan-dark pb-6 pt-4 last:border-b-0 last:pb-0 dark:border-dark-muted">
-          <div className="mb-2 flex flex-wrap items-baseline gap-3">
-            <h3 className="m-0 text-xl text-chestnut dark:text-dark-text">Senior Software Engineer</h3>
-            <span className="text-base font-semibold text-olive-dark dark:text-dark-muted">GEICO</span>
-            <span className="ml-auto text-sm italic text-olive dark:text-dark-muted">Present</span>
+        <section className={sectionCard}>
+          <h2 className="text-[var(--page-h2-color,var(--color-chestnut))] dark:text-[var(--page-h2-color-dark,var(--color-dark-text))]" style={{ fontFamily: "var(--page-heading-font, inherit)" }}>Experience</h2>
+          <div className="border-b border-desert-tan-dark pb-6 pt-4 last:border-b-0 last:pb-0 dark:border-dark-muted">
+            <div className="mb-2 flex flex-wrap items-baseline gap-3">
+              <h3 className="m-0 text-xl text-[var(--page-h2-color,var(--color-chestnut))] dark:text-[var(--page-h2-color-dark,var(--color-dark-text))]" style={{ fontFamily: "var(--page-heading-font, inherit)" }}>Senior Software Engineer</h3>
+              <span className="text-base font-semibold text-olive-dark dark:text-dark-muted">GEICO</span>
+              <span className="ml-auto text-sm italic text-olive dark:text-dark-muted">Present</span>
+            </div>
+            <p className="m-0 leading-relaxed text-[var(--page-body-color,var(--color-chestnut-dark))] dark:text-[var(--page-body-color-dark,var(--color-dark-muted))]" style={{ fontFamily: "var(--page-body-font, inherit)" }}>Working on commercial software dealing with DuckCreek and Next.js based service applications. Building robust, scalable solutions for commercial insurance products.</p>
           </div>
-          <p className="m-0 leading-relaxed text-chestnut-dark dark:text-dark-muted">Working on commercial software dealing with DuckCreek and Next.js based service applications. Building robust, scalable solutions for commercial insurance products.</p>
-        </div>
-        <div className="border-b border-desert-tan-dark pb-6 pt-4 last:border-b-0 last:pb-0 dark:border-dark-muted">
-          <div className="mb-2 flex flex-wrap items-baseline gap-3">
-            <h3 className="m-0 text-xl text-chestnut dark:text-dark-text">Software Engineer</h3>
-            <span className="text-base font-semibold text-olive-dark dark:text-dark-muted">Capital One</span>
-            <span className="ml-auto text-sm italic text-olive dark:text-dark-muted">Previous</span>
+          <div className="border-b border-desert-tan-dark pb-6 pt-4 last:border-b-0 last:pb-0 dark:border-dark-muted">
+            <div className="mb-2 flex flex-wrap items-baseline gap-3">
+              <h3 className="m-0 text-xl text-[var(--page-h2-color,var(--color-chestnut))] dark:text-[var(--page-h2-color-dark,var(--color-dark-text))]" style={{ fontFamily: "var(--page-heading-font, inherit)" }}>Software Engineer</h3>
+              <span className="text-base font-semibold text-olive-dark dark:text-dark-muted">Capital One</span>
+              <span className="ml-auto text-sm italic text-olive dark:text-dark-muted">Previous</span>
+            </div>
+            <p className="m-0 leading-relaxed text-[var(--page-body-color,var(--color-chestnut-dark))] dark:text-[var(--page-body-color-dark,var(--color-dark-muted))]" style={{ fontFamily: "var(--page-body-font, inherit)" }}>Full stack development with Node.js, Python, and Scala. Built and maintained microservices and distributed systems in a cloud-native environment.</p>
           </div>
-          <p className="m-0 leading-relaxed text-chestnut-dark dark:text-dark-muted">Full stack development with Node.js, Python, and Scala. Built and maintained microservices and distributed systems in a cloud-native environment.</p>
-        </div>
-      </section>
+        </section>
 
-      <section className="rounded-xl border border-desert-tan-dark bg-surface p-4 shadow-[0_2px_8px_rgba(72,9,3,0.08)] dark:border-dark-muted dark:bg-dark-surface">
-        <h2 className="text-chestnut dark:text-dark-text">Technical Skills</h2>
-        <div className="mt-4 grid gap-5">
-          <div>
-            <h3 className="mb-2 text-xs uppercase tracking-wide text-olive-dark dark:text-dark-muted">Languages</h3>
-            <p className="m-0 leading-relaxed text-chestnut-dark dark:text-dark-muted">.NET (C#), JavaScript/TypeScript, Node.js, Python, Scala, SQL</p>
+        <section className={sectionCard}>
+          <h2 className="text-[var(--page-h2-color,var(--color-chestnut))] dark:text-[var(--page-h2-color-dark,var(--color-dark-text))]" style={{ fontFamily: "var(--page-heading-font, inherit)" }}>Technical Skills</h2>
+          <div className="mt-4 grid gap-5">
+            <div>
+              <h3 className="mb-2 text-xs uppercase tracking-wide text-olive-dark dark:text-dark-muted">Languages</h3>
+              <p className="m-0 leading-relaxed text-[var(--page-body-color,var(--color-chestnut-dark))] dark:text-[var(--page-body-color-dark,var(--color-dark-muted))]" style={{ fontFamily: "var(--page-body-font, inherit)" }}>.NET (C#), JavaScript/TypeScript, Node.js, Python, Scala, SQL</p>
+            </div>
+            <div>
+              <h3 className="mb-2 text-xs uppercase tracking-wide text-olive-dark dark:text-dark-muted">Frameworks &amp; Technologies</h3>
+              <p className="m-0 leading-relaxed text-[var(--page-body-color,var(--color-chestnut-dark))] dark:text-[var(--page-body-color-dark,var(--color-dark-muted))]" style={{ fontFamily: "var(--page-body-font, inherit)" }}>Next.js, React, DuckCreek, .NET Core, ASP.NET, REST APIs, Microservices</p>
+            </div>
+            <div>
+              <h3 className="mb-2 text-xs uppercase tracking-wide text-olive-dark dark:text-dark-muted">Tools &amp; Platforms</h3>
+              <p className="m-0 leading-relaxed text-[var(--page-body-color,var(--color-chestnut-dark))] dark:text-[var(--page-body-color-dark,var(--color-dark-muted))]" style={{ fontFamily: "var(--page-body-font, inherit)" }}>Git, Docker, AWS, CI/CD, Agile/Scrum</p>
+            </div>
           </div>
-          <div>
-            <h3 className="mb-2 text-xs uppercase tracking-wide text-olive-dark dark:text-dark-muted">Frameworks & Technologies</h3>
-            <p className="m-0 leading-relaxed text-chestnut-dark dark:text-dark-muted">Next.js, React, DuckCreek, .NET Core, ASP.NET, REST APIs, Microservices</p>
-          </div>
-          <div>
-            <h3 className="mb-2 text-xs uppercase tracking-wide text-olive-dark dark:text-dark-muted">Tools & Platforms</h3>
-            <p className="m-0 leading-relaxed text-chestnut-dark dark:text-dark-muted">Git, Docker, AWS, CI/CD, Agile/Scrum</p>
-          </div>
-        </div>
-      </section>
+        </section>
 
-      <section className="rounded-xl border border-desert-tan-dark bg-surface p-4 shadow-[0_2px_8px_rgba(72,9,3,0.08)] dark:border-dark-muted dark:bg-dark-surface">
-        <h2 className="text-chestnut dark:text-dark-text">Experience Summary</h2>
-        <ul className="mt-4 list-outside pl-6 leading-relaxed text-chestnut-dark dark:text-dark-muted [&>li]:mb-2">
-          <li>7+ years of full stack .NET development experience</li>
-          <li>2+ years of Node.js/Python/Scala development experience</li>
-          <li>Experience building and maintaining commercial insurance software</li>
-          <li>Proficient in modern web frameworks including Next.js and React</li>
-          <li>Experience with DuckCreek platform integration</li>
-          <li>Strong background in microservices architecture and distributed systems</li>
-        </ul>
-      </section>
-    </div>
+        <section className={sectionCard}>
+          <h2 className="text-[var(--page-h2-color,var(--color-chestnut))] dark:text-[var(--page-h2-color-dark,var(--color-dark-text))]" style={{ fontFamily: "var(--page-heading-font, inherit)" }}>Experience Summary</h2>
+          <ul className="mt-4 list-outside pl-6 leading-relaxed text-[var(--page-body-color,var(--color-chestnut-dark))] dark:text-[var(--page-body-color-dark,var(--color-dark-muted))] [&>li]:mb-2" style={{ fontFamily: "var(--page-body-font, inherit)" }}>
+            <li>7+ years of full stack .NET development experience</li>
+            <li>2+ years of Node.js/Python/Scala development experience</li>
+            <li>Experience building and maintaining commercial insurance software</li>
+            <li>Proficient in modern web frameworks including Next.js and React</li>
+            <li>Experience with DuckCreek platform integration</li>
+            <li>Strong background in microservices architecture and distributed systems</li>
+          </ul>
+        </section>
+      </div>
+    </PageStyleProvider>
   );
 }

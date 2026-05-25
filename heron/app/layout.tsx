@@ -2,6 +2,7 @@ import "./globals.css";
 import type { ReactNode } from "react";
 import { Roboto } from "next/font/google";
 import Navigation from "@/components/Navigation";
+import NavStyleProvider from "@/components/NavStyleProvider";
 import Footer from "@/components/Footer";
 import Providers from "@/app/providers";
 import { getSetting } from "@/services/settings";
@@ -53,7 +54,9 @@ export default function RootLayout({ children }: { children: ReactNode }) {
       </head>
       <body className={`m-0 bg-caramel-light text-chestnut-dark dark:bg-dark-bg dark:text-dark-text ${roboto.className}`}>
         <Providers>
-          <Navigation />
+          <NavStyleProvider>
+            <Navigation />
+          </NavStyleProvider>
           <main className="mx-auto flex min-h-[calc(100vh-4rem)] max-w-[1100px] flex-col px-5 py-8 pb-6">
             {children}
             <Footer />

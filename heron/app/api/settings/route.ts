@@ -6,6 +6,10 @@ const ALLOWED_SETTING_KEYS = new Set([
     "site_title",
     "footer_text",
     "front_page",
+    "background_image",
+    "page_backgrounds",
+    "page_styles",
+    "nav_styles",
 ]);
 
 const MAX_VALUE_LENGTH = 100_000; // 100 KB

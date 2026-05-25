@@ -25,14 +25,21 @@ cd heron && npm run seed:local
 
 ## E2E Tests (Playwright)
 
-E2E tests expect the app on localhost:3000 with MinIO and a seeded DB. Use Docker:
+`npm run test:e2e` now:
+- ensures local SQLite DB file exists
+- starts/checks MinIO + app + bucket init via Docker
+- runs Playwright tests
+
+```bash
+npm run test:e2e
+```
+
+If you want the full stack running in Docker first:
 
 ```bash
 # Rebuild and start the full stack, then run tests
 npm run test:e2e:docker
 ```
-
-Or manually: from the repo root, `docker compose -f docker-compose.dev.yml up --build`, then from heron/ run `npm run test:e2e`.
 
 ## Technology Stack
 
