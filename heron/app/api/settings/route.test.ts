@@ -111,16 +111,6 @@ describe("SETTINGS /api/settings", () => {
             expect(res.status).toBe(400);
         });
 
-        it("accepts page_backgrounds as a batch setting key", async () => {
-            vi.mocked(getAuthUser).mockResolvedValue(MOCK_AUTH_USER as never);
-            const bgJson = JSON.stringify({ home: { backgroundType: "none", backgroundColor: "", backgroundImage: "", gradientFrom: "", gradientTo: "" }, albums: { backgroundType: "none", backgroundColor: "", backgroundImage: "", gradientFrom: "", gradientTo: "" }, posts: { backgroundType: "none", backgroundColor: "", backgroundImage: "", gradientFrom: "", gradientTo: "" }, resume: { backgroundType: "none", backgroundColor: "", backgroundImage: "", gradientFrom: "", gradientTo: "" } });
-            const res = await PUT(
-                jsonRequest("PUT", "http://localhost:3000/api/settings", { settings: { page_backgrounds: bgJson } })
-            );
-            expect(res.status).toBe(200);
-            expect(updateSettings).toHaveBeenCalledWith({ page_backgrounds: bgJson });
-        });
-
         it("accepts page_styles as a batch setting key", async () => {
             vi.mocked(getAuthUser).mockResolvedValue(MOCK_AUTH_USER as never);
             const defaultEntry = { background: { backgroundType: "none", backgroundColor: "", backgroundImage: "", gradientFrom: "", gradientTo: "" }, style: { headingFont: "", bodyFont: "", h1Color: "", h1ColorDark: "", h2Color: "", h2ColorDark: "", bodyColor: "", bodyColorDark: "", linkColor: "", linkColorDark: "", cardBg: "", cardBgDark: "", cardBorder: "", cardBorderDark: "" } };

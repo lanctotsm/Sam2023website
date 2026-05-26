@@ -82,22 +82,6 @@ export const defaultPageStyles: PageStyles = {
     resume: { background: { ...defaultPageBackground }, style: { ...defaultPageStyle } },
 };
 
-// Keep legacy types for backward compatibility
-export type PageBackgrounds = {
-    home: PageBackgroundConfig;
-    albums: PageBackgroundConfig;
-    posts: PageBackgroundConfig;
-    resume: PageBackgroundConfig;
-};
-
-export const defaultPageBackgrounds: PageBackgrounds = {
-    home: { ...defaultPageBackground },
-    albums: { ...defaultPageBackground },
-    posts: { ...defaultPageBackground },
-    resume: { ...defaultPageBackground },
-};
-
-
 /** Heading + paragraphs — used by About, Journey, and custom sections. */
 export type TextBlockSettings = {
     heading: string;
@@ -544,23 +528,6 @@ function sanitizePageBg(raw: unknown): PageBackgroundConfig {
         gradientFrom: typeof r.gradientFrom === "string" ? r.gradientFrom : d.gradientFrom,
         gradientTo: typeof r.gradientTo === "string" ? r.gradientTo : d.gradientTo,
     };
-}
-
-export function parsePageBackgrounds(raw: string | null): PageBackgrounds {
-    if (!raw) return { ...defaultPageBackgrounds };
-    try {
-        const parsed = JSON.parse(raw);
-        if (!parsed || typeof parsed !== "object") return { ...defaultPageBackgrounds };
-        const p = parsed as Record<string, unknown>;
-        return {
-            home: sanitizePageBg(p.home),
-            albums: sanitizePageBg(p.albums),
-            posts: sanitizePageBg(p.posts),
-            resume: sanitizePageBg(p.resume),
-        };
-    } catch {
-        return { ...defaultPageBackgrounds };
-    }
 }
 
 function str(val: unknown, fallback: string): string {

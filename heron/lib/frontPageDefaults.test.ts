@@ -1,113 +1,14 @@
 import { describe, it, expect } from "vitest";
 import {
-    parsePageBackgrounds,
     parsePageStyles,
     parseFrontPageConfig,
     defaultPageBackground,
-    defaultPageBackgrounds,
     defaultPageStyle,
     defaultPageStyles,
     defaultFrontPage,
     DEFAULT_SECTION_ORDER,
     customSectionKey,
 } from "./frontPageDefaults";
-
-describe("parsePageBackgrounds", () => {
-    it("returns defaults when raw is null", () => {
-        const result = parsePageBackgrounds(null);
-        expect(result).toEqual(defaultPageBackgrounds);
-    });
-
-    it("returns defaults when raw is empty string", () => {
-        const result = parsePageBackgrounds("");
-        expect(result).toEqual(defaultPageBackgrounds);
-    });
-
-    it("returns defaults when raw is invalid JSON", () => {
-        const result = parsePageBackgrounds("NOT JSON {{{");
-        expect(result).toEqual(defaultPageBackgrounds);
-    });
-
-    it("returns defaults when raw is a valid JSON non-object", () => {
-        const result = parsePageBackgrounds(JSON.stringify([1, 2, 3]));
-        expect(result).toEqual(defaultPageBackgrounds);
-    });
-
-    it("parses a fully specified valid config", () => {
-        const input = {
-            home: { backgroundType: "image", backgroundImage: "https://example.com/bg.jpg", backgroundColor: "", gradientFrom: "", gradientTo: "" },
-            albums: { backgroundType: "color", backgroundColor: "#ff0000", backgroundImage: "", gradientFrom: "", gradientTo: "" },
-            posts: { backgroundType: "gradient", gradientFrom: "#aaa", gradientTo: "#bbb", backgroundColor: "", backgroundImage: "" },
-            resume: { backgroundType: "none", backgroundColor: "", backgroundImage: "", gradientFrom: "", gradientTo: "" },
-        };
-        const result = parsePageBackgrounds(JSON.stringify(input));
-        expect(result.home.backgroundType).toBe("image");
-        expect(result.home.backgroundImage).toBe("https://example.com/bg.jpg");
-        expect(result.albums.backgroundType).toBe("color");
-        expect(result.albums.backgroundColor).toBe("#ff0000");
-        expect(result.posts.backgroundType).toBe("gradient");
-        expect(result.posts.gradientFrom).toBe("#aaa");
-        expect(result.resume.backgroundType).toBe("none");
-    });
-
-    it("merges partial configs with defaults — missing pages fall back to default", () => {
-        const input = {
-            home: { backgroundType: "color", backgroundColor: "#123456", backgroundImage: "", gradientFrom: "", gradientTo: "" },
-        };
-        const result = parsePageBackgrounds(JSON.stringify(input));
-        expect(result.home.backgroundType).toBe("color");
-        expect(result.home.backgroundColor).toBe("#123456");
-        expect(result.albums).toEqual(defaultPageBackground);
-        expect(result.posts).toEqual(defaultPageBackground);
-        expect(result.resume).toEqual(defaultPageBackground);
-    });
-
-    it("sanitizes invalid backgroundType to 'none'", () => {
-        const input = {
-            home: { backgroundType: "INVALID_TYPE", backgroundColor: "", backgroundImage: "", gradientFrom: "", gradientTo: "" },
-            albums: { backgroundType: null, backgroundColor: "", backgroundImage: "", gradientFrom: "", gradientTo: "" },
-            posts: defaultPageBackground,
-            resume: defaultPageBackground,
-        };
-        const result = parsePageBackgrounds(JSON.stringify(input));
-        expect(result.home.backgroundType).toBe("none");
-        expect(result.albums.backgroundType).toBe("none");
-    });
-
-    it("sanitizes non-string field values to empty string", () => {
-        const input = {
-            home: { backgroundType: "image", backgroundImage: 12345, backgroundColor: null, gradientFrom: {}, gradientTo: [] },
-            albums: defaultPageBackground,
-            posts: defaultPageBackground,
-            resume: defaultPageBackground,
-        };
-        const result = parsePageBackgrounds(JSON.stringify(input));
-        expect(result.home.backgroundImage).toBe("");
-        expect(result.home.backgroundColor).toBe("");
-        expect(result.home.gradientFrom).toBe("");
-        expect(result.home.gradientTo).toBe("");
-    });
-
-    it("handles an empty-object page entry by returning defaults for that page", () => {
-        const input = {
-            home: {},
-            albums: defaultPageBackground,
-            posts: defaultPageBackground,
-            resume: defaultPageBackground,
-        };
-        const result = parsePageBackgrounds(JSON.stringify(input));
-        expect(result.home).toEqual(defaultPageBackground);
-    });
-
-    it("accepts all valid backgroundType values", () => {
-        const types = ["none", "gradient", "color", "image"] as const;
-        for (const t of types) {
-            const input = { home: { ...defaultPageBackground, backgroundType: t }, albums: defaultPageBackground, posts: defaultPageBackground, resume: defaultPageBackground };
-            const result = parsePageBackgrounds(JSON.stringify(input));
-            expect(result.home.backgroundType).toBe(t);
-        }
-    });
-});
 
 describe("parsePageStyles", () => {
     it("returns defaults when raw is null", () => {
