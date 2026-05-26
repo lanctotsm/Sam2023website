@@ -6,8 +6,8 @@ const ALLOWED_SETTING_KEYS = new Set([
     "site_title",
     "footer_text",
     "front_page",
-    "background_image",
-    "page_backgrounds",
+    "background_image", // legacy; hero bg now lives in front_page
+    "page_backgrounds", // legacy; superseded by page_styles
     "page_styles",
     "nav_styles",
 ]);

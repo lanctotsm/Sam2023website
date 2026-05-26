@@ -1,16 +1,21 @@
 "use client";
 
-import type { FrontPageSettings, BuiltInSectionId, CustomSection } from "@/lib/frontPageDefaults";
+import type {
+    FrontPageSettings,
+    BuiltinTextBlockId,
+    CustomSection,
+    TextBlockSettings,
+} from "@/lib/frontPageDefaults";
 import {
-    BUILT_IN_SECTION_IDS,
     BUILT_IN_SECTION_LABELS,
-    createCustomSection,
     customSectionKey,
-    getSectionDisplayLabel,
+    isBuiltinTextBlockId,
     parseCustomSectionKey,
 } from "@/lib/frontPageDefaults";
 import IconPicker from "@/components/IconPicker";
 import LucideIcon from "@/components/LucideIcon";
+import HomePageSectionOrderPanel from "@/components/admin/HomePageSectionOrderPanel";
+import ParagraphFieldsEditor from "@/components/admin/ParagraphFieldsEditor";
 
 type Props = {
     config: FrontPageSettings;
@@ -39,12 +44,10 @@ export default function HomePageSettingsTab({
 }: Props) {
     const updateHero = (patch: Partial<FrontPageSettings["hero"]>) =>
         setConfig((c) => ({ ...c, hero: { ...c.hero, ...patch } }));
-    const updateAbout = (patch: Partial<FrontPageSettings["about"]>) =>
-        setConfig((c) => ({ ...c, about: { ...c.about, ...patch } }));
+    const updateTextBlock = (id: BuiltinTextBlockId, patch: Partial<TextBlockSettings>) =>
+        setConfig((c) => ({ ...c, [id]: { ...c[id], ...patch } }));
     const updateCards = (patch: Partial<FrontPageSettings["cards"]>) =>
         setConfig((c) => ({ ...c, cards: { ...c.cards, ...patch } }));
-    const updateJourney = (patch: Partial<FrontPageSettings["journey"]>) =>
-        setConfig((c) => ({ ...c, journey: { ...c.journey, ...patch } }));
     const updateInterests = (patch: Partial<FrontPageSettings["interests"]>) =>
         setConfig((c) => ({ ...c, interests: { ...c.interests, ...patch } }));
     const updateContact = (patch: Partial<FrontPageSettings["contact"]>) =>
@@ -56,33 +59,6 @@ export default function HomePageSettingsTab({
             customSections: c.customSections.map((s) => (s.id === id ? { ...s, ...patch } : s)),
         }));
 
-    const setSectionOrder = (order: string[]) => setConfig((c) => ({ ...c, sectionOrder: order }));
-
-    const removeFromPage = (key: string) =>
-        setSectionOrder(config.sectionOrder.filter((k) => k !== key));
-
-    const moveSection = (index: number, direction: -1 | 1) => {
-        const next = [...config.sectionOrder];
-        const target = index + direction;
-        if (target < 0 || target >= next.length) return;
-        [next[index], next[target]] = [next[target], next[index]];
-        setSectionOrder(next);
-    };
-
-    const addBuiltInSection = (id: BuiltInSectionId) => {
-        if (config.sectionOrder.includes(id)) return;
-        setSectionOrder([...config.sectionOrder, id]);
-    };
-
-    const addCustomSection = () => {
-        const section = createCustomSection();
-        setConfig((c) => ({
-            ...c,
-            customSections: [...c.customSections, section],
-            sectionOrder: [...c.sectionOrder, customSectionKey(section.id)],
-        }));
-    };
-
     const removeCustomSection = (id: string) => {
         const key = customSectionKey(id);
         setConfig((c) => ({
@@ -92,7 +68,38 @@ export default function HomePageSettingsTab({
         }));
     };
 
-    const availableBuiltIns = BUILT_IN_SECTION_IDS.filter((id) => !config.sectionOrder.includes(id));
+    const paragraphEditorProps = {
+        labelClass,
+        textareaClass,
+        btnDanger,
+        btnAdd,
+    };
+
+    const renderBuiltinTextBlockEditor = (id: BuiltinTextBlockId) => {
+        const block = config[id];
+        return (
+            <section key={id} className={sectionClass}>
+                <h2 className="mb-4 text-lg font-semibold text-chestnut dark:text-dark-text">
+                    {BUILT_IN_SECTION_LABELS[id]}
+                </h2>
+                <div className="grid gap-4">
+                    <div>
+                        <label className={labelClass}>Section Heading</label>
+                        <input
+                            className={inputClass}
+                            value={block.heading}
+                            onChange={(e) => updateTextBlock(id, { heading: e.target.value })}
+                        />
+                    </div>
+                    <ParagraphFieldsEditor
+                        paragraphs={block.paragraphs}
+                        onChange={(paragraphs) => updateTextBlock(id, { paragraphs })}
+                        {...paragraphEditorProps}
+                    />
+                </div>
+            </section>
+        );
+    };
 
     const updateCardItem = (index: number, patch: Partial<FrontPageSettings["cards"]["items"][0]>) =>
         setConfig((c) => ({
@@ -154,41 +161,11 @@ export default function HomePageSettingsTab({
             contact: { ...c.contact, links: c.contact.links.filter((_, i) => i !== index) },
         }));
 
-    const renderParagraphEditor = (
-        paragraphs: string[],
-        onChange: (paragraphs: string[]) => void
-    ) => (
-        <>
-            {paragraphs.map((p, i) => (
-                <div key={i} className="relative">
-                    <label className={labelClass}>Paragraph {i + 1}</label>
-                    <textarea
-                        className={textareaClass}
-                        value={p}
-                        onChange={(e) => {
-                            const next = [...paragraphs];
-                            next[i] = e.target.value;
-                            onChange(next);
-                        }}
-                    />
-                    {paragraphs.length > 1 && (
-                        <button
-                            type="button"
-                            onClick={() => onChange(paragraphs.filter((_, j) => j !== i))}
-                            className={`mt-1 ${btnDanger}`}
-                        >
-                            Remove
-                        </button>
-                    )}
-                </div>
-            ))}
-            <button type="button" onClick={() => onChange([...paragraphs, ""])} className={btnAdd}>
-                + Add Paragraph
-            </button>
-        </>
-    );
-
     const renderSectionEditor = (key: string) => {
+        if (isBuiltinTextBlockId(key)) {
+            return renderBuiltinTextBlockEditor(key);
+        }
+
         const customId = parseCustomSectionKey(key);
         if (customId) {
             const section = config.customSections.find((s) => s.id === customId);
@@ -212,9 +189,11 @@ export default function HomePageSettingsTab({
                                 onChange={(e) => updateCustomSection(customId, { heading: e.target.value })}
                             />
                         </div>
-                        {renderParagraphEditor(section.paragraphs, (paragraphs) =>
-                            updateCustomSection(customId, { paragraphs })
-                        )}
+                        <ParagraphFieldsEditor
+                            paragraphs={section.paragraphs}
+                            onChange={(paragraphs) => updateCustomSection(customId, { paragraphs })}
+                            {...paragraphEditorProps}
+                        />
                     </div>
                 </section>
             );
@@ -354,25 +333,6 @@ export default function HomePageSettingsTab({
                         </div>
                     </section>
                 );
-            case "about":
-                return (
-                    <section key="about" className={sectionClass}>
-                        <h2 className="mb-4 text-lg font-semibold text-chestnut dark:text-dark-text">About</h2>
-                        <div className="grid gap-4">
-                            <div>
-                                <label className={labelClass}>Section Heading</label>
-                                <input
-                                    className={inputClass}
-                                    value={config.about.heading}
-                                    onChange={(e) => updateAbout({ heading: e.target.value })}
-                                />
-                            </div>
-                            {renderParagraphEditor(config.about.paragraphs, (paragraphs) =>
-                                updateAbout({ paragraphs })
-                            )}
-                        </div>
-                    </section>
-                );
             case "cards":
                 return (
                     <section key="cards" className={sectionClass}>
@@ -430,25 +390,6 @@ export default function HomePageSettingsTab({
                             <button type="button" onClick={addCardItem} className={btnAdd}>
                                 + Add Card
                             </button>
-                        </div>
-                    </section>
-                );
-            case "journey":
-                return (
-                    <section key="journey" className={sectionClass}>
-                        <h2 className="mb-4 text-lg font-semibold text-chestnut dark:text-dark-text">Journey</h2>
-                        <div className="grid gap-4">
-                            <div>
-                                <label className={labelClass}>Section Heading</label>
-                                <input
-                                    className={inputClass}
-                                    value={config.journey.heading}
-                                    onChange={(e) => updateJourney({ heading: e.target.value })}
-                                />
-                            </div>
-                            {renderParagraphEditor(config.journey.paragraphs, (paragraphs) =>
-                                updateJourney({ paragraphs })
-                            )}
                         </div>
                     </section>
                 );
@@ -572,78 +513,14 @@ export default function HomePageSettingsTab({
 
     return (
         <>
-            <section className={sectionClass}>
-                <h2 className="mb-2 text-lg font-semibold text-chestnut dark:text-dark-text">Homepage sections</h2>
-                <p className="mb-4 text-sm text-olive-dark dark:text-dark-muted">
-                    Choose which sections appear on the home page and their order. Removing a section hides it but
-                    keeps its content if you add it back later.
-                </p>
-                {config.sectionOrder.length === 0 ? (
-                    <p className="text-sm text-olive dark:text-dark-muted">No sections on the page. Add one below.</p>
-                ) : (
-                    <ul className="mb-4 space-y-2">
-                        {config.sectionOrder.map((key, index) => (
-                            <li
-                                key={key}
-                                className="flex flex-wrap items-center gap-2 rounded-lg border border-desert-tan-dark/50 bg-white/60 px-3 py-2 dark:border-dark-muted/50 dark:bg-dark-bg/40"
-                            >
-                                <span className="min-w-0 flex-1 text-sm font-medium text-chestnut-dark dark:text-dark-text">
-                                    {getSectionDisplayLabel(key, config)}
-                                </span>
-                                <button
-                                    type="button"
-                                    disabled={index === 0}
-                                    onClick={() => moveSection(index, -1)}
-                                    className={btnAdd}
-                                    aria-label="Move up"
-                                >
-                                    ↑
-                                </button>
-                                <button
-                                    type="button"
-                                    disabled={index === config.sectionOrder.length - 1}
-                                    onClick={() => moveSection(index, 1)}
-                                    className={btnAdd}
-                                    aria-label="Move down"
-                                >
-                                    ↓
-                                </button>
-                                <button type="button" onClick={() => removeFromPage(key)} className={btnDanger}>
-                                    Remove
-                                </button>
-                            </li>
-                        ))}
-                    </ul>
-                )}
-                <div className="flex flex-wrap items-center gap-2">
-                    {availableBuiltIns.length > 0 && (
-                        <select
-                            className={inputClass}
-                            defaultValue=""
-                            onChange={(e) => {
-                                const id = e.target.value as BuiltInSectionId;
-                                if (id) {
-                                    addBuiltInSection(id);
-                                    e.target.value = "";
-                                }
-                            }}
-                        >
-                            <option value="" disabled>
-                                Add section…
-                            </option>
-                            {availableBuiltIns.map((id) => (
-                                <option key={id} value={id}>
-                                    {BUILT_IN_SECTION_LABELS[id]}
-                                </option>
-                            ))}
-                        </select>
-                    )}
-                    <button type="button" onClick={addCustomSection} className={btnAdd}>
-                        + Custom text block
-                    </button>
-                </div>
-            </section>
-
+            <HomePageSectionOrderPanel
+                config={config}
+                setConfig={setConfig}
+                sectionClass={sectionClass}
+                inputClass={inputClass}
+                btnAdd={btnAdd}
+                btnDanger={btnDanger}
+            />
             {config.sectionOrder.map((key) => renderSectionEditor(key))}
         </>
     );

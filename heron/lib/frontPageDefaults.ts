@@ -98,10 +98,13 @@ export const defaultPageBackgrounds: PageBackgrounds = {
 };
 
 
-export type AboutSettings = {
+/** Heading + paragraphs — used by About, Journey, and custom sections. */
+export type TextBlockSettings = {
     heading: string;
     paragraphs: string[];
 };
+
+export type AboutSettings = TextBlockSettings;
 
 export type CardItem = {
     icon: string;
@@ -115,10 +118,14 @@ export type CardsSettings = {
     items: CardItem[];
 };
 
-export type JourneySettings = {
-    heading: string;
-    paragraphs: string[];
-};
+export type JourneySettings = TextBlockSettings;
+
+export const BUILTIN_TEXT_BLOCK_IDS = ["about", "journey"] as const;
+export type BuiltinTextBlockId = (typeof BUILTIN_TEXT_BLOCK_IDS)[number];
+
+export function isBuiltinTextBlockId(id: string): id is BuiltinTextBlockId {
+    return (BUILTIN_TEXT_BLOCK_IDS as readonly string[]).includes(id);
+}
 
 export type InterestItem = {
     icon: string;
@@ -164,12 +171,8 @@ export const BUILT_IN_SECTION_LABELS: Record<BuiltInSectionId, string> = {
     contact: "Contact",
 };
 
-/** User-added text block (heading + paragraphs). Referenced in sectionOrder as `custom:<id>`. */
-export type CustomSection = {
-    id: string;
-    heading: string;
-    paragraphs: string[];
-};
+/** User-added text block. Referenced in sectionOrder as `custom:<id>`. */
+export type CustomSection = TextBlockSettings & { id: string };
 
 export type FrontPageSettings = {
     hero: HeroSettings;
@@ -183,7 +186,8 @@ export type FrontPageSettings = {
     customSections: CustomSection[];
 };
 
-export const DEFAULT_SECTION_ORDER: string[] = [...BUILT_IN_SECTION_IDS];
+/** Default home page section order (all built-in sections). */
+export const DEFAULT_SECTION_ORDER = [...BUILT_IN_SECTION_IDS] as string[];
 
 export function customSectionKey(id: string): string {
     return `custom:${id}`;

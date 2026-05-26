@@ -1,7 +1,7 @@
 "use client";
 
 import type { FrontPageSettings } from "@/lib/frontPageDefaults";
-import { parseCustomSectionKey } from "@/lib/frontPageDefaults";
+import { isBuiltinTextBlockId, parseCustomSectionKey } from "@/lib/frontPageDefaults";
 import LucideIcon from "@/components/LucideIcon";
 
 type Props = {
@@ -70,7 +70,7 @@ function TextBlockSection({
 }
 
 export default function FrontPageContent({ config }: Props) {
-    const { hero, about, cards, journey, interests, contact, sectionOrder, customSections } = config;
+    const { hero, cards, interests, contact, sectionOrder, customSections } = config;
     const customBg = hasCustomBackground(hero);
     const gridCols =
         cards.columns === 1
@@ -118,7 +118,13 @@ export default function FrontPageContent({ config }: Props) {
                     </section>
                 );
             case "about":
-                return <TextBlockSection key="about" heading={about.heading} paragraphs={about.paragraphs} />;
+            case "journey": {
+                if (!isBuiltinTextBlockId(key)) return null;
+                const block = config[key];
+                return (
+                    <TextBlockSection key={key} heading={block.heading} paragraphs={block.paragraphs} />
+                );
+            }
             case "cards":
                 return (
                     <section key="cards">
@@ -147,10 +153,6 @@ export default function FrontPageContent({ config }: Props) {
                             ))}
                         </div>
                     </section>
-                );
-            case "journey":
-                return (
-                    <TextBlockSection key="journey" heading={journey.heading} paragraphs={journey.paragraphs} />
                 );
             case "interests":
                 return (
