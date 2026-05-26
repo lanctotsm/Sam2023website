@@ -2,10 +2,14 @@ import { describe, it, expect } from "vitest";
 import {
     parsePageBackgrounds,
     parsePageStyles,
+    parseFrontPageConfig,
     defaultPageBackground,
     defaultPageBackgrounds,
     defaultPageStyle,
     defaultPageStyles,
+    defaultFrontPage,
+    DEFAULT_SECTION_ORDER,
+    customSectionKey,
 } from "./frontPageDefaults";
 
 describe("parsePageBackgrounds", () => {
@@ -211,5 +215,39 @@ describe("parsePageStyles", () => {
         expect(result.home.style.bodyFont).toBe("DM Sans");
         expect(result.home.style.h1Color).toBe("#ff0000");
         expect(result.home.style.h1ColorDark).toBe("#ffffff");
+    });
+});
+
+describe("parseFrontPageConfig sectionOrder", () => {
+    it("returns default section order when legacy JSON has no sectionOrder", () => {
+        const legacy = { ...defaultFrontPage };
+        delete (legacy as { sectionOrder?: string[] }).sectionOrder;
+        delete (legacy as { customSections?: unknown[] }).customSections;
+        const result = parseFrontPageConfig(JSON.stringify(legacy));
+        expect(result.sectionOrder).toEqual(DEFAULT_SECTION_ORDER);
+        expect(result.customSections).toEqual([]);
+    });
+
+    it("omits journey when not in sectionOrder", () => {
+        const order = DEFAULT_SECTION_ORDER.filter((id) => id !== "journey");
+        const result = parseFrontPageConfig(
+            JSON.stringify({ ...defaultFrontPage, sectionOrder: order })
+        );
+        expect(result.sectionOrder).not.toContain("journey");
+        expect(result.journey.heading).toBe(defaultFrontPage.journey.heading);
+    });
+
+    it("parses custom sections referenced in sectionOrder", () => {
+        const custom = { id: "abc123", heading: "Side project", paragraphs: ["Line one"] };
+        const result = parseFrontPageConfig(
+            JSON.stringify({
+                ...defaultFrontPage,
+                sectionOrder: ["hero", customSectionKey("abc123"), "contact"],
+                customSections: [custom],
+            })
+        );
+        expect(result.sectionOrder).toEqual(["hero", "custom:abc123", "contact"]);
+        expect(result.customSections).toHaveLength(1);
+        expect(result.customSections[0].heading).toBe("Side project");
     });
 });

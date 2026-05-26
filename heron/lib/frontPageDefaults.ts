@@ -143,6 +143,34 @@ export type ContactSettings = {
     links: ContactLink[];
 };
 
+/** Built-in homepage section identifiers stored in `sectionOrder`. */
+export const BUILT_IN_SECTION_IDS = [
+    "hero",
+    "about",
+    "cards",
+    "journey",
+    "interests",
+    "contact",
+] as const;
+
+export type BuiltInSectionId = (typeof BUILT_IN_SECTION_IDS)[number];
+
+export const BUILT_IN_SECTION_LABELS: Record<BuiltInSectionId, string> = {
+    hero: "Hero",
+    about: "About",
+    cards: "Cards",
+    journey: "Journey",
+    interests: "Interests",
+    contact: "Contact",
+};
+
+/** User-added text block (heading + paragraphs). Referenced in sectionOrder as `custom:<id>`. */
+export type CustomSection = {
+    id: string;
+    heading: string;
+    paragraphs: string[];
+};
+
 export type FrontPageSettings = {
     hero: HeroSettings;
     about: AboutSettings;
@@ -150,7 +178,44 @@ export type FrontPageSettings = {
     journey: JourneySettings;
     interests: InterestsSettings;
     contact: ContactSettings;
+    /** Ordered keys: built-in id or `custom:<uuid>`. Controls which sections appear on the home page. */
+    sectionOrder: string[];
+    customSections: CustomSection[];
 };
+
+export const DEFAULT_SECTION_ORDER: string[] = [...BUILT_IN_SECTION_IDS];
+
+export function customSectionKey(id: string): string {
+    return `custom:${id}`;
+}
+
+export function parseCustomSectionKey(key: string): string | null {
+    if (!key.startsWith("custom:")) return null;
+    const id = key.slice("custom:".length);
+    return id.length > 0 ? id : null;
+}
+
+export function isBuiltInSectionId(id: string): id is BuiltInSectionId {
+    return (BUILT_IN_SECTION_IDS as readonly string[]).includes(id);
+}
+
+export function createCustomSection(heading = "New Section"): CustomSection {
+    const id =
+        typeof crypto !== "undefined" && crypto.randomUUID
+            ? crypto.randomUUID()
+            : `s${Date.now()}`;
+    return { id, heading, paragraphs: [""] };
+}
+
+export function getSectionDisplayLabel(key: string, config: FrontPageSettings): string {
+    if (isBuiltInSectionId(key)) return BUILT_IN_SECTION_LABELS[key];
+    const customId = parseCustomSectionKey(key);
+    if (customId) {
+        const custom = config.customSections.find((s) => s.id === customId);
+        return custom?.heading?.trim() || "Custom section";
+    }
+    return key;
+}
 
 export const defaultFrontPage: FrontPageSettings = {
     hero: {
@@ -229,7 +294,9 @@ export const defaultFrontPage: FrontPageSettings = {
             },
             { icon: "FileText", label: "Resume", url: "/resume" }
         ]
-    }
+    },
+    sectionOrder: [...DEFAULT_SECTION_ORDER],
+    customSections: [],
 };
 
 /**
@@ -300,6 +367,44 @@ function sanitizeInterestItems(
         }
     }
     return items.length > 0 ? items : fallback;
+}
+
+function sanitizeCustomSections(value: unknown): CustomSection[] {
+    if (!Array.isArray(value)) return [];
+    const sections: CustomSection[] = [];
+    for (const item of value) {
+        if (!item || typeof item !== "object") continue;
+        const r = item as Record<string, unknown>;
+        const id = typeof r.id === "string" && r.id.length > 0 ? r.id : null;
+        if (!id) continue;
+        sections.push({
+            id,
+            heading: typeof r.heading === "string" ? r.heading : "",
+            paragraphs: sanitizeStringArray(r.paragraphs, [""]),
+        });
+    }
+    return sections;
+}
+
+function sanitizeSectionOrder(
+    value: unknown,
+    customSections: CustomSection[]
+): string[] {
+    const customIds = new Set(customSections.map((s) => s.id));
+    if (!Array.isArray(value)) return [...DEFAULT_SECTION_ORDER];
+    const order: string[] = [];
+    for (const entry of value) {
+        if (typeof entry !== "string" || entry.length === 0) continue;
+        if (isBuiltInSectionId(entry)) {
+            if (!order.includes(entry)) order.push(entry);
+            continue;
+        }
+        const customId = parseCustomSectionKey(entry);
+        if (customId && customIds.has(customId) && !order.includes(entry)) {
+            order.push(entry);
+        }
+    }
+    return order.length > 0 ? order : [...DEFAULT_SECTION_ORDER];
 }
 
 function sanitizeContactLinks(
@@ -402,6 +507,9 @@ export function parseFrontPageConfig(raw: string | null): FrontPageSettings {
             ),
         };
 
+        const customSections = sanitizeCustomSections(root.customSections);
+        const sectionOrder = sanitizeSectionOrder(root.sectionOrder, customSections);
+
         return {
             hero,
             about,
@@ -409,6 +517,8 @@ export function parseFrontPageConfig(raw: string | null): FrontPageSettings {
             journey,
             interests,
             contact,
+            sectionOrder,
+            customSections,
         };
     } catch {
         return defaultFrontPage;
