@@ -1,13 +1,13 @@
 "use client";
 
-import type { FrontPageSettings, HomeSectionType } from "@/lib/frontPageDefaults";
+import type { FrontPageSettings, HomeSectionTemplateId } from "@/lib/frontPageDefaults";
 import {
     createHomeSection,
     createTextBlockSection,
     getSectionDisplayLabel,
-    HOME_SECTION_TYPES,
-    SECTION_TYPE_LABELS,
+    HOME_SECTION_TEMPLATE_IDS,
 } from "@/lib/frontPageDefaults";
+import { HOME_SECTION_REGISTRY } from "@/components/home/sectionRegistry";
 
 type Props = {
     config: FrontPageSettings;
@@ -45,8 +45,8 @@ export default function HomePageSectionOrderPanel({
         setSectionOrder([...config.sectionOrder, id]);
     };
 
-    const addNewSection = (type: HomeSectionType) => {
-        const section = createHomeSection(type);
+    const addNewSection = (templateId: HomeSectionTemplateId) => {
+        const section = createHomeSection(templateId);
         setConfig((c) => ({
             ...c,
             sections: [...c.sections, section],
@@ -69,8 +69,8 @@ export default function HomePageSectionOrderPanel({
         <section className={sectionClass}>
             <h2 className="mb-2 text-lg font-semibold text-chestnut dark:text-dark-text">Homepage sections</h2>
             <p className="mb-4 text-sm text-olive-dark dark:text-dark-muted">
-                Choose which sections appear on the home page and their order. Removing a section hides it but
-                keeps its content if you add it back later.
+                Sections are rows in the database, each using a template for layout and fields. Reorder or hide
+                sections without losing their content.
             </p>
             {config.sectionOrder.length === 0 ? (
                 <p className="text-sm text-olive dark:text-dark-muted">No sections on the page. Add one below.</p>
@@ -79,6 +79,7 @@ export default function HomePageSectionOrderPanel({
                     {config.sectionOrder.map((id, index) => {
                         const section = config.sections.find((s) => s.id === id);
                         if (!section) return null;
+                        const template = HOME_SECTION_REGISTRY[section.templateId];
                         return (
                             <li
                                 key={id}
@@ -86,6 +87,9 @@ export default function HomePageSectionOrderPanel({
                             >
                                 <span className="min-w-0 flex-1 text-sm font-medium text-chestnut-dark dark:text-dark-text">
                                     {getSectionDisplayLabel(section)}
+                                    <span className="ml-2 text-xs font-normal text-olive dark:text-dark-muted">
+                                        ({template?.label ?? section.templateId})
+                                    </span>
                                 </span>
                                 <button
                                     type="button"
@@ -140,19 +144,19 @@ export default function HomePageSectionOrderPanel({
                     className={inputClass}
                     defaultValue=""
                     onChange={(e) => {
-                        const type = e.target.value as HomeSectionType;
-                        if (type) {
-                            addNewSection(type);
+                        const templateId = e.target.value as HomeSectionTemplateId;
+                        if (templateId) {
+                            addNewSection(templateId);
                             e.target.value = "";
                         }
                     }}
                 >
                     <option value="" disabled>
-                        Add new section type…
+                        Add from template…
                     </option>
-                    {HOME_SECTION_TYPES.map((type) => (
-                        <option key={type} value={type}>
-                            {SECTION_TYPE_LABELS[type]}
+                    {HOME_SECTION_TEMPLATE_IDS.map((templateId) => (
+                        <option key={templateId} value={templateId}>
+                            {HOME_SECTION_REGISTRY[templateId].label}
                         </option>
                     ))}
                 </select>

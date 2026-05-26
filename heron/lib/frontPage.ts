@@ -1,84 +1,40 @@
 /** Homepage sections stored as rows in `front_page` settings JSON. */
 
-export type HomeSectionType = "hero" | "textBlock" | "cards" | "interests" | "contact";
+import {
+    HOME_SECTION_TEMPLATE_DEFS,
+    HOME_SECTION_TEMPLATE_IDS,
+    getTemplateLabel,
+    resolveTemplateId,
+    sanitizeTemplateData,
+    type HomeSectionTemplateData,
+    type HomeSectionTemplateId,
+} from "./homeSectionTemplates";
 
-export const HOME_SECTION_TYPES: readonly HomeSectionType[] = [
-    "hero",
-    "textBlock",
-    "cards",
-    "interests",
-    "contact",
-];
+export type { HomeSectionTemplateId, HomeSectionTemplateData } from "./homeSectionTemplates";
+export type {
+    BannerSectionData,
+    TextBlockSectionData,
+    CardGridSectionData,
+    TagListSectionData,
+    ContactSectionData,
+    CardItem,
+    TagItem,
+    ContactLink,
+} from "./homeSectionTemplates/types";
 
-/** Labels for creating a new section of a given type (not tied to specific DB rows). */
-export const SECTION_TYPE_LABELS: Record<HomeSectionType, string> = {
-    hero: "Hero",
-    textBlock: "Text block",
-    cards: "Cards",
-    interests: "Interests",
-    contact: "Contact",
-};
+export { HOME_SECTION_TEMPLATE_IDS, HOME_SECTION_TEMPLATE_DEFS, getTemplateLabel } from "./homeSectionTemplates";
 
-export type HeroSectionData = {
-    title: string;
-    subtitle: string;
-    backgroundType: "gradient" | "color" | "image";
-    backgroundColor: string;
-    backgroundImage: string;
-    gradientFrom: string;
-    gradientTo: string;
-};
-
-export type TextBlockSectionData = {
-    heading: string;
-    paragraphs: string[];
-};
-
-export type CardItem = {
-    icon: string;
-    title: string;
-    text: string;
-};
-
-export type CardsSectionData = {
-    heading: string;
-    columns: number;
-    items: CardItem[];
-};
-
-export type InterestItem = {
-    icon: string;
+/** A single home page section row (template + data), stored in the DB. */
+export type HomeSection = {
+    id: string;
+    templateId: HomeSectionTemplateId;
     label: string;
+    removable?: boolean;
+    data: HomeSectionTemplateData;
 };
-
-export type InterestsSectionData = {
-    heading: string;
-    items: InterestItem[];
-};
-
-export type ContactLink = {
-    icon: string;
-    label: string;
-    url: string;
-};
-
-export type ContactSectionData = {
-    heading: string;
-    text: string;
-    showSocials: boolean;
-    links: ContactLink[];
-};
-
-export type HomeSection =
-    | { id: string; type: "hero"; label: string; removable?: boolean; data: HeroSectionData }
-    | { id: string; type: "textBlock"; label: string; removable?: boolean; data: TextBlockSectionData }
-    | { id: string; type: "cards"; label: string; removable?: boolean; data: CardsSectionData }
-    | { id: string; type: "interests"; label: string; removable?: boolean; data: InterestsSectionData }
-    | { id: string; type: "contact"; label: string; removable?: boolean; data: ContactSectionData };
 
 export type FrontPageSettings = {
     sections: HomeSection[];
-    /** Section ids currently visible on the home page, in display order. */
     sectionOrder: string[];
 };
 
@@ -90,27 +46,23 @@ export function newSectionId(): string {
 }
 
 export function getSectionDisplayLabel(section: HomeSection): string {
-    if (section.type === "textBlock") {
-        const heading = section.data.heading?.trim();
+    if (section.templateId === "text-block") {
+        const heading = (section.data as { heading?: string }).heading?.trim();
         if (heading) return heading;
     }
-    return section.label.trim() || SECTION_TYPE_LABELS[section.type];
+    return section.label.trim() || getTemplateLabel(section.templateId);
 }
 
 export function findSection(config: FrontPageSettings, id: string): HomeSection | undefined {
     return config.sections.find((s) => s.id === id);
 }
 
-export function sectionsById(config: FrontPageSettings): Map<string, HomeSection> {
-    return new Map(config.sections.map((s) => [s.id, s]));
-}
-
 function buildDefaultSections(): HomeSection[] {
     return [
         {
             id: "8f3e2c1a-4b5d-4e7f-8a9b-0c1d2e3f4a01",
-            type: "hero",
-            label: "Hero",
+            templateId: "banner",
+            label: "Top banner",
             data: {
                 title: "Samuel Lanctot",
                 subtitle:
@@ -124,7 +76,7 @@ function buildDefaultSections(): HomeSection[] {
         },
         {
             id: "8f3e2c1a-4b5d-4e7f-8a9b-0c1d2e3f4a02",
-            type: "textBlock",
+            templateId: "text-block",
             label: "About",
             data: {
                 heading: "About Me",
@@ -137,8 +89,8 @@ function buildDefaultSections(): HomeSection[] {
         },
         {
             id: "8f3e2c1a-4b5d-4e7f-8a9b-0c1d2e3f4a03",
-            type: "cards",
-            label: "Cards",
+            templateId: "card-grid",
+            label: "What I do",
             data: {
                 heading: "What I Do",
                 columns: 2,
@@ -168,7 +120,7 @@ function buildDefaultSections(): HomeSection[] {
         },
         {
             id: "8f3e2c1a-4b5d-4e7f-8a9b-0c1d2e3f4a04",
-            type: "textBlock",
+            templateId: "text-block",
             label: "Journey",
             data: {
                 heading: "My Journey",
@@ -180,7 +132,7 @@ function buildDefaultSections(): HomeSection[] {
         },
         {
             id: "8f3e2c1a-4b5d-4e7f-8a9b-0c1d2e3f4a05",
-            type: "interests",
+            templateId: "tag-list",
             label: "Interests",
             data: {
                 heading: "Beyond the Screen",
@@ -196,7 +148,7 @@ function buildDefaultSections(): HomeSection[] {
         },
         {
             id: "8f3e2c1a-4b5d-4e7f-8a9b-0c1d2e3f4a06",
-            type: "contact",
+            templateId: "contact",
             label: "Contact",
             data: {
                 heading: "Let's Connect",
@@ -219,255 +171,56 @@ function buildDefaultSections(): HomeSection[] {
 
 export function createDefaultFrontPageConfig(): FrontPageSettings {
     const sections = buildDefaultSections();
-    return {
-        sections,
-        sectionOrder: sections.map((s) => s.id),
-    };
+    return { sections, sectionOrder: sections.map((s) => s.id) };
 }
 
 export const defaultFrontPage = createDefaultFrontPageConfig();
 
-export function createTextBlockSection(heading = "New Section"): HomeSection {
+export function createHomeSection(templateId: HomeSectionTemplateId, label?: string): HomeSection {
+    const def = HOME_SECTION_TEMPLATE_DEFS[templateId];
     return {
         id: newSectionId(),
-        type: "textBlock",
-        label: heading,
+        templateId,
+        label: label ?? def.label,
         removable: true,
+        data: def.defaultData(),
+    };
+}
+
+export function createTextBlockSection(heading = "New Section"): HomeSection {
+    return {
+        ...createHomeSection("text-block", heading),
         data: { heading, paragraphs: [""] },
     };
 }
 
-export function emptySectionData(type: HomeSectionType): HomeSection["data"] {
-    switch (type) {
-        case "hero":
-            return {
-                title: "",
-                subtitle: "",
-                backgroundType: "gradient",
-                backgroundColor: "",
-                backgroundImage: "",
-                gradientFrom: "",
-                gradientTo: "",
-            };
-        case "textBlock":
-            return { heading: SECTION_TYPE_LABELS.textBlock, paragraphs: [""] };
-        case "cards":
-            return { heading: SECTION_TYPE_LABELS.cards, columns: 2, items: [] };
-        case "interests":
-            return { heading: SECTION_TYPE_LABELS.interests, items: [] };
-        case "contact":
-            return {
-                heading: SECTION_TYPE_LABELS.contact,
-                text: "",
-                showSocials: true,
-                links: [],
-            };
-    }
-}
-
-export function createHomeSection(type: HomeSectionType, label?: string): HomeSection {
-    const resolvedLabel = label ?? SECTION_TYPE_LABELS[type];
-    return {
-        id: newSectionId(),
-        type,
-        label: resolvedLabel,
-        removable: true,
-        data: emptySectionData(type),
-    } as HomeSection;
-}
-
-function isStringArray(value: unknown): value is string[] {
-    return Array.isArray(value) && value.every((item) => typeof item === "string");
-}
-
-function sanitizeStringArray(value: unknown, fallback: string[]): string[] {
-    return isStringArray(value) ? value : fallback;
-}
-
-function sanitizeCardItems(value: unknown, fallback: CardItem[]): CardItem[] {
-    if (!Array.isArray(value)) return fallback;
-    const items: CardItem[] = [];
-    for (const item of value) {
-        if (
-            item &&
-            typeof item === "object" &&
-            typeof (item as CardItem).icon === "string" &&
-            typeof (item as CardItem).title === "string" &&
-            typeof (item as CardItem).text === "string"
-        ) {
-            items.push({
-                icon: (item as CardItem).icon,
-                title: (item as CardItem).title,
-                text: (item as CardItem).text,
-            });
-        }
-    }
-    return items.length > 0 ? items : fallback;
-}
-
-function sanitizeInterestItems(value: unknown, fallback: InterestItem[]): InterestItem[] {
-    if (!Array.isArray(value)) return fallback;
-    const items: InterestItem[] = [];
-    for (const item of value) {
-        if (
-            item &&
-            typeof item === "object" &&
-            typeof (item as InterestItem).icon === "string" &&
-            typeof (item as InterestItem).label === "string"
-        ) {
-            items.push({
-                icon: (item as InterestItem).icon,
-                label: (item as InterestItem).label,
-            });
-        }
-    }
-    return items.length > 0 ? items : fallback;
-}
-
-function sanitizeContactLinks(value: unknown, fallback: ContactLink[]): ContactLink[] {
-    if (!Array.isArray(value)) return fallback;
-    const links: ContactLink[] = [];
-    for (const item of value) {
-        if (
-            item &&
-            typeof item === "object" &&
-            typeof (item as ContactLink).icon === "string" &&
-            typeof (item as ContactLink).label === "string" &&
-            typeof (item as ContactLink).url === "string"
-        ) {
-            links.push({
-                icon: (item as ContactLink).icon,
-                label: (item as ContactLink).label,
-                url: (item as ContactLink).url,
-            });
-        }
-    }
-    return links.length > 0 ? links : fallback;
-}
-
-function sanitizeHeroData(raw: unknown, fallback: HeroSectionData): HeroSectionData {
-    if (!raw || typeof raw !== "object") return { ...fallback };
-    const r = raw as Record<string, unknown>;
-    const bg =
-        r.backgroundType === "gradient" || r.backgroundType === "color" || r.backgroundType === "image"
-            ? r.backgroundType
-            : fallback.backgroundType;
-    return {
-        title: typeof r.title === "string" ? r.title : fallback.title,
-        subtitle: typeof r.subtitle === "string" ? r.subtitle : fallback.subtitle,
-        backgroundType: bg,
-        backgroundColor: typeof r.backgroundColor === "string" ? r.backgroundColor : fallback.backgroundColor,
-        backgroundImage: typeof r.backgroundImage === "string" ? r.backgroundImage : fallback.backgroundImage,
-        gradientFrom: typeof r.gradientFrom === "string" ? r.gradientFrom : fallback.gradientFrom,
-        gradientTo: typeof r.gradientTo === "string" ? r.gradientTo : fallback.gradientTo,
-    };
-}
-
-function sanitizeTextBlockData(raw: unknown, fallback: TextBlockSectionData): TextBlockSectionData {
-    if (!raw || typeof raw !== "object") return { ...fallback };
-    const r = raw as Record<string, unknown>;
-    return {
-        heading: typeof r.heading === "string" ? r.heading : fallback.heading,
-        paragraphs: sanitizeStringArray(r.paragraphs, fallback.paragraphs),
-    };
-}
-
-function sanitizeCardsData(raw: unknown, fallback: CardsSectionData): CardsSectionData {
-    if (!raw || typeof raw !== "object") return { ...fallback };
-    const r = raw as Record<string, unknown>;
-    const columns = typeof r.columns === "number" && r.columns >= 1 && r.columns <= 4 ? r.columns : fallback.columns;
-    return {
-        heading: typeof r.heading === "string" ? r.heading : fallback.heading,
-        columns,
-        items: sanitizeCardItems(r.items, fallback.items),
-    };
-}
-
-function sanitizeInterestsData(raw: unknown, fallback: InterestsSectionData): InterestsSectionData {
-    if (!raw || typeof raw !== "object") return { ...fallback };
-    const r = raw as Record<string, unknown>;
-    return {
-        heading: typeof r.heading === "string" ? r.heading : fallback.heading,
-        items: sanitizeInterestItems(r.items, fallback.items),
-    };
-}
-
-function sanitizeContactData(raw: unknown, fallback: ContactSectionData): ContactSectionData {
-    if (!raw || typeof raw !== "object") return { ...fallback };
-    const r = raw as Record<string, unknown>;
-    return {
-        heading: typeof r.heading === "string" ? r.heading : fallback.heading,
-        text: typeof r.text === "string" ? r.text : fallback.text,
-        showSocials: typeof r.showSocials === "boolean" ? r.showSocials : fallback.showSocials,
-        links: sanitizeContactLinks(r.links, fallback.links),
-    };
-}
-
-function defaultDataForType(type: HomeSectionType): HomeSection["data"] {
-    const template = defaultFrontPage.sections.find((s) => s.type === type);
+function defaultDataForTemplate(templateId: HomeSectionTemplateId): HomeSectionTemplateData {
+    const template = defaultFrontPage.sections.find((s) => s.templateId === templateId);
     if (template) return structuredClone(template.data);
-    return emptySectionData(type);
+    return HOME_SECTION_TEMPLATE_DEFS[templateId].defaultData();
 }
 
 function sanitizeHomeSection(raw: unknown, fallback?: HomeSection): HomeSection | null {
     if (!raw || typeof raw !== "object") return null;
     const r = raw as Record<string, unknown>;
     const id = typeof r.id === "string" && r.id.length > 0 ? r.id : null;
-    const type = r.type;
-    if (!id || typeof type !== "string" || !HOME_SECTION_TYPES.includes(type as HomeSectionType)) {
-        return null;
-    }
+    const templateId = resolveTemplateId(r.templateId ?? r.type);
+    if (!id || !templateId) return null;
+
     const label =
         typeof r.label === "string" && r.label.length > 0
             ? r.label
-            : (fallback?.label ?? SECTION_TYPE_LABELS[type as HomeSectionType]);
+            : (fallback?.label ?? getTemplateLabel(templateId));
     const removable = typeof r.removable === "boolean" ? r.removable : fallback?.removable;
-    const dataFallback = fallback?.data ?? defaultDataForType(type as HomeSectionType);
+    const dataFallback = fallback?.data ?? defaultDataForTemplate(templateId);
 
-    switch (type) {
-        case "hero":
-            return {
-                id,
-                type: "hero",
-                label,
-                removable,
-                data: sanitizeHeroData(r.data, dataFallback as HeroSectionData),
-            };
-        case "textBlock":
-            return {
-                id,
-                type: "textBlock",
-                label,
-                removable,
-                data: sanitizeTextBlockData(r.data, dataFallback as TextBlockSectionData),
-            };
-        case "cards":
-            return {
-                id,
-                type: "cards",
-                label,
-                removable,
-                data: sanitizeCardsData(r.data, dataFallback as CardsSectionData),
-            };
-        case "interests":
-            return {
-                id,
-                type: "interests",
-                label,
-                removable,
-                data: sanitizeInterestsData(r.data, dataFallback as InterestsSectionData),
-            };
-        case "contact":
-            return {
-                id,
-                type: "contact",
-                label,
-                removable,
-                data: sanitizeContactData(r.data, dataFallback as ContactSectionData),
-            };
-        default:
-            return null;
-    }
+    return {
+        id,
+        templateId,
+        label,
+        removable,
+        data: sanitizeTemplateData(templateId, r.data, dataFallback),
+    };
 }
 
 function sanitizeSections(value: unknown): HomeSection[] {
@@ -503,11 +256,9 @@ export function parseFrontPageConfig(raw: string | null): FrontPageSettings {
     try {
         const parsed = JSON.parse(raw);
         const root = parsed && typeof parsed === "object" ? (parsed as Record<string, unknown>) : {};
-
         if (!Array.isArray(root.sections)) {
             return createDefaultFrontPageConfig();
         }
-
         const sections = sanitizeSections(root.sections);
         const sectionIds = new Set(sections.map((s) => s.id));
         const sectionOrder = sanitizeSectionOrder(root.sectionOrder, sectionIds);
