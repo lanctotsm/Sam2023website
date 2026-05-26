@@ -1,5 +1,7 @@
 import { getDb } from "../lib/db";
-import { albums, adminUsers } from "../lib/db/schema";
+import { albums, adminUsers, settings } from "../lib/db/schema";
+import { getDefaultFrontPageJson } from "../lib/frontPage";
+import { eq } from "drizzle-orm";
 
 async function main() {
   console.log("Starting local seed...");
@@ -29,6 +31,20 @@ async function main() {
       title: "Sample Album",
       slug: "sample-album",
       description: "Starter album for local testing.",
+    });
+  }
+
+  // 3. Seed default home page sections
+  const existingFrontPage = await db
+    .select()
+    .from(settings)
+    .where(eq(settings.key, "front_page"))
+    .limit(1);
+  if (existingFrontPage.length === 0) {
+    console.log("Seeding front_page settings...");
+    await db.insert(settings).values({
+      key: "front_page",
+      value: getDefaultFrontPageJson(),
     });
   }
 

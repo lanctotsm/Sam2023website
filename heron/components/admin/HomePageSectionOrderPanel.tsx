@@ -1,13 +1,12 @@
 "use client";
 
-import type { FrontPageSettings, BuiltInSectionId } from "@/lib/frontPageDefaults";
+import type { FrontPageSettings, HomeSectionType } from "@/lib/frontPageDefaults";
 import {
-    BUILT_IN_SECTION_IDS,
-    BUILT_IN_SECTION_LABELS,
-    createCustomSection,
-    customSectionKey,
+    createHomeSection,
+    createTextBlockSection,
     getSectionDisplayLabel,
-    parseCustomSectionKey,
+    HOME_SECTION_TYPES,
+    SECTION_TYPE_LABELS,
 } from "@/lib/frontPageDefaults";
 
 type Props = {
@@ -29,17 +28,8 @@ export default function HomePageSectionOrderPanel({
 }: Props) {
     const setSectionOrder = (order: string[]) => setConfig((c) => ({ ...c, sectionOrder: order }));
 
-    const removeFromPage = (key: string) => {
-        const customId = parseCustomSectionKey(key);
-        if (customId) {
-            setConfig((c) => ({
-                ...c,
-                customSections: c.customSections.filter((s) => s.id !== customId),
-                sectionOrder: c.sectionOrder.filter((k) => k !== key),
-            }));
-            return;
-        }
-        setSectionOrder(config.sectionOrder.filter((k) => k !== key));
+    const removeFromPage = (id: string) => {
+        setSectionOrder(config.sectionOrder.filter((k) => k !== id));
     };
 
     const moveSection = (index: number, direction: -1 | 1) => {
@@ -50,21 +40,30 @@ export default function HomePageSectionOrderPanel({
         setSectionOrder(next);
     };
 
-    const addBuiltInSection = (id: BuiltInSectionId) => {
+    const addSectionToPage = (id: string) => {
         if (config.sectionOrder.includes(id)) return;
         setSectionOrder([...config.sectionOrder, id]);
     };
 
-    const addCustomSection = () => {
-        const section = createCustomSection();
+    const addNewSection = (type: HomeSectionType) => {
+        const section = createHomeSection(type);
         setConfig((c) => ({
             ...c,
-            customSections: [...c.customSections, section],
-            sectionOrder: [...c.sectionOrder, customSectionKey(section.id)],
+            sections: [...c.sections, section],
+            sectionOrder: [...c.sectionOrder, section.id],
         }));
     };
 
-    const availableBuiltIns = BUILT_IN_SECTION_IDS.filter((id) => !config.sectionOrder.includes(id));
+    const addTextBlock = () => {
+        const section = createTextBlockSection();
+        setConfig((c) => ({
+            ...c,
+            sections: [...c.sections, section],
+            sectionOrder: [...c.sectionOrder, section.id],
+        }));
+    };
+
+    const hiddenSections = config.sections.filter((s) => !config.sectionOrder.includes(s.id));
 
     return (
         <section className={sectionClass}>
@@ -77,64 +76,88 @@ export default function HomePageSectionOrderPanel({
                 <p className="text-sm text-olive dark:text-dark-muted">No sections on the page. Add one below.</p>
             ) : (
                 <ul className="mb-4 space-y-2">
-                    {config.sectionOrder.map((key, index) => (
-                        <li
-                            key={key}
-                            className="flex flex-wrap items-center gap-2 rounded-lg border border-desert-tan-dark/50 bg-white/60 px-3 py-2 dark:border-dark-muted/50 dark:bg-dark-bg/40"
-                        >
-                            <span className="min-w-0 flex-1 text-sm font-medium text-chestnut-dark dark:text-dark-text">
-                                {getSectionDisplayLabel(key, config)}
-                            </span>
-                            <button
-                                type="button"
-                                disabled={index === 0}
-                                onClick={() => moveSection(index, -1)}
-                                className={btnAdd}
-                                aria-label="Move up"
+                    {config.sectionOrder.map((id, index) => {
+                        const section = config.sections.find((s) => s.id === id);
+                        if (!section) return null;
+                        return (
+                            <li
+                                key={id}
+                                className="flex flex-wrap items-center gap-2 rounded-lg border border-desert-tan-dark/50 bg-white/60 px-3 py-2 dark:border-dark-muted/50 dark:bg-dark-bg/40"
                             >
-                                ↑
-                            </button>
-                            <button
-                                type="button"
-                                disabled={index === config.sectionOrder.length - 1}
-                                onClick={() => moveSection(index, 1)}
-                                className={btnAdd}
-                                aria-label="Move down"
-                            >
-                                ↓
-                            </button>
-                            <button type="button" onClick={() => removeFromPage(key)} className={btnDanger}>
-                                Remove
-                            </button>
-                        </li>
-                    ))}
+                                <span className="min-w-0 flex-1 text-sm font-medium text-chestnut-dark dark:text-dark-text">
+                                    {getSectionDisplayLabel(section)}
+                                </span>
+                                <button
+                                    type="button"
+                                    disabled={index === 0}
+                                    onClick={() => moveSection(index, -1)}
+                                    className={btnAdd}
+                                    aria-label="Move up"
+                                >
+                                    ↑
+                                </button>
+                                <button
+                                    type="button"
+                                    disabled={index === config.sectionOrder.length - 1}
+                                    onClick={() => moveSection(index, 1)}
+                                    className={btnAdd}
+                                    aria-label="Move down"
+                                >
+                                    ↓
+                                </button>
+                                <button type="button" onClick={() => removeFromPage(id)} className={btnDanger}>
+                                    Remove
+                                </button>
+                            </li>
+                        );
+                    })}
                 </ul>
             )}
             <div className="flex flex-wrap items-center gap-2">
-                {availableBuiltIns.length > 0 && (
+                {hiddenSections.length > 0 && (
                     <select
                         className={inputClass}
                         defaultValue=""
                         onChange={(e) => {
-                            const id = e.target.value as BuiltInSectionId;
+                            const id = e.target.value;
                             if (id) {
-                                addBuiltInSection(id);
+                                addSectionToPage(id);
                                 e.target.value = "";
                             }
                         }}
                     >
                         <option value="" disabled>
-                            Add section…
+                            Add existing section…
                         </option>
-                        {availableBuiltIns.map((id) => (
-                            <option key={id} value={id}>
-                                {BUILT_IN_SECTION_LABELS[id]}
+                        {hiddenSections.map((section) => (
+                            <option key={section.id} value={section.id}>
+                                {getSectionDisplayLabel(section)}
                             </option>
                         ))}
                     </select>
                 )}
-                <button type="button" onClick={addCustomSection} className={btnAdd}>
-                    + Custom text block
+                <select
+                    className={inputClass}
+                    defaultValue=""
+                    onChange={(e) => {
+                        const type = e.target.value as HomeSectionType;
+                        if (type) {
+                            addNewSection(type);
+                            e.target.value = "";
+                        }
+                    }}
+                >
+                    <option value="" disabled>
+                        Add new section type…
+                    </option>
+                    {HOME_SECTION_TYPES.map((type) => (
+                        <option key={type} value={type}>
+                            {SECTION_TYPE_LABELS[type]}
+                        </option>
+                    ))}
+                </select>
+                <button type="button" onClick={addTextBlock} className={btnAdd}>
+                    + Text block
                 </button>
             </div>
         </section>

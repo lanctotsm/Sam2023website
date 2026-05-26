@@ -2,16 +2,17 @@
 
 import type {
     FrontPageSettings,
-    BuiltinTextBlockId,
-    CustomSection,
-    TextBlockSettings,
+    HomeSection,
+    HeroSectionData,
+    TextBlockSectionData,
+    CardsSectionData,
+    InterestsSectionData,
+    ContactSectionData,
+    CardItem,
+    InterestItem,
+    ContactLink,
 } from "@/lib/frontPageDefaults";
-import {
-    BUILT_IN_SECTION_LABELS,
-    customSectionKey,
-    isBuiltinTextBlockId,
-    parseCustomSectionKey,
-} from "@/lib/frontPageDefaults";
+import { findSection, getSectionDisplayLabel } from "@/lib/frontPageDefaults";
 import IconPicker from "@/components/IconPicker";
 import LucideIcon from "@/components/LucideIcon";
 import HomePageSectionOrderPanel from "@/components/admin/HomePageSectionOrderPanel";
@@ -42,29 +43,25 @@ export default function HomePageSettingsTab({
     btnDanger,
     btnAdd,
 }: Props) {
-    const updateHero = (patch: Partial<FrontPageSettings["hero"]>) =>
-        setConfig((c) => ({ ...c, hero: { ...c.hero, ...patch } }));
-    const updateTextBlock = (id: BuiltinTextBlockId, patch: Partial<TextBlockSettings>) =>
-        setConfig((c) => ({ ...c, [id]: { ...c[id], ...patch } }));
-    const updateCards = (patch: Partial<FrontPageSettings["cards"]>) =>
-        setConfig((c) => ({ ...c, cards: { ...c.cards, ...patch } }));
-    const updateInterests = (patch: Partial<FrontPageSettings["interests"]>) =>
-        setConfig((c) => ({ ...c, interests: { ...c.interests, ...patch } }));
-    const updateContact = (patch: Partial<FrontPageSettings["contact"]>) =>
-        setConfig((c) => ({ ...c, contact: { ...c.contact, ...patch } }));
-
-    const updateCustomSection = (id: string, patch: Partial<CustomSection>) =>
+    const updateSection = (id: string, updater: (section: HomeSection) => HomeSection) => {
         setConfig((c) => ({
             ...c,
-            customSections: c.customSections.map((s) => (s.id === id ? { ...s, ...patch } : s)),
+            sections: c.sections.map((s) => (s.id === id ? updater(s) : s)),
         }));
+    };
 
-    const removeCustomSection = (id: string) => {
-        const key = customSectionKey(id);
+    const updateSectionData = <T extends HomeSection["type"]>(
+        id: string,
+        patch: Partial<Extract<HomeSection, { type: T }>["data"]>
+    ) => {
+        updateSection(id, (s) => ({ ...s, data: { ...s.data, ...patch } } as HomeSection));
+    };
+
+    const deleteSection = (id: string) => {
         setConfig((c) => ({
             ...c,
-            customSections: c.customSections.filter((s) => s.id !== id),
-            sectionOrder: c.sectionOrder.filter((k) => k !== key),
+            sections: c.sections.filter((s) => s.id !== id),
+            sectionOrder: c.sectionOrder.filter((k) => k !== id),
         }));
     };
 
@@ -75,160 +72,84 @@ export default function HomePageSettingsTab({
         btnAdd,
     };
 
-    const renderBuiltinTextBlockEditor = (id: BuiltinTextBlockId) => {
-        const block = config[id];
-        return (
-            <section key={id} className={sectionClass}>
-                <h2 className="mb-4 text-lg font-semibold text-chestnut dark:text-dark-text">
-                    {BUILT_IN_SECTION_LABELS[id]}
-                </h2>
-                <div className="grid gap-4">
-                    <div>
-                        <label className={labelClass}>Section Heading</label>
-                        <input
-                            className={inputClass}
-                            value={block.heading}
-                            onChange={(e) => updateTextBlock(id, { heading: e.target.value })}
-                        />
-                    </div>
-                    <ParagraphFieldsEditor
-                        paragraphs={block.paragraphs}
-                        onChange={(paragraphs) => updateTextBlock(id, { paragraphs })}
-                        {...paragraphEditorProps}
-                    />
-                </div>
-            </section>
+    const renderSectionEditor = (id: string) => {
+        const section = findSection(config, id);
+        if (!section) return null;
+
+        const title = getSectionDisplayLabel(section);
+        const header = (
+            <div className="mb-4 flex items-center justify-between">
+                <h2 className="text-lg font-semibold text-chestnut dark:text-dark-text">{title}</h2>
+                {section.removable && (
+                    <button type="button" onClick={() => deleteSection(id)} className={btnDanger}>
+                        Delete section
+                    </button>
+                )}
+            </div>
         );
-    };
 
-    const updateCardItem = (index: number, patch: Partial<FrontPageSettings["cards"]["items"][0]>) =>
-        setConfig((c) => ({
-            ...c,
-            cards: {
-                ...c.cards,
-                items: c.cards.items.map((item, i) => (i === index ? { ...item, ...patch } : item)),
-            },
-        }));
-    const addCardItem = () =>
-        setConfig((c) => ({
-            ...c,
-            cards: { ...c.cards, items: [...c.cards.items, { icon: "Star", title: "", text: "" }] },
-        }));
-    const removeCardItem = (index: number) =>
-        setConfig((c) => ({
-            ...c,
-            cards: { ...c.cards, items: c.cards.items.filter((_, i) => i !== index) },
-        }));
-
-    const updateInterestItem = (index: number, patch: Partial<FrontPageSettings["interests"]["items"][0]>) =>
-        setConfig((c) => ({
-            ...c,
-            interests: {
-                ...c.interests,
-                items: c.interests.items.map((item, i) => (i === index ? { ...item, ...patch } : item)),
-            },
-        }));
-    const addInterestItem = () =>
-        setConfig((c) => ({
-            ...c,
-            interests: { ...c.interests, items: [...c.interests.items, { icon: "Star", label: "" }] },
-        }));
-    const removeInterestItem = (index: number) =>
-        setConfig((c) => ({
-            ...c,
-            interests: { ...c.interests, items: c.interests.items.filter((_, i) => i !== index) },
-        }));
-
-    const updateContactLink = (index: number, patch: Partial<FrontPageSettings["contact"]["links"][0]>) =>
-        setConfig((c) => ({
-            ...c,
-            contact: {
-                ...c.contact,
-                links: c.contact.links.map((link, i) => (i === index ? { ...link, ...patch } : link)),
-            },
-        }));
-    const addContactLink = () =>
-        setConfig((c) => ({
-            ...c,
-            contact: {
-                ...c.contact,
-                links: [...c.contact.links, { icon: "Link", label: "", url: "" }],
-            },
-        }));
-    const removeContactLink = (index: number) =>
-        setConfig((c) => ({
-            ...c,
-            contact: { ...c.contact, links: c.contact.links.filter((_, i) => i !== index) },
-        }));
-
-    const renderSectionEditor = (key: string) => {
-        if (isBuiltinTextBlockId(key)) {
-            return renderBuiltinTextBlockEditor(key);
-        }
-
-        const customId = parseCustomSectionKey(key);
-        if (customId) {
-            const section = config.customSections.find((s) => s.id === customId);
-            if (!section) return null;
-            return (
-                <section key={key} className={sectionClass}>
-                    <div className="mb-4 flex items-center justify-between">
-                        <h2 className="text-lg font-semibold text-chestnut dark:text-dark-text">
-                            Custom: {section.heading || "Untitled"}
-                        </h2>
-                        <button type="button" onClick={() => removeCustomSection(customId)} className={btnDanger}>
-                            Delete section
-                        </button>
-                    </div>
-                    <div className="grid gap-4">
-                        <div>
-                            <label className={labelClass}>Section Heading</label>
-                            <input
-                                className={inputClass}
-                                value={section.heading}
-                                onChange={(e) => updateCustomSection(customId, { heading: e.target.value })}
+        switch (section.type) {
+            case "textBlock": {
+                const data = section.data;
+                return (
+                    <section key={id} className={sectionClass}>
+                        {header}
+                        <div className="grid gap-4">
+                            <div>
+                                <label className={labelClass}>Section Heading</label>
+                                <input
+                                    className={inputClass}
+                                    value={data.heading}
+                                    onChange={(e) =>
+                                        updateSectionData(id, { heading: e.target.value } as Partial<TextBlockSectionData>)
+                                    }
+                                />
+                            </div>
+                            <ParagraphFieldsEditor
+                                paragraphs={data.paragraphs}
+                                onChange={(paragraphs) =>
+                                    updateSectionData(id, { paragraphs } as Partial<TextBlockSectionData>)
+                                }
+                                {...paragraphEditorProps}
                             />
                         </div>
-                        <ParagraphFieldsEditor
-                            paragraphs={section.paragraphs}
-                            onChange={(paragraphs) => updateCustomSection(customId, { paragraphs })}
-                            {...paragraphEditorProps}
-                        />
-                    </div>
-                </section>
-            );
-        }
-
-        switch (key) {
-            case "hero":
+                    </section>
+                );
+            }
+            case "hero": {
+                const data = section.data;
                 return (
-                    <section key="hero" className={sectionClass}>
-                        <h2 className="mb-4 text-lg font-semibold text-chestnut dark:text-dark-text">Hero</h2>
+                    <section key={id} className={sectionClass}>
+                        {header}
                         <div className="grid gap-4">
                             <div>
                                 <label className={labelClass}>Title</label>
                                 <input
                                     className={inputClass}
-                                    value={config.hero.title}
-                                    onChange={(e) => updateHero({ title: e.target.value })}
+                                    value={data.title}
+                                    onChange={(e) =>
+                                        updateSectionData(id, { title: e.target.value } as Partial<HeroSectionData>)
+                                    }
                                 />
                             </div>
                             <div>
                                 <label className={labelClass}>Subtitle</label>
                                 <textarea
                                     className={textareaClass}
-                                    value={config.hero.subtitle}
-                                    onChange={(e) => updateHero({ subtitle: e.target.value })}
+                                    value={data.subtitle}
+                                    onChange={(e) =>
+                                        updateSectionData(id, { subtitle: e.target.value } as Partial<HeroSectionData>)
+                                    }
                                 />
                             </div>
                             <div>
                                 <label className={labelClass}>Hero Background Type</label>
                                 <select
                                     className={inputClass}
-                                    value={config.hero.backgroundType}
+                                    value={data.backgroundType}
                                     onChange={(e) =>
-                                        updateHero({
-                                            backgroundType: e.target.value as "gradient" | "color" | "image",
+                                        updateSectionData(id, {
+                                            backgroundType: e.target.value as HeroSectionData["backgroundType"],
                                         })
                                     }
                                 >
@@ -237,40 +158,56 @@ export default function HomePageSettingsTab({
                                     <option value="image">Background image</option>
                                 </select>
                             </div>
-                            {config.hero.backgroundType === "color" && (
+                            {data.backgroundType === "color" && (
                                 <div>
                                     <label className={labelClass}>Background Color</label>
                                     <div className="flex items-center gap-2">
                                         <input
                                             type="color"
-                                            value={config.hero.backgroundColor || "#6B2D2D"}
-                                            onChange={(e) => updateHero({ backgroundColor: e.target.value })}
+                                            value={data.backgroundColor || "#6B2D2D"}
+                                            onChange={(e) =>
+                                                updateSectionData(id, {
+                                                    backgroundColor: e.target.value,
+                                                } as Partial<HeroSectionData>)
+                                            }
                                             className="h-10 w-14 cursor-pointer rounded border border-desert-tan-dark"
                                         />
                                         <input
                                             className={inputClass}
-                                            value={config.hero.backgroundColor}
-                                            onChange={(e) => updateHero({ backgroundColor: e.target.value })}
+                                            value={data.backgroundColor}
+                                            onChange={(e) =>
+                                                updateSectionData(id, {
+                                                    backgroundColor: e.target.value,
+                                                } as Partial<HeroSectionData>)
+                                            }
                                             placeholder="#6B2D2D"
                                         />
                                     </div>
                                 </div>
                             )}
-                            {config.hero.backgroundType === "gradient" && (
+                            {data.backgroundType === "gradient" && (
                                 <div className="grid gap-4 sm:grid-cols-2">
                                     <div>
                                         <label className={labelClass}>Gradient From</label>
                                         <div className="flex items-center gap-2">
                                             <input
                                                 type="color"
-                                                value={config.hero.gradientFrom || "#6B2D2D"}
-                                                onChange={(e) => updateHero({ gradientFrom: e.target.value })}
+                                                value={data.gradientFrom || "#6B2D2D"}
+                                                onChange={(e) =>
+                                                    updateSectionData(id, {
+                                                        gradientFrom: e.target.value,
+                                                    } as Partial<HeroSectionData>)
+                                                }
                                                 className="h-10 w-14 cursor-pointer rounded border border-desert-tan-dark"
                                             />
                                             <input
                                                 className={inputClass}
-                                                value={config.hero.gradientFrom}
-                                                onChange={(e) => updateHero({ gradientFrom: e.target.value })}
+                                                value={data.gradientFrom}
+                                                onChange={(e) =>
+                                                    updateSectionData(id, {
+                                                        gradientFrom: e.target.value,
+                                                    } as Partial<HeroSectionData>)
+                                                }
                                             />
                                         </div>
                                     </div>
@@ -279,20 +216,28 @@ export default function HomePageSettingsTab({
                                         <div className="flex items-center gap-2">
                                             <input
                                                 type="color"
-                                                value={config.hero.gradientTo || "#8B4D4D"}
-                                                onChange={(e) => updateHero({ gradientTo: e.target.value })}
+                                                value={data.gradientTo || "#8B4D4D"}
+                                                onChange={(e) =>
+                                                    updateSectionData(id, {
+                                                        gradientTo: e.target.value,
+                                                    } as Partial<HeroSectionData>)
+                                                }
                                                 className="h-10 w-14 cursor-pointer rounded border border-desert-tan-dark"
                                             />
                                             <input
                                                 className={inputClass}
-                                                value={config.hero.gradientTo}
-                                                onChange={(e) => updateHero({ gradientTo: e.target.value })}
+                                                value={data.gradientTo}
+                                                onChange={(e) =>
+                                                    updateSectionData(id, {
+                                                        gradientTo: e.target.value,
+                                                    } as Partial<HeroSectionData>)
+                                                }
                                             />
                                         </div>
                                     </div>
                                 </div>
                             )}
-                            {config.hero.backgroundType === "image" && (
+                            {data.backgroundType === "image" && (
                                 <div>
                                     <label className={labelClass}>Hero Background Image</label>
                                     <div className="space-y-3">
@@ -300,14 +245,16 @@ export default function HomePageSettingsTab({
                                             type="file"
                                             accept="image/jpeg,image/png,image/webp,image/gif"
                                             className="hidden"
-                                            id="hero-bg-image-upload"
+                                            id={`hero-bg-${id}`}
                                             onChange={async (e) => {
                                                 const file = e.target.files?.[0];
                                                 if (!file) return;
                                                 showToast("Uploading...", "success");
                                                 try {
                                                     const url = await uploadBackgroundImage(file);
-                                                    updateHero({ backgroundImage: url });
+                                                    updateSectionData(id, {
+                                                        backgroundImage: url,
+                                                    } as Partial<HeroSectionData>);
                                                     showToast("Image uploaded!", "success");
                                                 } catch {
                                                     showToast("Upload failed", "error");
@@ -316,15 +263,19 @@ export default function HomePageSettingsTab({
                                         />
                                         <button
                                             type="button"
-                                            onClick={() => document.getElementById("hero-bg-image-upload")?.click()}
+                                            onClick={() => document.getElementById(`hero-bg-${id}`)?.click()}
                                             className={btnAdd}
                                         >
                                             Select Image
                                         </button>
                                         <input
                                             className={inputClass}
-                                            value={config.hero.backgroundImage}
-                                            onChange={(e) => updateHero({ backgroundImage: e.target.value })}
+                                            value={data.backgroundImage}
+                                            onChange={(e) =>
+                                                updateSectionData(id, {
+                                                    backgroundImage: e.target.value,
+                                                } as Partial<HeroSectionData>)
+                                            }
                                             placeholder="https://…"
                                         />
                                     </div>
@@ -333,31 +284,52 @@ export default function HomePageSettingsTab({
                         </div>
                     </section>
                 );
-            case "cards":
+            }
+            case "cards": {
+                const data = section.data;
+                const updateCardItem = (index: number, patch: Partial<CardItem>) =>
+                    updateSectionData(id, {
+                        items: data.items.map((item, i) => (i === index ? { ...item, ...patch } : item)),
+                    } as Partial<CardsSectionData>);
+                const addCardItem = () =>
+                    updateSectionData(id, {
+                        items: [...data.items, { icon: "Star", title: "", text: "" }],
+                    } as Partial<CardsSectionData>);
+                const removeCardItem = (index: number) =>
+                    updateSectionData(id, {
+                        items: data.items.filter((_, i) => i !== index),
+                    } as Partial<CardsSectionData>);
+
                 return (
-                    <section key="cards" className={sectionClass}>
-                        <h2 className="mb-4 text-lg font-semibold text-chestnut dark:text-dark-text">Cards</h2>
+                    <section key={id} className={sectionClass}>
+                        {header}
                         <div className="grid gap-4">
                             <div>
                                 <label className={labelClass}>Section Heading</label>
                                 <input
                                     className={inputClass}
-                                    value={config.cards.heading}
-                                    onChange={(e) => updateCards({ heading: e.target.value })}
+                                    value={data.heading}
+                                    onChange={(e) =>
+                                        updateSectionData(id, { heading: e.target.value } as Partial<CardsSectionData>)
+                                    }
                                 />
                             </div>
                             <div>
-                                <label className={labelClass}>Columns ({config.cards.columns})</label>
+                                <label className={labelClass}>Columns ({data.columns})</label>
                                 <input
                                     type="range"
                                     min={1}
                                     max={4}
-                                    value={config.cards.columns}
-                                    onChange={(e) => updateCards({ columns: Number(e.target.value) })}
+                                    value={data.columns}
+                                    onChange={(e) =>
+                                        updateSectionData(id, {
+                                            columns: Number(e.target.value),
+                                        } as Partial<CardsSectionData>)
+                                    }
                                     className="w-full accent-chestnut dark:accent-caramel"
                                 />
                             </div>
-                            {config.cards.items.map((item, i) => (
+                            {data.items.map((item, i) => (
                                 <div
                                     key={i}
                                     className="rounded-lg border border-desert-tan-dark/50 bg-white/50 p-4 dark:border-dark-muted/50 dark:bg-dark-bg/50"
@@ -371,7 +343,10 @@ export default function HomePageSettingsTab({
                                         </button>
                                     </div>
                                     <div className="grid gap-3">
-                                        <IconPicker value={item.icon} onChange={(icon) => updateCardItem(i, { icon })} />
+                                        <IconPicker
+                                            value={item.icon}
+                                            onChange={(icon) => updateCardItem(i, { icon })}
+                                        />
                                         <input
                                             className={inputClass}
                                             value={item.title}
@@ -393,20 +368,39 @@ export default function HomePageSettingsTab({
                         </div>
                     </section>
                 );
-            case "interests":
+            }
+            case "interests": {
+                const data = section.data;
+                const updateInterestItem = (index: number, patch: Partial<InterestItem>) =>
+                    updateSectionData(id, {
+                        items: data.items.map((item, i) => (i === index ? { ...item, ...patch } : item)),
+                    } as Partial<InterestsSectionData>);
+                const addInterestItem = () =>
+                    updateSectionData(id, {
+                        items: [...data.items, { icon: "Star", label: "" }],
+                    } as Partial<InterestsSectionData>);
+                const removeInterestItem = (index: number) =>
+                    updateSectionData(id, {
+                        items: data.items.filter((_, i) => i !== index),
+                    } as Partial<InterestsSectionData>);
+
                 return (
-                    <section key="interests" className={sectionClass}>
-                        <h2 className="mb-4 text-lg font-semibold text-chestnut dark:text-dark-text">Interests</h2>
+                    <section key={id} className={sectionClass}>
+                        {header}
                         <div className="grid gap-4">
                             <div>
                                 <label className={labelClass}>Section Heading</label>
                                 <input
                                     className={inputClass}
-                                    value={config.interests.heading}
-                                    onChange={(e) => updateInterests({ heading: e.target.value })}
+                                    value={data.heading}
+                                    onChange={(e) =>
+                                        updateSectionData(id, {
+                                            heading: e.target.value,
+                                        } as Partial<InterestsSectionData>)
+                                    }
                                 />
                             </div>
-                            {config.interests.items.map((item, i) => (
+                            {data.items.map((item, i) => (
                                 <div key={i} className="flex items-center gap-3">
                                     <IconPicker
                                         value={item.icon}
@@ -429,25 +423,46 @@ export default function HomePageSettingsTab({
                         </div>
                     </section>
                 );
-            case "contact":
+            }
+            case "contact": {
+                const data = section.data;
+                const updateContactLink = (index: number, patch: Partial<ContactLink>) =>
+                    updateSectionData(id, {
+                        links: data.links.map((link, i) => (i === index ? { ...link, ...patch } : link)),
+                    } as Partial<ContactSectionData>);
+                const addContactLink = () =>
+                    updateSectionData(id, {
+                        links: [...data.links, { icon: "Link", label: "", url: "" }],
+                    } as Partial<ContactSectionData>);
+                const removeContactLink = (index: number) =>
+                    updateSectionData(id, {
+                        links: data.links.filter((_, i) => i !== index),
+                    } as Partial<ContactSectionData>);
+
                 return (
-                    <section key="contact" className={sectionClass}>
-                        <h2 className="mb-4 text-lg font-semibold text-chestnut dark:text-dark-text">Contact</h2>
+                    <section key={id} className={sectionClass}>
+                        {header}
                         <div className="grid gap-4">
                             <div>
                                 <label className={labelClass}>Section Heading</label>
                                 <input
                                     className={inputClass}
-                                    value={config.contact.heading}
-                                    onChange={(e) => updateContact({ heading: e.target.value })}
+                                    value={data.heading}
+                                    onChange={(e) =>
+                                        updateSectionData(id, {
+                                            heading: e.target.value,
+                                        } as Partial<ContactSectionData>)
+                                    }
                                 />
                             </div>
                             <div>
                                 <label className={labelClass}>Description Text</label>
                                 <textarea
                                     className={textareaClass}
-                                    value={config.contact.text}
-                                    onChange={(e) => updateContact({ text: e.target.value })}
+                                    value={data.text}
+                                    onChange={(e) =>
+                                        updateSectionData(id, { text: e.target.value } as Partial<ContactSectionData>)
+                                    }
                                 />
                             </div>
                             <div className="flex items-center gap-3">
@@ -456,16 +471,20 @@ export default function HomePageSettingsTab({
                                 </label>
                                 <button
                                     type="button"
-                                    onClick={() => updateContact({ showSocials: !config.contact.showSocials })}
-                                    className={`relative h-6 w-11 rounded-full transition-colors ${config.contact.showSocials ? "bg-chestnut dark:bg-caramel" : "bg-desert-tan-dark dark:bg-dark-muted"}`}
+                                    onClick={() =>
+                                        updateSectionData(id, {
+                                            showSocials: !data.showSocials,
+                                        } as Partial<ContactSectionData>)
+                                    }
+                                    className={`relative h-6 w-11 rounded-full transition-colors ${data.showSocials ? "bg-chestnut dark:bg-caramel" : "bg-desert-tan-dark dark:bg-dark-muted"}`}
                                 >
                                     <span
-                                        className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform ${config.contact.showSocials ? "left-[22px]" : "left-0.5"}`}
+                                        className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform ${data.showSocials ? "left-[22px]" : "left-0.5"}`}
                                     />
                                 </button>
                             </div>
-                            {config.contact.showSocials &&
-                                config.contact.links.map((link, i) => (
+                            {data.showSocials &&
+                                data.links.map((link, i) => (
                                     <div
                                         key={i}
                                         className="rounded-lg border border-desert-tan-dark/50 bg-white/50 p-4 dark:border-dark-muted/50 dark:bg-dark-bg/50"
@@ -498,7 +517,7 @@ export default function HomePageSettingsTab({
                                         </div>
                                     </div>
                                 ))}
-                            {config.contact.showSocials && (
+                            {data.showSocials && (
                                 <button type="button" onClick={addContactLink} className={btnAdd}>
                                     + Add Link
                                 </button>
@@ -506,6 +525,7 @@ export default function HomePageSettingsTab({
                         </div>
                     </section>
                 );
+            }
             default:
                 return null;
         }
@@ -521,7 +541,7 @@ export default function HomePageSettingsTab({
                 btnAdd={btnAdd}
                 btnDanger={btnDanger}
             />
-            {config.sectionOrder.map((key) => renderSectionEditor(key))}
+            {config.sectionOrder.map((id) => renderSectionEditor(id))}
         </>
     );
 }
