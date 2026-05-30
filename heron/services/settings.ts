@@ -3,6 +3,15 @@ import { getDb } from "@/lib/db";
 import { settings } from "@/lib/db/schema";
 import { unstable_cache, revalidateTag } from "next/cache";
 
+function invalidateSettingsCache() {
+    try {
+        // Next.js 15.5+: prefer profile "max" (stale-while-revalidate) in route handlers.
+        revalidateTag("settings", "max");
+    } catch (err) {
+        console.error("Failed to revalidate settings cache:", err);
+    }
+}
+
 export async function getSetting(key: string): Promise<string | null> {
     return unstable_cache(
         async () => {
@@ -46,7 +55,7 @@ export async function updateSetting(key: string, value: string): Promise<void> {
             target: settings.key,
             set: { value, updatedAt: sql`CURRENT_TIMESTAMP` }
         });
-    revalidateTag("settings");
+    invalidateSettingsCache();
 }
 
 export async function updateSettings(entries: Record<string, string>): Promise<void> {
@@ -62,6 +71,6 @@ export async function updateSettings(entries: Record<string, string>): Promise<v
                 });
         }
     });
-    revalidateTag("settings");
+    invalidateSettingsCache();
 }
 
