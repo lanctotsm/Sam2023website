@@ -5,9 +5,12 @@ test.describe("Admin authentication UI", () => {
     test("dev login exposes admin navigation", async ({ page }) => {
         await loginAsDevAdmin(page);
 
-        await expect(page.getByRole("link", { name: "Posts" })).toBeVisible();
-        await expect(page.getByRole("link", { name: "Albums" })).toBeVisible();
-        await expect(page.getByRole("link", { name: "Settings" })).toBeVisible();
+        // Scope to the admin sub-nav (the only <nav> inside a <header>) to avoid
+        // matching the main site navigation, which has its own Posts/Albums links.
+        const adminNav = page.locator("header nav");
+        await expect(adminNav.getByRole("link", { name: "Posts", exact: true })).toBeVisible();
+        await expect(adminNav.getByRole("link", { name: "Albums", exact: true })).toBeVisible();
+        await expect(adminNav.getByRole("link", { name: "Settings", exact: true })).toBeVisible();
         await expect(page.getByRole("button", { name: "Logout" })).toBeVisible();
     });
 

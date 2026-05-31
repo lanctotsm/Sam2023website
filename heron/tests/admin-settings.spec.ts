@@ -16,8 +16,7 @@ test.describe("Admin settings UI", () => {
     });
 
     test("general tab saves site title", async ({ page }) => {
-        const titleInput = page.locator("#settings-site-title");
-        await titleInput.fill("Playwright Test Site");
+        await page.locator("#settings-site-title").fill("Playwright Test Site");
 
         const saveResponse = page.waitForResponse(
             (res) => res.url().includes("/api/settings") && res.request().method() === "PUT"
@@ -33,8 +32,16 @@ test.describe("Admin settings UI", () => {
         await page.locator("#settings-tab-styles").click();
         await expect(page.getByRole("heading", { name: "Page Styles" })).toBeVisible();
 
-        const homeEditor = page.locator("div.rounded-xl.border").filter({ hasText: "🏠 Home Page" });
-        await homeEditor.locator("select").first().selectOption("Montserrat");
+        // The Home editor is the rounded-xl card whose heading is "🏠 Home Page".
+        const homeEditor = page
+            .locator("div.rounded-xl")
+            .filter({ has: page.getByRole("heading", { name: "🏠 Home Page" }) });
+        // The heading-font <select> is the one offering "Theme default (Roboto)"
+        // (the body-font select offers "Theme default (Inter)" instead).
+        const headingFontSelect = homeEditor.locator(
+            'select:has(option:text-is("Theme default (Roboto)"))'
+        );
+        await headingFontSelect.selectOption("Montserrat");
 
         const saveResponse = page.waitForResponse(
             (res) => res.url().includes("/api/settings") && res.request().method() === "PUT"
