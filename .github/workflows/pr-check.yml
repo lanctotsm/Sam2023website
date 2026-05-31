@@ -49,6 +49,11 @@ jobs:
     runs-on: ubuntu-latest
     needs: check
     timeout-minutes: 20
+    # Official Playwright image: browsers + OS deps are pre-baked, so there is
+    # no flaky browser download from cdn.playwright.dev. Pin the tag to the
+    # @playwright/test version in package-lock.json (1.58.2).
+    container:
+      image: mcr.microsoft.com/playwright:v1.58.2-noble
     defaults:
       run:
         working-directory: heron
@@ -81,31 +86,6 @@ jobs:
           cache-dependency-path: heron/package-lock.json
 
       - run: npm ci
-
-      - name: Cache Playwright browsers
-        uses: actions/cache@v4
-        id: playwright-cache
-        with:
-          path: ~/.cache/ms-playwright
-          key: playwright-${{ runner.os }}-${{ hashFiles('heron/package-lock.json') }}
-
-      - name: Install Playwright system deps
-        run: npx playwright install-deps chromium
-
-      - name: Install Playwright browser (with timeout + retry)
-        # The browser download to cdn.playwright.dev can stall with no built-in
-        # timeout. Bound each attempt and retry so a stalled download can't hang CI.
-        run: |
-          for attempt in 1 2 3; do
-            echo "Playwright browser install attempt $attempt..."
-            if timeout 240 npx playwright install chromium; then
-              echo "Browser install succeeded."
-              exit 0
-            fi
-            echo "Attempt $attempt failed or timed out; retrying..."
-          done
-          echo "Playwright browser install failed after 3 attempts." >&2
-          exit 1
 
       - name: Cache Next.js build
         uses: actions/cache@v4
