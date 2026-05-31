@@ -206,3 +206,6 @@ jobs:
           LETSENCRYPT_EMAIL: ${{ secrets.LETSENCRYPT_EMAIL }}
         run: |
           ssh -F ssh_config lightsail "SITE_DOMAIN='${{ secrets.ROUTE53_RECORD_NAME }}' LETSENCRYPT_EMAIL='${{ secrets.LETSENCRYPT_EMAIL }}' bash -c 'cd /opt/heron-cms && bash scripts/deploy-configure-apache.sh'"
+
+      - name: Install weekly SQLite backup cron
+        run: ssh -F ssh_config lightsail "cd /opt/heron-cms && bash scripts/deploy-install-db-backup-cron.sh"

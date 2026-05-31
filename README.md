@@ -124,3 +124,19 @@ Production uses an **AWS Lightsail Node.js blueprint** (not Bitnami; see [Bitnam
 ### HTTPS with Let's Encrypt
 
 If **`ROUTE53_RECORD_NAME`** and **`LETSENCRYPT_EMAIL`** are set, each deploy configures Apache as a reverse proxy to port 3000 and runs certbot (webroot). Ensure DNS points at the Lightsail static IP before the first certificate request.
+
+### SQLite backups (S3)
+
+Each deploy installs a **weekly** cron job (Sunday 03:15 UTC) that:
+
+1. Creates a consistent SQLite backup (WAL-safe) via `better-sqlite3`
+2. Uploads `backups/cms-db/cms-YYYY-MM-DD.db.gz` to your CMS S3 bucket
+3. Deletes older backups, keeping the **8 most recent weeks** by default
+
+Manual run on the server:
+
+```bash
+cd /opt/heron-cms && set -a && . ./.env && set +a && node scripts/backup-cms-db.cjs
+```
+
+Optional env vars in `.env`: `CMS_DB_BACKUP_RETAIN_WEEKS`, `CMS_DB_BACKUP_PREFIX`. Logs: `/var/log/heron-cms-db-backup.log`.

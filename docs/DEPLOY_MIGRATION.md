@@ -40,3 +40,7 @@ aws lightsail get-blueprints --query "blueprints[?contains(name, 'Node')].[bluep
 ```
 
 Use the active Node.js blueprint whose vendor is Lightsail when launching new instances.
+
+## SQLite backups
+
+Production deploys install a weekly cron that uploads a gzipped DB backup to `s3://<CMS_BUCKET>/backups/cms-db/`. After migration, run a deploy (or install cron manually) so the new instance has the job. Restore by downloading a `.db.gz`, `gunzip`, and replacing `cms.db` while the app is stopped.
