@@ -53,8 +53,10 @@ jobs:
       run:
         working-directory: heron
     env:
+      # NOTE: do NOT set NODE_ENV=production here — it makes `npm ci` skip
+      # devDependencies (including Playwright). next build/start set production
+      # mode themselves.
       CI: "true"
-      NODE_ENV: production
       NEXTAUTH_URL: http://localhost:3000
       NEXTAUTH_SECRET: ci-dummy-secret
       DEV_AUTH_BYPASS: "true"
