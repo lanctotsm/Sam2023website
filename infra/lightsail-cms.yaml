@@ -8,7 +8,10 @@ Parameters:
   LightsailBlueprintId:
     Type: String
     Default: nodejs
-    Description: "Bitnami Node.js blueprint. Run aws lightsail get-blueprints to list."
+    Description: >
+      Lightsail Node.js blueprint (AWS-packaged, not Bitnami). Run
+      `aws lightsail get-blueprints` and pick the active Node.js app blueprint
+      whose vendor is Lightsail. Changing this on an existing instance replaces the VM.
   LightsailBundleId:
     Type: String
     Default: nano_3_0
@@ -95,10 +98,18 @@ Resources:
         #!/bin/bash
         set -euo pipefail
         export DEBIAN_FRONTEND=noninteractive
-        echo "[startup] Creating app and data directories..."
+        if id -u ubuntu >/dev/null 2>&1; then
+          DEPLOY_USER=ubuntu
+        elif id -u bitnami >/dev/null 2>&1; then
+          DEPLOY_USER=bitnami
+        else
+          DEPLOY_USER=root
+        fi
+        echo "[startup] Creating app and data directories (user=$DEPLOY_USER)..."
         mkdir -p /opt/heron-cms /var/lib/heron-cms/data
-        chown -R bitnami:bitnami /opt/heron-cms /var/lib/heron-cms
+        chown -R "$DEPLOY_USER:$DEPLOY_USER" /opt/heron-cms /var/lib/heron-cms
         touch /var/lib/heron-cms/.startup-done
+        chown "$DEPLOY_USER:$DEPLOY_USER" /var/lib/heron-cms/.startup-done
         echo "[startup] Installing utilities..."
         apt-get update -y 2>/dev/null || true
         apt-get install -y rsync git unzip jq 2>/dev/null || true

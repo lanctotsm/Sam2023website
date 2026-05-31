@@ -11,7 +11,10 @@ jobs:
     environment: production
     permissions:
       contents: read
-      packages: write
+
+    env:
+      # Default bitnami until migrated; set secret LIGHTSAIL_SSH_USER=ubuntu on Lightsail Node.js VM
+      LIGHTSAIL_SSH_USER: ${{ secrets.LIGHTSAIL_SSH_USER || 'bitnami' }}
 
     steps:
       - name: Checkout
@@ -24,7 +27,7 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ secrets.AWS_REGION }}
 
-      # Use Node 24 to match Bitnami/Lightsail server (better-sqlite3 is native and must match)
+      # Node 24 — build on Linux CI; native modules must match the Lightsail VM (glibc)
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
@@ -56,6 +59,10 @@ jobs:
           # Site title (GitHub Environment variable, not a secret)
           SITE_TITLE: ${{ vars.SITE_TITLE }}
         run: npm run build
+        working-directory: heron
+
+      - name: Rebuild native modules for Linux deploy target
+        run: npm rebuild better-sqlite3
         working-directory: heron
 
       - name: Deploy CloudFormation
@@ -127,7 +134,7 @@ jobs:
           cat > ssh_config <<SSH
           Host lightsail
             HostName $LIGHTSAIL_HOST
-            User bitnami
+            User ${{ env.LIGHTSAIL_SSH_USER }}
             IdentityFile $(pwd)/lightsail.key
             StrictHostKeyChecking no
             ServerAliveInterval 60
@@ -184,7 +191,8 @@ jobs:
           ssh -F ssh_config lightsail "bash -s" <<'DB'
           set -euo pipefail
           cd /opt/heron-cms
-          export PATH="/opt/bitnami/node/bin:/usr/local/bin:/usr/bin:$PATH"
+          source scripts/deploy-runtime.sh
+          deploy_runtime_detect
           set -a; [ -f .env ] && . ./.env; set +a
           node scripts/deploy-db.cjs
           DB

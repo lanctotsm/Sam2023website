@@ -105,12 +105,22 @@ graph TD
 
 ## 🚢 Deployment
 
-Deployments are automated via GitHub Actions to AWS Lightsail. The pipeline builds the Next.js app as a standalone output, rsyncs artifacts to the instance, and runs the app with pm2. The database lives in `/var/lib/heron-cms/data` on the server so it is not overwritten on deploy.
+Deployments are automated via GitHub Actions to AWS Lightsail. The pipeline builds the Next.js app on Linux (Node 24), rebuilds `better-sqlite3` for the VM, rsyncs the standalone output to `/opt/heron-cms`, and runs the app with **pm2**. The database lives in `/var/lib/heron-cms/data` on the server so it is not overwritten on deploy.
+
+Production uses an **AWS Lightsail Node.js blueprint** (not Bitnami; see [Bitnami deprecation](https://docs.aws.amazon.com/lightsail/latest/userguide/amazon-lightsail-faq-bitnami-blueprints.html)). You deploy **your own app** on top of that image—there is no custom Lightsail blueprint upload. **Docker is not required on the server** (suitable for nano instances).
 
 - **Workflow**: `.github/workflows/deploy-lightsail.yml`
 - **Infrastructure**: `infra/lightsail-cms.yaml` (Lightsail instance, S3, CloudFront)
-- **Local dev** uses Docker Compose and MinIO only; production does not run the app in Docker.
+- **Migration**: `docs/DEPLOY_MIGRATION.md`
+- **Local dev** uses Docker Compose and MinIO only.
+
+### GitHub secrets
+
+| Secret | Notes |
+|--------|--------|
+| `LIGHTSAIL_SSH_USER` | `ubuntu` on Lightsail Node.js; `bitnami` until you migrate (workflow default) |
+| `ROUTE53_RECORD_NAME`, `LETSENCRYPT_EMAIL` | HTTPS via Apache + certbot on the instance |
 
 ### HTTPS with Let's Encrypt
 
-If the repo secrets **`ROUTE53_RECORD_NAME`** (your domain) and **`LETSENCRYPT_EMAIL`** (e.g. `admin@yourdomain.com`) are set, each deploy will attempt to obtain or renew a Let's Encrypt certificate and configure Apache to use it. Certbot runs on the instance and a cron job renews the cert twice daily. Ensure your domain’s DNS already points to the Lightsail static IP before the first deploy so ACME validation can succeed.
+If **`ROUTE53_RECORD_NAME`** and **`LETSENCRYPT_EMAIL`** are set, each deploy configures Apache as a reverse proxy to port 3000 and runs certbot (webroot). Ensure DNS points at the Lightsail static IP before the first certificate request.
