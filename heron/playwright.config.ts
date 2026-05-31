@@ -1,19 +1,23 @@
 import { defineConfig, devices } from "@playwright/test";
 
-// `npm run test:e2e` now ensures MinIO/local DB deps and starts/reuses the app.
+// Playwright manages the app lifecycle via `webServer` below:
+// - CI: builds happen as an explicit workflow step, then `next start` is launched here.
+// - Local: `next dev` is launched (and an already-running dev server is reused).
+const isCI = !!process.env.CI;
 
 export default defineConfig({
   testDir: "./tests",
   fullyParallel: true,
-  forbidOnly: !!process.env.CI,
-  retries: process.env.CI ? 2 : 0,
-  workers: process.env.CI ? 1 : undefined,
-  reporter: process.env.CI
-    ? [["list"], ["html", { open: "never" }]]
+  forbidOnly: isCI,
+  retries: isCI ? 2 : 0,
+  workers: isCI ? 1 : undefined,
+  reporter: isCI
+    ? [["github"], ["list"], ["html", { open: "never" }]]
     : "html",
   use: {
     baseURL: "http://localhost:3000",
     trace: "on-first-retry",
+    screenshot: "only-on-failure",
     viewport: { width: 1280, height: 720 },
   },
   projects: [
@@ -22,4 +26,12 @@ export default defineConfig({
       use: { ...devices["Desktop Chrome"] },
     },
   ],
+  webServer: {
+    command: isCI ? "npm run start" : "npm run dev",
+    url: "http://localhost:3000",
+    reuseExistingServer: !isCI,
+    timeout: 120_000,
+    stdout: "pipe",
+    stderr: "pipe",
+  },
 });
