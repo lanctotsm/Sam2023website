@@ -89,8 +89,23 @@ jobs:
           path: ~/.cache/ms-playwright
           key: playwright-${{ runner.os }}-${{ hashFiles('heron/package-lock.json') }}
 
-      - name: Install Playwright browsers
-        run: npx playwright install --with-deps chromium
+      - name: Install Playwright system deps
+        run: npx playwright install-deps chromium
+
+      - name: Install Playwright browser (with timeout + retry)
+        # The browser download to cdn.playwright.dev can stall with no built-in
+        # timeout. Bound each attempt and retry so a stalled download can't hang CI.
+        run: |
+          for attempt in 1 2 3; do
+            echo "Playwright browser install attempt $attempt..."
+            if timeout 240 npx playwright install chromium; then
+              echo "Browser install succeeded."
+              exit 0
+            fi
+            echo "Attempt $attempt failed or timed out; retrying..."
+          done
+          echo "Playwright browser install failed after 3 attempts." >&2
+          exit 1
 
       - name: Cache Next.js build
         uses: actions/cache@v4
