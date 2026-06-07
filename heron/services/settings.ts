@@ -5,8 +5,7 @@ import { unstable_cache, revalidateTag } from "next/cache";
 
 function invalidateSettingsCache() {
     try {
-        // Next.js 15.5+: prefer profile "max" (stale-while-revalidate) in route handlers.
-        revalidateTag("settings", "max");
+        revalidateTag("settings");
     } catch (err) {
         console.error("Failed to revalidate settings cache:", err);
     }
@@ -60,15 +59,19 @@ export async function updateSetting(key: string, value: string): Promise<void> {
 
 export async function updateSettings(entries: Record<string, string>): Promise<void> {
     const db = getDb();
-    await db.transaction(async (tx) => {
+    // better-sqlite3 is synchronous: the transaction callback must NOT be async
+    // (Drizzle throws "Transaction function cannot return a promise"). Execute
+    // each statement synchronously with `.run()`.
+    db.transaction((tx) => {
         for (const [key, value] of Object.entries(entries)) {
-            await tx
+            tx
                 .insert(settings)
                 .values({ key, value, updatedAt: sql`CURRENT_TIMESTAMP` })
                 .onConflictDoUpdate({
                     target: settings.key,
                     set: { value, updatedAt: sql`CURRENT_TIMESTAMP` }
-                });
+                })
+                .run();
         }
     });
     invalidateSettingsCache();
