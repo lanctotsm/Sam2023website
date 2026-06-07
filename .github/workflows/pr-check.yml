@@ -29,6 +29,10 @@ jobs:
 
       - run: npm test
 
+      # Restore .next/cache before the build so incremental compilation is fast.
+      # NOTE: this step is intentionally duplicated in the e2e job below — each
+      # job runs in a separate runner and must manage its own cache. Update the
+      # key formula in both places when changing the hash inputs.
       - name: Cache Next.js build
         uses: actions/cache@v4
         with:
@@ -50,8 +54,10 @@ jobs:
     needs: check
     timeout-minutes: 20
     # Official Playwright image: browsers + OS deps are pre-baked, so there is
-    # no flaky browser download from cdn.playwright.dev. Pin the tag to the
-    # @playwright/test version in package-lock.json (1.58.2).
+    # no flaky browser download from cdn.playwright.dev.
+    # IMPORTANT: keep the tag in sync with @playwright/test in heron/package.json.
+    # When bumping @playwright/test, update the image tag here to match:
+    #   mcr.microsoft.com/playwright:v<SAME_VERSION>-noble
     container:
       image: mcr.microsoft.com/playwright:v1.58.2-noble
     defaults:
@@ -87,6 +93,7 @@ jobs:
 
       - run: npm ci
 
+      # Intentional duplicate of the step in the check job — see note above.
       - name: Cache Next.js build
         uses: actions/cache@v4
         with:

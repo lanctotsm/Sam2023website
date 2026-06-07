@@ -26,17 +26,20 @@ test.describe("Admin settings UI", () => {
                 (res) => res.url().includes("/api/settings") && res.request().method() === "PUT"
             );
 
-        await titleInput.fill("Playwright Test Site");
-        let save = waitForSave();
-        await page.locator("#settings-save-btn").click();
-        expect((await save).status()).toBe(200);
-        await expect(page.getByText("Settings saved!")).toBeVisible();
-
-        // Restore original value so subsequent specs see the default title.
-        await titleInput.fill(originalTitle);
-        save = waitForSave();
-        await page.locator("#settings-save-btn").click();
-        expect((await save).status()).toBe(200);
+        try {
+            await titleInput.fill("Playwright Test Site");
+            const save = waitForSave();
+            await page.locator("#settings-save-btn").click();
+            expect((await save).status()).toBe(200);
+            await expect(page.getByText("Settings saved!")).toBeVisible();
+        } finally {
+            // Restore original value even if the test fails mid-way, so
+            // subsequent runs don't see a leaked "Playwright Test Site" title.
+            await titleInput.fill(originalTitle);
+            const restore = waitForSave();
+            await page.locator("#settings-save-btn").click();
+            await restore;
+        }
     });
 
     test("page styles tab saves heading font without error", async ({ page }) => {
