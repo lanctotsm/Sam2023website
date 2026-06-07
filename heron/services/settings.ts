@@ -5,8 +5,7 @@ import { unstable_cache, revalidateTag } from "next/cache";
 
 function invalidateSettingsCache() {
     try {
-        // Next.js 15.5+: prefer profile "max" (stale-while-revalidate) in route handlers.
-        revalidateTag("settings", "max");
+        revalidateTag("settings");
     } catch (err) {
         console.error("Failed to revalidate settings cache:", err);
     }
