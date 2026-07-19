@@ -24,7 +24,7 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ secrets.AWS_REGION }}
 
-      # Use Node 24 to match Bitnami/Lightsail server (better-sqlite3 is native and must match)
+      # Node 24 must match the Heron runtime image (better-sqlite3 is native)
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
@@ -56,6 +56,10 @@ jobs:
           # Site title (GitHub Environment variable, not a secret)
           SITE_TITLE: ${{ vars.SITE_TITLE }}
         run: npm run build
+        working-directory: heron
+
+      - name: Rebuild native modules for Linux
+        run: npm rebuild better-sqlite3
         working-directory: heron
 
       - name: Deploy CloudFormation
@@ -108,7 +112,11 @@ jobs:
           echo "✓ Route 53 A record updated: $ROUTE53_RECORD_NAME -> $STATIC_IP"
 
       - name: Prepare SSH
+        env:
+          # Empty secret → ubuntu (custom heron-runtime). Set to bitnami until cutover.
+          LIGHTSAIL_SSH_USER: ${{ secrets.LIGHTSAIL_SSH_USER }}
         run: |
+          SSH_USER="${LIGHTSAIL_SSH_USER:-ubuntu}"
           # Fetch key from Secrets Manager
           SECRET_VALUE=$(aws secretsmanager get-secret-value \
             --secret-id "${{ secrets.LIGHTSAIL_SSH_KEY_SECRET_NAME }}" \
@@ -127,14 +135,14 @@ jobs:
           cat > ssh_config <<SSH
           Host lightsail
             HostName $LIGHTSAIL_HOST
-            User bitnami
+            User $SSH_USER
             IdentityFile $(pwd)/lightsail.key
             StrictHostKeyChecking no
             ServerAliveInterval 60
             ServerAliveCountMax 3
             TCPKeepAlive yes
           SSH
-          echo "✓ SSH config written for $LIGHTSAIL_HOST"
+          echo "✓ SSH config written for $LIGHTSAIL_HOST (user=$SSH_USER)"
 
       - name: Wait for SSH
         run: |
@@ -184,13 +192,17 @@ jobs:
           ssh -F ssh_config lightsail "bash -s" <<'DB'
           set -euo pipefail
           cd /opt/heron-cms
-          export PATH="/opt/bitnami/node/bin:/usr/local/bin:/usr/bin:$PATH"
+          # Prefer PATH from runtime image; fall back to Bitnami during cutover
+          export PATH="/usr/local/bin:/usr/bin:/opt/bitnami/node/bin:${HOME}/.local/bin:$PATH"
           set -a; [ -f .env ] && . ./.env; set +a
           node scripts/deploy-db.cjs
           DB
 
       - name: Restart services
         run: ssh -F ssh_config lightsail "cd /opt/heron-cms && bash scripts/deploy-restart-services.sh"
+
+      - name: Install DB backup cron
+        run: ssh -F ssh_config lightsail "cd /opt/heron-cms && bash scripts/deploy-install-db-backup-cron.sh"
 
       - name: Configure Apache reverse proxy and Let's Encrypt
         env:

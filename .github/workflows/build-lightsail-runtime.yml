@@ -1,0 +1,223 @@
+name: Build Lightsail runtime
+
+# Creates a runtime-only Lightsail snapshot (Ubuntu + Node 24 + Apache + pm2).
+# App code is deployed separately via Deploy Lightsail CMS (rsync).
+
+on:
+  workflow_dispatch:
+  schedule:
+    # Monthly security rebuild (1st of month 06:00 UTC)
+    - cron: "0 6 1 * *"
+
+jobs:
+  build-runtime:
+    runs-on: ubuntu-latest
+    environment: production
+    permissions:
+      contents: read
+    env:
+      BUNDLE_ID: nano_3_0
+      BUILDER_PREFIX: heron-runtime-builder
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Resolve Ubuntu blueprint and AZ
+        id: meta
+        run: |
+          set -euo pipefail
+          REGION="${{ secrets.AWS_REGION }}"
+          # Prefer Ubuntu 24.04 OS blueprint; fall back to newest active Ubuntu OS blueprint
+          BLUEPRINT=$(aws lightsail get-blueprints --region "$REGION" --query \
+            "blueprints[?platform=='LINUX_UNIX' && type=='os' && contains(name, 'Ubuntu') && contains(name, '24') && isActive].blueprintId | [0]" \
+            --output text)
+          if [ -z "$BLUEPRINT" ] || [ "$BLUEPRINT" = "None" ]; then
+            BLUEPRINT=$(aws lightsail get-blueprints --region "$REGION" --query \
+              "blueprints[?platform=='LINUX_UNIX' && type=='os' && contains(name, 'Ubuntu') && isActive] | sort_by(@, &name) | [-1].blueprintId" \
+              --output text)
+          fi
+          if [ -z "$BLUEPRINT" ] || [ "$BLUEPRINT" = "None" ]; then
+            echo "✗ Could not find an active Ubuntu OS Lightsail blueprint" >&2
+            exit 1
+          fi
+          AZ=$(aws lightsail get-regions --include-availability-zones --query \
+            "regions[?name=='${REGION}'].availabilityZones[0].zoneName" --output text)
+          if [ -z "$AZ" ] || [ "$AZ" = "None" ]; then
+            AZ="${REGION}a"
+          fi
+          SHORT_SHA="${GITHUB_SHA:0:7}"
+          STAMP=$(date -u +%Y%m%d)
+          BUILDER_NAME="${BUILDER_PREFIX}-${STAMP}-${SHORT_SHA}-${GITHUB_RUN_ID}"
+          SNAPSHOT_NAME="heron-runtime-${STAMP}-${SHORT_SHA}"
+          echo "blueprint=$BLUEPRINT" >> "$GITHUB_OUTPUT"
+          echo "az=$AZ" >> "$GITHUB_OUTPUT"
+          echo "builder_name=$BUILDER_NAME" >> "$GITHUB_OUTPUT"
+          echo "snapshot_name=$SNAPSHOT_NAME" >> "$GITHUB_OUTPUT"
+          echo "image_version=${STAMP}-${SHORT_SHA}" >> "$GITHUB_OUTPUT"
+          echo "Using blueprint=$BLUEPRINT az=$AZ builder=$BUILDER_NAME snapshot=$SNAPSHOT_NAME"
+
+      - name: Prepare SSH key
+        run: |
+          set -euo pipefail
+          SECRET_VALUE=$(aws secretsmanager get-secret-value \
+            --secret-id "${{ secrets.LIGHTSAIL_SSH_KEY_SECRET_NAME }}" \
+            --query SecretString --output text)
+          if echo "$SECRET_VALUE" | jq -e . >/dev/null 2>&1; then
+            echo "$SECRET_VALUE" | jq -r '.privateKey // .ssh_key // .key // .' > lightsail.key
+          else
+            echo "$SECRET_VALUE" > lightsail.key
+          fi
+          chmod 600 lightsail.key
+          ssh-keygen -l -f lightsail.key >/dev/null 2>&1 || { echo "✗ Invalid SSH key"; exit 1; }
+
+      - name: Create builder instance
+        id: create
+        run: |
+          set -euo pipefail
+          aws lightsail create-instances \
+            --instance-names "${{ steps.meta.outputs.builder_name }}" \
+            --availability-zone "${{ steps.meta.outputs.az }}" \
+            --blueprint-id "${{ steps.meta.outputs.blueprint }}" \
+            --bundle-id "$BUNDLE_ID" \
+            --key-pair-name "${{ secrets.LIGHTSAIL_KEY_PAIR_NAME }}" \
+            --tags Key=Purpose,Value=heron-runtime-builder Key=ManagedBy,Value=github-actions
+
+          echo "Waiting for instance to become running..."
+          for i in $(seq 1 60); do
+            STATE=$(aws lightsail get-instance \
+              --instance-name "${{ steps.meta.outputs.builder_name }}" \
+              --query "instance.state.name" --output text 2>/dev/null || echo "pending")
+            echo "  state=$STATE ($i/60)"
+            if [ "$STATE" = "running" ]; then
+              break
+            fi
+            sleep 10
+          done
+          if [ "${STATE:-}" != "running" ]; then
+            echo "✗ Builder did not reach running state" >&2
+            exit 1
+          fi
+
+          # Open SSH (and HTTP/S for parity with prod firewall expectations)
+          aws lightsail open-instance-public-ports \
+            --instance-name "${{ steps.meta.outputs.builder_name }}" \
+            --port-info fromPort=22,toPort=22,protocol=tcp || true
+          aws lightsail open-instance-public-ports \
+            --instance-name "${{ steps.meta.outputs.builder_name }}" \
+            --port-info fromPort=80,toPort=80,protocol=tcp || true
+          aws lightsail open-instance-public-ports \
+            --instance-name "${{ steps.meta.outputs.builder_name }}" \
+            --port-info fromPort=443,toPort=443,protocol=tcp || true
+
+          PUBLIC_IP=$(aws lightsail get-instance \
+            --instance-name "${{ steps.meta.outputs.builder_name }}" \
+            --query "instance.publicIpAddress" --output text)
+          echo "public_ip=$PUBLIC_IP" >> "$GITHUB_OUTPUT"
+          echo "Builder IP: $PUBLIC_IP"
+
+      - name: Wait for SSH
+        run: |
+          set -euo pipefail
+          HOST="${{ steps.create.outputs.public_ip }}"
+          cat > ssh_config <<SSH
+          Host builder
+            HostName $HOST
+            User ubuntu
+            IdentityFile $(pwd)/lightsail.key
+            StrictHostKeyChecking no
+            ServerAliveInterval 60
+            ConnectTimeout 10
+          SSH
+          for i in $(seq 1 36); do
+            if ssh -F ssh_config builder "echo ok" 2>/dev/null; then
+              echo "✓ SSH ready"
+              exit 0
+            fi
+            echo "Attempt $i/36, retrying in 10s..."
+            sleep 10
+          done
+          echo "✗ SSH not ready" >&2
+          exit 1
+
+      - name: Provision runtime
+        run: |
+          set -euo pipefail
+          scp -F ssh_config infra/lightsail-image/provision.sh builder:/tmp/provision.sh
+          ssh -F ssh_config builder \
+            "sudo IMAGE_VERSION='${{ steps.meta.outputs.image_version }}' bash /tmp/provision.sh"
+          ssh -F ssh_config builder "cat /var/lib/heron-cms/.runtime-image-version && node -v && apache2ctl -v | head -1"
+
+      - name: Create instance snapshot
+        id: snapshot
+        run: |
+          set -euo pipefail
+          SNAP="${{ steps.meta.outputs.snapshot_name }}"
+          # Delete prior same-named snapshot if a re-run collides (unlikely with sha)
+          if aws lightsail get-instance-snapshot --instance-snapshot-name "$SNAP" >/dev/null 2>&1; then
+            echo "Snapshot $SNAP already exists; deleting first..."
+            aws lightsail delete-instance-snapshot --instance-snapshot-name "$SNAP"
+            sleep 15
+          fi
+          aws lightsail create-instance-snapshot \
+            --instance-name "${{ steps.meta.outputs.builder_name }}" \
+            --instance-snapshot-name "$SNAP" \
+            --tags Key=Purpose,Value=heron-runtime Key=GitSha,Value="${GITHUB_SHA}" Key=ManagedBy,Value=github-actions
+
+          echo "Waiting for snapshot $SNAP..."
+          for i in $(seq 1 90); do
+            STATE=$(aws lightsail get-instance-snapshot \
+              --instance-snapshot-name "$SNAP" \
+              --query "instanceSnapshot.state" --output text 2>/dev/null || echo "pending")
+            echo "  snapshot state=$STATE ($i/90)"
+            # Lightsail uses pending | completed | error | available depending on API version
+            case "$STATE" in
+              completed|available) echo "✓ Snapshot ready"; exit 0 ;;
+              error|failed) echo "✗ Snapshot failed: $STATE" >&2; exit 1 ;;
+            esac
+            sleep 10
+          done
+          echo "✗ Snapshot did not complete in time" >&2
+          exit 1
+
+      - name: Delete builder instance
+        if: always()
+        run: |
+          set -euo pipefail
+          NAME="${{ steps.meta.outputs.builder_name }}"
+          if [ -z "$NAME" ]; then
+            echo "No builder name; skip cleanup"
+            exit 0
+          fi
+          if aws lightsail get-instance --instance-name "$NAME" >/dev/null 2>&1; then
+            echo "Deleting builder $NAME..."
+            aws lightsail delete-instance --instance-name "$NAME" --force-delete-add-ons || \
+              aws lightsail delete-instance --instance-name "$NAME" || true
+          else
+            echo "Builder already gone"
+          fi
+
+      - name: Job summary
+        if: success()
+        run: |
+          {
+            echo "## Heron runtime snapshot"
+            echo ""
+            echo "| Field | Value |"
+            echo "| --- | --- |"
+            echo "| Snapshot | \`${{ steps.meta.outputs.snapshot_name }}\` |"
+            echo "| Image version | \`${{ steps.meta.outputs.image_version }}\` |"
+            echo "| Blueprint | \`${{ steps.meta.outputs.blueprint }}\` |"
+            echo "| Bundle | \`$BUNDLE_ID\` |"
+            echo ""
+            echo "Next: Lightsail console → Snapshots → **Create new instance** from this snapshot (nano), migrate data, attach static IP, set \`LIGHTSAIL_SSH_USER=ubuntu\`, run Deploy Lightsail CMS."
+            echo ""
+            echo "See \`docs/DEPLOY_RUNTIME_IMAGE.md\`."
+          } >> "$GITHUB_STEP_SUMMARY"

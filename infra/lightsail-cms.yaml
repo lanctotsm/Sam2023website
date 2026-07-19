@@ -1,5 +1,8 @@
 AWSTemplateFormatVersion: "2010-09-09"
-Description: Heron Lightsail CMS (VM + S3 + CloudFront)
+Description: >
+  Heron Lightsail CMS (VM + S3 + CloudFront).
+  Prefer replacing the VM via heron-runtime-* instance snapshots (see docs/DEPLOY_RUNTIME_IMAGE.md).
+  Do not change LightsailBlueprintId on a live stack to migrate hosts — that may replace the instance.
 
 Parameters:
   LightsailInstanceName:
@@ -8,7 +11,10 @@ Parameters:
   LightsailBlueprintId:
     Type: String
     Default: nodejs
-    Description: "Bitnami Node.js blueprint. Run aws lightsail get-blueprints to list."
+    Description: >
+      Blueprint for CloudFormation-managed instance create only.
+      Production cutover should use a custom heron-runtime snapshot (console/CLI), not a blueprint change here.
+      Run aws lightsail get-blueprints to list IDs.
   LightsailBundleId:
     Type: String
     Default: nano_3_0
