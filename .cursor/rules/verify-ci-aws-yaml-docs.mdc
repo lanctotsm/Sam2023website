@@ -1,0 +1,39 @@
+---
+description: Verify GitHub Actions and AWS infra YAML against official docs before shipping
+globs: .github/workflows/**/*.{yml,yaml},infra/**/*.{yml,yaml}
+alwaysApply: false
+---
+
+# Verify CI / AWS YAML against docs
+
+When adding or changing GitHub Actions workflows or AWS infra YAML (CloudFormation, Lightsail, CloudFront, deploy scripts invoked from CI), **do not invent CLI flags, resource properties, or action inputs from memory**. Confirm against current official docs first.
+
+## Before finishing a YAML change
+
+1. **Identify the API surface** you touched (e.g. `aws lightsail create-instances --tags`, CloudFront DistributionConfig, `actions/checkout` inputs).
+2. **Look it up** with available tools:
+   - AWS: `project-0-Sam2023website-aws-docs` (`search_documentation` / `read_documentation` / `read_sections`) or AWS IaC MCP for CloudFormation/CDK.
+   - GitHub Actions: official docs (`https://docs.github.com/en/actions`) via fetch/web — workflow syntax, `secrets`/`env` behavior, and the README for any third-party action.
+3. **Match casing and shape exactly** — AWS services differ (e.g. Lightsail CLI tags are `key`/`value`, not EC2-style `Key`/`Value`).
+4. **Call out anything unverified** if docs were unreachable; do not present guessed syntax as correct.
+
+## Common footguns (check docs when touching these)
+
+- Lightsail CLI structure tags: `key=...,value=...` (lowercase field names).
+- CloudFormation property names and update/replace behavior for Lightsail/CloudFront.
+- Action input names and required permissions (`permissions:`, OIDC vs access keys).
+- Shell steps: `set -euo pipefail`, and whether `|| true` hides real failures you care about.
+
+## Example
+
+```yaml
+# ❌ BAD — EC2-style tag keys; Lightsail AWS CLI rejects this
+--tags Key=Purpose,Value=heron-runtime
+
+# ✅ GOOD — Lightsail expects lowercase key/value
+--tags key=Purpose,value=heron-runtime
+```
+
+## Out of scope
+
+App TypeScript/React under `heron/` — use other project rules. This rule is only for workflow/infra YAML and AWS CLI embedded in those files.
