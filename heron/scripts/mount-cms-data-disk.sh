@@ -10,7 +10,7 @@ MARKER="${HERON_DATA_DISK_MARKER:-/var/lib/heron-cms/.data-on-block-disk}"
 FSTAB_TAG="heron-cms-data-disk"
 LABEL="HERONCMS"
 # Only these devices may be formatted (never "first random disk").
-ALLOW_FORMAT_DEVICES="${HERON_ALLOW_FORMAT_DEVICES:-/dev/xvdf /dev/nvme1n1 /dev/sdf}"
+ALLOW_FORMAT_DEVICES="${HERON_ALLOW_FORMAT_DEVICES:-/dev/xvdf /dev/nvme1n1}"
 
 log() { echo "[mount-cms-data-disk] $*"; }
 die() { log "ERROR: $*"; exit 1; }
