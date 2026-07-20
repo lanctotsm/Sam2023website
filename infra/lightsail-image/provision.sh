@@ -24,12 +24,20 @@ if ! id -u "$RUNTIME_USER" >/dev/null 2>&1; then
 fi
 
 echo "[provision] Enable Ubuntu universe (certbot / apt-listchanges are not in main)..."
-# Lightsail Ubuntu OS blueprints often ship with only `main` enabled. No Certbot PPA
+# Lightsail Ubuntu OS blueprints often ship with only main enabled. No Certbot PPA
 # needed - packages come from archive.ubuntu.com universe.
 # https://packages.ubuntu.com/jammy/certbot
+#
+# Minimal images often fail apt-get update after enabling universe because the
+# command-not-found post-invoke hook looks for missing */universe_cnf_Commands-*
+# files. Disable that hook for provisioning (not needed on a server image).
+printf 'APT::Update::Post-Invoke-Success {};\n' >/etc/apt/apt.conf.d/99disable-cnf-update
+
 apt-get update -y
 apt-get install -y software-properties-common
 add-apt-repository -y universe
+# Fresh lists after component change (avoids partial/stale index races)
+rm -rf /var/lib/apt/lists/*
 apt-get update -y
 
 echo "[provision] apt install base packages..."
