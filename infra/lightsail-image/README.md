@@ -3,7 +3,7 @@
 Builds a **runtime-only** Lightsail instance snapshot for the Heron CMS nano VM:
 
 - Ubuntu OS blueprint (seed)
-- Node.js **24 Active LTS** (not Current 26 — prefer LTS for prod + native modules)
+- Node.js 24
 - Apache (`proxy` / `ssl` modules; vhost written at app deploy)
 - pm2 (per `ubuntu` user)
 - App dirs: `/opt/heron-cms`, `/var/lib/heron-cms/data`

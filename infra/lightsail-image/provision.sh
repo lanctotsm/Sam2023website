@@ -1,14 +1,12 @@
 #!/usr/bin/env bash
 # Provision an Ubuntu Lightsail nano as the Heron CMS runtime image.
-# Installs Node.js Active LTS (24), Apache (proxy modules), pm2, certbot helpers, and app dirs.
-# Pin Active LTS (not Current): native modules (better-sqlite3) need a stable prod line.
+# Installs Node 24, Apache (proxy modules), pm2, certbot helpers, and app dirs.
 # Idempotent - safe to re-run.
 set -euo pipefail
 
 export DEBIAN_FRONTEND=noninteractive
 
 RUNTIME_USER="${RUNTIME_USER:-ubuntu}"
-# Newest Active LTS as of 2026-07 (https://github.com/nodejs/Release). Override only for experiments.
 NODE_MAJOR="${NODE_MAJOR:-24}"
 IMAGE_VERSION="${IMAGE_VERSION:-dev}"
 MARKER="/var/lib/heron-cms/.runtime-image-version"
@@ -58,7 +56,7 @@ APT::Periodic::AutocleanInterval "7";
 EOF
 
 if ! command -v node >/dev/null 2>&1 || ! node -v | grep -q "v${NODE_MAJOR}"; then
-  echo "[provision] Installing Node.js ${NODE_MAJOR} (Active LTS) from NodeSource..."
+  echo "[provision] Installing Node.js ${NODE_MAJOR} from NodeSource..."
   curl -fsSL "https://deb.nodesource.com/setup_${NODE_MAJOR}.x" | bash -
   apt-get install -y nodejs
 fi

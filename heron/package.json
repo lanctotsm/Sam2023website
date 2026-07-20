@@ -2,9 +2,6 @@
   "name": "heron",
   "private": true,
   "version": "0.1.0",
-  "engines": {
-    "node": ">=24 <25"
-  },
   "scripts": {
     "dev": "next dev",
     "build": "next build",
