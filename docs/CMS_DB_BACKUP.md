@@ -19,20 +19,13 @@ Disk cost: **8 GB** Lightsail storage ≈ **$0.80/mo** (minimum size).
 
 ## After merge (Bitnami — do this once)
 
-1. Run **Deploy Lightsail CMS**.
+1. Confirm DB path on the live host: `ls -la /var/lib/heron-cms/data/cms.db`
+2. Confirm the GitHub deploy AWS user can manage Lightsail disks (or `lightsail:*`); otherwise CloudFormation will fail.
+3. Run **Deploy Lightsail CMS**.
    - CloudFormation creates/attaches the data disk (**instance restarts**; static IP stays).
-   - Mount script moves existing `/var/lib/heron-cms/data` onto the disk if needed.
-2. Confirm site works (admin login, posts).
-3. Optional: take an S3 backup for DR:
-
-```bash
-cd /opt/heron-cms
-export PATH="/opt/bitnami/node/bin:/usr/local/bin:/usr/bin:$PATH"
-set -a; . ./.env; set +a
-node scripts/backup-cms-db.cjs
-```
-
-4. After soak, you can delete `/var/lib/heron-cms/data.rootfs-bak-*` on the instance.
+   - Deploy stops the app, best-effort S3 backup, then mounts/migrates (refuses to format unknown devices or migrate while `:3000` is still up).
+4. Confirm site works and `findmnt /var/lib/heron-cms/data`.
+5. After soak, delete `/var/lib/heron-cms/data.rootfs-bak-*` on the instance.
 
 Optional weekly backup cron (Bitnami user):
 

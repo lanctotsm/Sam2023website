@@ -172,17 +172,47 @@ jobs:
           echo "✗ SSH not ready after 30 attempts"; exit 1
 
       # Attaching the Lightsail disk restarts the instance; wait again if needed, then
-      # mount / migrate SQLite onto the block disk (one-time migrate, then no-op).
+      # stop the app, optionally S3-backup, mount / migrate SQLite onto the block disk.
       - name: Mount CMS data disk
         run: |
+          set -euo pipefail
           for i in {1..18}; do
             if ssh -F ssh_config lightsail "echo ok" 2>/dev/null; then
               break
             fi
             echo "SSH after disk attach: attempt $i/18..."; sleep 10
           done
-          scp -F ssh_config heron/scripts/mount-cms-data-disk.sh lightsail:/tmp/mount-cms-data-disk.sh
-          ssh -F ssh_config lightsail "bash /tmp/mount-cms-data-disk.sh"
+          scp -F ssh_config \
+            heron/scripts/mount-cms-data-disk.sh \
+            heron/scripts/backup-cms-db.cjs \
+            lightsail:/tmp/
+          # Stop app before any DB file copy (mount script also enforces :3000 clear)
+          ssh -F ssh_config lightsail "bash -s" <<'STOP'
+          set -euo pipefail
+          export PATH="/opt/bitnami/node/bin:/usr/local/bin:/usr/bin:$HOME/.local/bin:$PATH"
+          if command -v pm2 >/dev/null 2>&1; then
+            pm2 stop heron-cms 2>/dev/null || true
+          fi
+          pkill -f '/opt/heron-cms/server.js' 2>/dev/null || true
+          sleep 2
+          STOP
+          # DR snapshot while DB is quiescent (best-effort if deps/env already on host)
+          ssh -F ssh_config lightsail "bash -s" <<'BAK'
+          set -euo pipefail
+          if [ -f /opt/heron-cms/.env ] && [ -f /tmp/backup-cms-db.cjs ]; then
+            cd /opt/heron-cms
+            export PATH="/opt/bitnami/node/bin:/usr/local/bin:/usr/bin:$HOME/.local/bin:$PATH"
+            set -a; . ./.env; set +a
+            mkdir -p scripts
+            cp /tmp/backup-cms-db.cjs scripts/backup-cms-db.cjs
+            node scripts/backup-cms-db.cjs || echo "⚠ S3 backup failed (continuing with local migrate); check IAM/env" >&2
+          else
+            echo "⚠ Skipping pre-migrate S3 backup (.env or script missing)"
+          fi
+          BAK
+          # Require existing cms.db on first migrate so we never mount an empty disk over prod by mistake
+          ssh -F ssh_config lightsail \
+            "sudo HERON_REQUIRE_EXISTING_DB=1 bash /tmp/mount-cms-data-disk.sh"
 
       - name: Sync app to Lightsail
         run: |
