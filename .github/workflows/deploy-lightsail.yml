@@ -60,16 +60,41 @@ jobs:
 
       - name: Deploy CloudFormation
         run: |
+          set -euo pipefail
+          INSTANCE_NAME="${{ secrets.LIGHTSAIL_INSTANCE_NAME }}"
+          if [ -z "$INSTANCE_NAME" ]; then
+            INSTANCE_NAME="heron-cms"
+          fi
+          AZ=$(aws lightsail get-instance \
+            --instance-name "$INSTANCE_NAME" \
+            --query "instance.location.availabilityZone" \
+            --output text)
+          if [ -z "$AZ" ] || [ "$AZ" = "None" ]; then
+            echo "✗ Could not resolve Availability Zone for Lightsail instance $INSTANCE_NAME" >&2
+            exit 1
+          fi
+          echo "Lightsail AZ: $AZ"
+          DATA_DISK_NAME="${{ secrets.LIGHTSAIL_DATA_DISK_NAME }}"
+          DATA_DISK_SIZE="${{ secrets.LIGHTSAIL_DATA_DISK_SIZE_GB }}"
+          STATIC_IP_NAME="${{ secrets.LIGHTSAIL_STATIC_IP_NAME }}"
+          CF_PRICE="${{ secrets.CLOUDFRONT_PRICE_CLASS }}"
+          : "${DATA_DISK_NAME:=heron-cms-data}"
+          : "${DATA_DISK_SIZE:=8}"
+          : "${STATIC_IP_NAME:=heron-cms-ip}"
+          : "${CF_PRICE:=PriceClass_100}"
           aws cloudformation deploy \
             --stack-name ${{ secrets.LIGHTSAIL_STACK_NAME }} \
             --template-file infra/lightsail-cms.yaml \
             --capabilities CAPABILITY_IAM CAPABILITY_NAMED_IAM \
             --parameter-overrides \
               BucketName=${{ secrets.CMS_BUCKET_NAME }} \
-              LightsailInstanceName=${{ secrets.LIGHTSAIL_INSTANCE_NAME || 'heron-cms' }} \
-              StaticIpName=${{ secrets.LIGHTSAIL_STATIC_IP_NAME || 'heron-cms-ip' }} \
+              LightsailInstanceName=$INSTANCE_NAME \
+              LightsailAvailabilityZone=$AZ \
+              DataDiskName=$DATA_DISK_NAME \
+              DataDiskSizeGb=$DATA_DISK_SIZE \
+              StaticIpName=$STATIC_IP_NAME \
               KeyPairName=${{ secrets.LIGHTSAIL_KEY_PAIR_NAME }} \
-              CloudFrontPriceClass=${{ secrets.CLOUDFRONT_PRICE_CLASS || 'PriceClass_100' }}
+              CloudFrontPriceClass=$CF_PRICE
 
       - name: Get Lightsail static IP
         id: lightsail-info
@@ -145,6 +170,19 @@ jobs:
             echo "Attempt $i/30, retrying in 10s..."; sleep 10
           done
           echo "✗ SSH not ready after 30 attempts"; exit 1
+
+      # Attaching the Lightsail disk restarts the instance; wait again if needed, then
+      # mount / migrate SQLite onto the block disk (one-time migrate, then no-op).
+      - name: Mount CMS data disk
+        run: |
+          for i in {1..18}; do
+            if ssh -F ssh_config lightsail "echo ok" 2>/dev/null; then
+              break
+            fi
+            echo "SSH after disk attach: attempt $i/18..."; sleep 10
+          done
+          scp -F ssh_config heron/scripts/mount-cms-data-disk.sh lightsail:/tmp/mount-cms-data-disk.sh
+          ssh -F ssh_config lightsail "bash /tmp/mount-cms-data-disk.sh"
 
       - name: Sync app to Lightsail
         run: |
