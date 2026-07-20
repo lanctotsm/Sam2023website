@@ -71,7 +71,7 @@ find_device() {
     return 0
   fi
   local cand
-  for cand in /dev/xvdf /dev/nvme1n1 /dev/sdf; do
+  for cand in /dev/xvdf /dev/nvme1n1; do
     if [ -b "$cand" ]; then
       echo "$cand"
       return 0
