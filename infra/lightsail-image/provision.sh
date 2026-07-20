@@ -23,8 +23,16 @@ if ! id -u "$RUNTIME_USER" >/dev/null 2>&1; then
   exit 1
 fi
 
-echo "[provision] apt update + base packages..."
+echo "[provision] Enable Ubuntu universe (certbot / apt-listchanges are not in main)..."
+# Lightsail Ubuntu OS blueprints often ship with only `main` enabled. No Certbot PPA
+# needed — packages come from archive.ubuntu.com universe.
+# https://packages.ubuntu.com/jammy/certbot
 apt-get update -y
+apt-get install -y software-properties-common
+add-apt-repository -y universe
+apt-get update -y
+
+echo "[provision] apt install base packages..."
 apt-get install -y \
   ca-certificates \
   curl \
