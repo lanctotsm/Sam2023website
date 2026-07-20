@@ -74,20 +74,21 @@ function createS3Client() {
 }
 
 async function uploadBackup(client, localGzPath, key) {
-  const body = fs.readFileSync(localGzPath);
+  const stat = fs.statSync(localGzPath);
   await client.send(
     new PutObjectCommand({
       Bucket: bucket,
       Key: key,
-      Body: body,
+      Body: fs.createReadStream(localGzPath),
       ContentType: "application/gzip",
+      ContentLength: stat.size,
       Metadata: {
         source: "heron-cms",
         "db-path": dbPath
       }
     })
   );
-  console.log(`Uploaded s3://${bucket}/${key} (${body.length} bytes)`);
+  console.log(`Uploaded s3://${bucket}/${key} (${stat.size} bytes)`);
 }
 
 async function pruneOldBackups(client) {
@@ -102,9 +103,13 @@ async function pruneOldBackups(client) {
     .filter((o) => o.date)
     .sort((a, b) => (a.date < b.date ? 1 : -1));
 
-  const toDelete = objects.slice(retainWeeks);
+  const cutoff = new Date(Date.now() - retainWeeks * 7 * 24 * 60 * 60 * 1000)
+    .toISOString()
+    .slice(0, 10);
+
+  const toDelete = objects.filter((o) => o.date < cutoff);
   if (toDelete.length === 0) {
-    console.log(`Retention: keeping all ${objects.length} backup(s) (limit ${retainWeeks} weeks).`);
+    console.log(`Retention: keeping all ${objects.length} backup(s) (keep >= ${cutoff}).`);
     return;
   }
 
@@ -117,7 +122,7 @@ async function pruneOldBackups(client) {
       }
     })
   );
-  console.log(`Retention: deleted ${toDelete.length} backup(s) older than ${retainWeeks} newest weeks.`);
+  console.log(`Retention: deleted ${toDelete.length} backup(s) older than ${cutoff}.`);
   for (const o of toDelete) {
     console.log(`  removed ${o.key}`);
   }
