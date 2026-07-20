@@ -9,7 +9,7 @@ deploy_runtime_detect
 
 cd /opt/heron-cms
 
-ensure_pm2() {
+install_pm2() {
   local npm_cmd
   npm_cmd="$(command -v npm 2>/dev/null || echo "${DEPLOY_NODE_BIN_DIR}/npm")"
   # Always use the deploy user's home (not a mismatched $HOME).
@@ -17,12 +17,7 @@ ensure_pm2() {
   mkdir -p "${DEPLOY_HOME}/.local/bin"
   export PATH="${DEPLOY_HOME}/.local/bin:${PATH}"
 
-  # Binary on PATH is not enough — Node 24 rejects a corrupt pm2 package.json.
-  if command -v pm2 >/dev/null 2>&1 && pm2 -v >/dev/null 2>&1; then
-    return 0
-  fi
-
-  echo "Installing/repairing pm2 under ${DEPLOY_HOME}/.local ..."
+  echo "Installing pm2 under ${DEPLOY_HOME}/.local ..."
   rm -rf \
     "${DEPLOY_HOME}/.local/lib/node_modules/pm2" \
     "${DEPLOY_HOME}/.local/lib/node_modules/.pm2-"* \
@@ -32,6 +27,23 @@ ensure_pm2() {
   "$npm_cmd" install -g pm2
   command -v pm2 >/dev/null 2>&1
   pm2 -v
+}
+
+ensure_pm2() {
+  export PATH="${DEPLOY_HOME}/.local/bin:${PATH}"
+
+  if ! command -v pm2 >/dev/null 2>&1; then
+    echo "pm2 not found; installing..."
+    install_pm2
+    return 0
+  fi
+
+  # Binary on PATH is not enough — Node 24 rejects a corrupt pm2 package.json.
+  if ! pm2 -v >/dev/null 2>&1; then
+    echo "pm2 is present but broken (invalid package config); reinstalling..."
+    install_pm2
+    return 0
+  fi
 }
 
 ensure_pm2
