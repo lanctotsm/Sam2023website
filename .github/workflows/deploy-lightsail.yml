@@ -48,6 +48,12 @@ jobs:
         run: npm test
         working-directory: heron
 
+      # Rebuild before `next build` so standalone copies the Linux native binary
+      # into `.next/standalone` (rsync deploys that tree, not heron/node_modules).
+      - name: Rebuild native modules for Linux
+        run: npm rebuild better-sqlite3
+        working-directory: heron
+
       - name: Build Heron app
         env:
           NEXT_PUBLIC_IMAGE_BASE_URL: ${{ secrets.S3_PUBLIC_BASE_URL }}
@@ -56,10 +62,6 @@ jobs:
           # Site title (GitHub Environment variable, not a secret)
           SITE_TITLE: ${{ vars.SITE_TITLE }}
         run: npm run build
-        working-directory: heron
-
-      - name: Rebuild native modules for Linux
-        run: npm rebuild better-sqlite3
         working-directory: heron
 
       - name: Deploy CloudFormation
@@ -138,10 +140,10 @@ jobs:
 
       - name: Prepare SSH
         env:
-          # Empty secret → ubuntu (custom heron-runtime). Set to bitnami until cutover.
+          # Empty/unset → bitnami (current prod). Set LIGHTSAIL_SSH_USER=ubuntu at cutover.
           LIGHTSAIL_SSH_USER: ${{ secrets.LIGHTSAIL_SSH_USER }}
         run: |
-          SSH_USER="${LIGHTSAIL_SSH_USER:-ubuntu}"
+          SSH_USER="${LIGHTSAIL_SSH_USER:-bitnami}"
           # Fetch key from Secrets Manager
           SECRET_VALUE=$(aws secretsmanager get-secret-value \
             --secret-id "${{ secrets.LIGHTSAIL_SSH_KEY_SECRET_NAME }}" \

@@ -88,7 +88,7 @@ jobs:
             --blueprint-id "${{ steps.meta.outputs.blueprint }}" \
             --bundle-id "$BUNDLE_ID" \
             --key-pair-name "${{ secrets.LIGHTSAIL_KEY_PAIR_NAME }}" \
-            --tags Key=Purpose,Value=heron-runtime-builder Key=ManagedBy,Value=github-actions
+            --tags key=Purpose,value=heron-runtime-builder key=ManagedBy,value=github-actions
 
           echo "Waiting for instance to become running..."
           for i in $(seq 1 60); do
@@ -106,16 +106,10 @@ jobs:
             exit 1
           fi
 
-          # Open SSH (and HTTP/S for parity with prod firewall expectations)
+          # Builder only needs SSH for provision.sh; leave 80/443 closed.
           aws lightsail open-instance-public-ports \
             --instance-name "${{ steps.meta.outputs.builder_name }}" \
             --port-info fromPort=22,toPort=22,protocol=tcp || true
-          aws lightsail open-instance-public-ports \
-            --instance-name "${{ steps.meta.outputs.builder_name }}" \
-            --port-info fromPort=80,toPort=80,protocol=tcp || true
-          aws lightsail open-instance-public-ports \
-            --instance-name "${{ steps.meta.outputs.builder_name }}" \
-            --port-info fromPort=443,toPort=443,protocol=tcp || true
 
           PUBLIC_IP=$(aws lightsail get-instance \
             --instance-name "${{ steps.meta.outputs.builder_name }}" \
@@ -169,7 +163,7 @@ jobs:
           aws lightsail create-instance-snapshot \
             --instance-name "${{ steps.meta.outputs.builder_name }}" \
             --instance-snapshot-name "$SNAP" \
-            --tags Key=Purpose,Value=heron-runtime Key=GitSha,Value="${GITHUB_SHA}" Key=ManagedBy,Value=github-actions
+            --tags key=Purpose,value=heron-runtime key=GitSha,value="${GITHUB_SHA}" key=ManagedBy,value=github-actions
 
           echo "Waiting for snapshot $SNAP..."
           for i in $(seq 1 90); do

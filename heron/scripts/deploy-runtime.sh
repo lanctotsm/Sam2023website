@@ -9,7 +9,6 @@ deploy_runtime_detect() {
   if [ -x /opt/bitnami/node/bin/node ]; then
     DEPLOY_VENDOR=bitnami
     DEPLOY_USER="${LIGHTSAIL_DEPLOY_USER:-bitnami}"
-    DEPLOY_HOME="${DEPLOY_HOME:-/home/bitnami}"
     DEPLOY_NODE_BIN_DIR=/opt/bitnami/node/bin
     DEPLOY_VHOST_PATH=/opt/bitnami/apache/conf/vhosts/heron-cms-proxy.conf
     DEPLOY_APACHE_CTL=/opt/bitnami/apache/bin/apachectl
@@ -20,7 +19,6 @@ deploy_runtime_detect() {
     # Ubuntu OS / custom heron-runtime snapshot (system Apache + Node on PATH)
     DEPLOY_VENDOR=ubuntu
     DEPLOY_USER="${LIGHTSAIL_DEPLOY_USER:-ubuntu}"
-    DEPLOY_HOME="${DEPLOY_HOME:-/home/ubuntu}"
     if command -v node >/dev/null 2>&1; then
       DEPLOY_NODE_BIN_DIR="$(dirname "$(command -v node)")"
     elif [ -x /usr/local/bin/node ]; then
@@ -35,16 +33,23 @@ deploy_runtime_detect() {
     DEPLOY_APACHE_ERROR_LOG=/var/log/apache2/error.log
   fi
 
+  # Keep home aligned with DEPLOY_USER (override with DEPLOY_HOME if needed).
+  DEPLOY_HOME="${DEPLOY_HOME:-/home/${DEPLOY_USER}}"
+
   export DEPLOY_VENDOR DEPLOY_USER DEPLOY_HOME DEPLOY_NODE_BIN_DIR
   export DEPLOY_VHOST_PATH DEPLOY_APACHE_CTL DEPLOY_APACHE_CERT_DIR DEPLOY_APACHE_ERROR_LOG
-  export PATH="${DEPLOY_NODE_BIN_DIR}:/usr/local/bin:/usr/bin:${HOME}/.local/bin:${PATH}"
+  export PATH="${DEPLOY_NODE_BIN_DIR}:/usr/local/bin:/usr/bin:${DEPLOY_HOME}/.local/bin:${PATH}"
 }
 
 deploy_runtime_node_ready() {
-  if [ -f /var/lib/heron-cms/.runtime-image-version ] || [ -f /var/lib/heron-cms/.startup-done ]; then
+  # Require a real node binary — markers alone must not short-circuit a broken host.
+  if [ -n "${DEPLOY_NODE_BIN_DIR:-}" ] && [ -x "${DEPLOY_NODE_BIN_DIR}/node" ]; then
     return 0
   fi
-  if [ -x "${DEPLOY_NODE_BIN_DIR:-/usr/bin}/node" ] 2>/dev/null || command -v node >/dev/null 2>&1; then
+  if [ -x /opt/bitnami/node/bin/node ] || [ -x /usr/local/bin/node ] || [ -x /usr/bin/node ]; then
+    return 0
+  fi
+  if command -v node >/dev/null 2>&1; then
     return 0
   fi
   return 1
