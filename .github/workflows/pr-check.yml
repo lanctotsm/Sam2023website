@@ -15,6 +15,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # Active LTS - keep in sync with provision.sh / Deploy Lightsail CMS
       - uses: actions/setup-node@v4
         with:
           node-version: 24
@@ -85,6 +86,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # Active LTS - keep in sync with provision.sh / Deploy Lightsail CMS
       - uses: actions/setup-node@v4
         with:
           node-version: 24

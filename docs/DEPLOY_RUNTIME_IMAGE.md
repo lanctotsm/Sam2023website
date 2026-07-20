@@ -10,7 +10,7 @@ SQLite lives on the attached Lightsail disk `heron-cms-data` at `/var/lib/heron-
 
 | Piece | Role |
 | --- | --- |
-| Runtime snapshot (`heron-runtime-YYYYMMDD-<sha>`) | Ubuntu + Node 24 + Apache + pm2 + app dirs |
+| Runtime snapshot (`heron-runtime-YYYYMMDD-<sha>`) | Ubuntu + Node 24 Active LTS + Apache + pm2 + app dirs |
 | Data disk (`heron-cms-data`) | Persistent SQLite at `/var/lib/heron-cms/data` |
 | Deploy Lightsail CMS workflow | Build app → mount disk → rsync → migrate → pm2 → Apache/Let’s Encrypt |
 | Build Lightsail runtime workflow | Monthly / on-demand: provision Ubuntu nano → snapshot → delete builder |

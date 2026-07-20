@@ -2,6 +2,9 @@
   "name": "heron",
   "private": true,
   "version": "0.1.0",
+  "engines": {
+    "node": ">=24 <25"
+  },
   "scripts": {
     "dev": "next dev",
     "build": "next build",
@@ -47,7 +50,7 @@
     "@playwright/test": "^1.58.2",
     "@types/better-sqlite3": "^7.6.13",
     "@types/jszip": "^3.4.0",
-    "@types/node": "^20.12.12",
+    "@types/node": "^24.13.3",
     "@types/react": "^18.3.3",
     "@types/react-dom": "^18.3.0",
     "eslint": "^9.39.2",

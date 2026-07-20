@@ -24,7 +24,7 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ secrets.AWS_REGION }}
 
-      # Node 24 must match the Heron runtime image (better-sqlite3 is native)
+      # Active LTS — must match Lightsail runtime image / provision.sh (better-sqlite3 is native)
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:

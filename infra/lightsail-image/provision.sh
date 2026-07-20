@@ -1,12 +1,14 @@
 #!/usr/bin/env bash
 # Provision an Ubuntu Lightsail nano as the Heron CMS runtime image.
-# Installs Node 24, Apache (proxy modules), pm2, certbot helpers, and app dirs.
-# Idempotent — safe to re-run.
+# Installs Node.js Active LTS (24), Apache (proxy modules), pm2, certbot helpers, and app dirs.
+# Pin Active LTS (not Current): native modules (better-sqlite3) need a stable prod line.
+# Idempotent - safe to re-run.
 set -euo pipefail
 
 export DEBIAN_FRONTEND=noninteractive
 
 RUNTIME_USER="${RUNTIME_USER:-ubuntu}"
+# Newest Active LTS as of 2026-07 (https://github.com/nodejs/Release). Override only for experiments.
 NODE_MAJOR="${NODE_MAJOR:-24}"
 IMAGE_VERSION="${IMAGE_VERSION:-dev}"
 MARKER="/var/lib/heron-cms/.runtime-image-version"
@@ -23,8 +25,16 @@ if ! id -u "$RUNTIME_USER" >/dev/null 2>&1; then
   exit 1
 fi
 
-echo "[provision] apt update + base packages..."
+echo "[provision] Enable Ubuntu universe (certbot / apt-listchanges are not in main)..."
+# Lightsail Ubuntu OS blueprints often ship with only `main` enabled. No Certbot PPA
+# needed - packages come from archive.ubuntu.com universe.
+# https://packages.ubuntu.com/jammy/certbot
 apt-get update -y
+apt-get install -y software-properties-common
+add-apt-repository -y universe
+apt-get update -y
+
+echo "[provision] apt install base packages..."
 apt-get install -y \
   ca-certificates \
   curl \
@@ -48,7 +58,7 @@ APT::Periodic::AutocleanInterval "7";
 EOF
 
 if ! command -v node >/dev/null 2>&1 || ! node -v | grep -q "v${NODE_MAJOR}"; then
-  echo "[provision] Installing Node.js ${NODE_MAJOR} from NodeSource..."
+  echo "[provision] Installing Node.js ${NODE_MAJOR} (Active LTS) from NodeSource..."
   curl -fsSL "https://deb.nodesource.com/setup_${NODE_MAJOR}.x" | bash -
   apt-get install -y nodejs
 fi

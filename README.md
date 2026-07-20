@@ -55,7 +55,7 @@ graph TD
 ## 🛠 Technology Stack
 
 - **Framework**: [Next.js 15](https://nextjs.org/) (App Router)
-- **Runtime**: Node.js 22+ locally; CI and deployment use Node 24 to match the Lightsail/Bitnami runtime (required for native better-sqlite3).
+- **Runtime**: [Node.js 24 Active LTS](https://github.com/nodejs/Release) for local (recommended), CI, and Lightsail runtime image. Prefer Active LTS over Current (26) for production/native modules (`better-sqlite3`).
 - **Language**: [TypeScript](https://www.typescriptlang.org/)
 - **Database**: [SQLite](https://sqlite.org/) via [better-sqlite3](https://github.com/WiseLibs/better-sqlite3)
 - **ORM**: [Drizzle ORM](https://orm.drizzle.team/)

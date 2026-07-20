@@ -1,6 +1,6 @@
 name: Build Lightsail runtime
 
-# Creates a runtime-only Lightsail snapshot (Ubuntu + Node 24 + Apache + pm2).
+# Creates a runtime-only Lightsail snapshot (Ubuntu + Node 24 Active LTS + Apache + pm2).
 # App code is deployed separately via Deploy Lightsail CMS (rsync).
 
 on:
