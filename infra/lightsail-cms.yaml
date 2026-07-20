@@ -1,5 +1,8 @@
 AWSTemplateFormatVersion: "2010-09-09"
-Description: Heron Lightsail CMS (VM + S3 + CloudFront)
+Description: >
+  Heron Lightsail CMS (VM + attached data disk + S3 + CloudFront).
+  SQLite lives on the attached disk at /var/lib/heron-cms/data so VM replacements
+  can reattach the same disk instead of copying the database.
 
 Parameters:
   LightsailInstanceName:
@@ -12,6 +15,19 @@ Parameters:
   LightsailBundleId:
     Type: String
     Default: nano_3_0
+  LightsailAvailabilityZone:
+    Type: String
+    Description: >
+      AZ of the Lightsail instance (e.g. us-east-1a). Required so the data disk is
+      created in the same zone. Deploy workflow resolves this automatically.
+  DataDiskName:
+    Type: String
+    Default: heron-cms-data
+  DataDiskSizeGb:
+    Type: Number
+    Default: 8
+    MinValue: 8
+    Description: Lightsail block storage size (GB). 8 GB is the minimum (~$0.80/mo).
   StaticIpName:
     Type: String
     Default: heron-cms-ip
@@ -84,20 +100,40 @@ Resources:
               Forward: none
         DefaultRootObject: ""
 
+  CmsDataDisk:
+    Type: AWS::Lightsail::Disk
+    Properties:
+      DiskName: !Ref DataDiskName
+      SizeInGb: !Ref DataDiskSizeGb
+      AvailabilityZone: !Ref LightsailAvailabilityZone
+      Tags:
+        - Key: Purpose
+          Value: heron-cms-sqlite
+
   CmsInstance:
     Type: AWS::Lightsail::Instance
+    DependsOn: CmsDataDisk
     Properties:
       InstanceName: !Ref LightsailInstanceName
       BlueprintId: !Ref LightsailBlueprintId
       BundleId: !Ref LightsailBundleId
       KeyPairName: !Ref KeyPairName
+      # Attaching/detaching a disk restarts the instance (static IP stays if attached).
+      Hardware:
+        Disks:
+          - DiskName: !Ref DataDiskName
+            Path: /dev/xvdf
       UserData: |
         #!/bin/bash
         set -euo pipefail
         export DEBIAN_FRONTEND=noninteractive
         echo "[startup] Creating app and data directories..."
         mkdir -p /opt/heron-cms /var/lib/heron-cms/data
-        chown -R bitnami:bitnami /opt/heron-cms /var/lib/heron-cms
+        if id -u bitnami >/dev/null 2>&1; then
+          chown -R bitnami:bitnami /opt/heron-cms /var/lib/heron-cms
+        elif id -u ubuntu >/dev/null 2>&1; then
+          chown -R ubuntu:ubuntu /opt/heron-cms /var/lib/heron-cms
+        fi
         touch /var/lib/heron-cms/.startup-done
         echo "[startup] Installing utilities..."
         apt-get update -y 2>/dev/null || true
@@ -141,6 +177,8 @@ Outputs:
     Value: !GetAtt CmsStaticIp.IpAddress
   S3Bucket:
     Value: !Ref CmsBucket
+  CmsDataDiskName:
+    Value: !Ref DataDiskName
   CmsS3UploaderPolicyArn:
     Description: "Attach this policy to the IAM user used by the CMS app (e.g. cms-s3-uploader) if that user is not in this stack."
     Value: !Ref CmsS3UploaderPolicy
