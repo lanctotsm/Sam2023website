@@ -137,7 +137,7 @@ fi
 
 if ! DEVICE="$(find_device)"; then
   log "ERROR: No data disk device found. Is the Lightsail disk attached?"
-  log "Expected one of: /dev/xvdf, /dev/nvme1n1, /dev/sdf, or label $LABEL"
+  log "Expected one of: /dev/xvdf, /dev/nvme1n1, or label $LABEL"
   lsblk -o NAME,SIZE,TYPE,MOUNTPOINT,LABEL || true
   exit 1
 fi
