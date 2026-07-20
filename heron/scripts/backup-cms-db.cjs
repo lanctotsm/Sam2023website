@@ -126,6 +126,7 @@ async function pruneOldBackups(client) {
   for (const o of toDelete) {
     console.log(`  removed ${o.key}`);
   }
+}
 
 async function main() {
   requireEnv("S3_BUCKET");
