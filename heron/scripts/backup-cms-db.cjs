@@ -74,20 +74,21 @@ function createS3Client() {
 }
 
 async function uploadBackup(client, localGzPath, key) {
-  const body = fs.readFileSync(localGzPath);
+  const stat = fs.statSync(localGzPath);
   await client.send(
     new PutObjectCommand({
       Bucket: bucket,
       Key: key,
-      Body: body,
+      Body: fs.createReadStream(localGzPath),
       ContentType: "application/gzip",
+      ContentLength: stat.size,
       Metadata: {
         source: "heron-cms",
         "db-path": dbPath
       }
     })
   );
-  console.log(`Uploaded s3://${bucket}/${key} (${body.length} bytes)`);
+  console.log(`Uploaded s3://${bucket}/${key} (${stat.size} bytes)`);
 }
 
 async function pruneOldBackups(client) {
