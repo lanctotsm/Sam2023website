@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Restart heron-cms via pm2 (install pm2 if needed, startup, restart/start, save).
+# Restart heron-cms via pm2 (install/repair pm2 if needed, startup, restart/start, save).
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -9,13 +9,44 @@ deploy_runtime_detect
 
 cd /opt/heron-cms
 
-if ! command -v pm2 >/dev/null 2>&1; then
-  echo "Installing pm2..."
-  NPM_CMD="$(command -v npm 2>/dev/null || echo "${DEPLOY_NODE_BIN_DIR}/npm")"
-  export npm_config_prefix="$HOME/.local"
-  mkdir -p "$HOME/.local/bin"
-  "$NPM_CMD" install -g pm2
-fi
+install_pm2() {
+  local npm_cmd
+  npm_cmd="$(command -v npm 2>/dev/null || echo "${DEPLOY_NODE_BIN_DIR}/npm")"
+  # Always use the deploy user's home (not a mismatched $HOME).
+  export npm_config_prefix="${DEPLOY_HOME}/.local"
+  mkdir -p "${DEPLOY_HOME}/.local/bin"
+  export PATH="${DEPLOY_HOME}/.local/bin:${PATH}"
+
+  echo "Installing pm2 under ${DEPLOY_HOME}/.local ..."
+  rm -rf \
+    "${DEPLOY_HOME}/.local/lib/node_modules/pm2" \
+    "${DEPLOY_HOME}/.local/lib/node_modules/.pm2-"* \
+    "${DEPLOY_HOME}/.local/bin/pm2" \
+    "${DEPLOY_HOME}/.local/bin/pm2-"* \
+    2>/dev/null || true
+  "$npm_cmd" install -g pm2
+  command -v pm2 >/dev/null 2>&1
+  pm2 -v
+}
+
+ensure_pm2() {
+  export PATH="${DEPLOY_HOME}/.local/bin:${PATH}"
+
+  if ! command -v pm2 >/dev/null 2>&1; then
+    echo "pm2 not found; installing..."
+    install_pm2
+    return 0
+  fi
+
+  # Binary on PATH is not enough — Node 24 rejects a corrupt pm2 package.json.
+  if ! pm2 -v >/dev/null 2>&1; then
+    echo "pm2 is present but broken (invalid package config); reinstalling..."
+    install_pm2
+    return 0
+  fi
+}
+
+ensure_pm2
 
 if [ ! -f .env ]; then
   echo "Error: .env file not found. Cannot load environment variables."
