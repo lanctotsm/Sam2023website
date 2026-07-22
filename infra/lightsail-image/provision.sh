@@ -62,6 +62,7 @@ APT::Periodic::Unattended-Upgrade "0";
 APT::Periodic::Download-Upgradeable-Packages "0";
 APT::Periodic::AutocleanInterval "0";
 EOF
+systemctl stop apt-daily.service apt-daily-upgrade.service 2>/dev/null || true
 systemctl stop apt-daily.timer apt-daily-upgrade.timer unattended-upgrades.service 2>/dev/null || true
 systemctl disable apt-daily.timer apt-daily-upgrade.timer unattended-upgrades.service 2>/dev/null || true
 systemctl mask apt-daily.timer apt-daily-upgrade.timer unattended-upgrades.service 2>/dev/null || true
