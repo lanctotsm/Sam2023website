@@ -8,6 +8,7 @@ import { createImage, updateImage, deleteImage } from "@/services/images";
 import { addAlbumImage } from "@/services/albumImages";
 import { putObject, deleteObjects } from "@/lib/s3";
 import { processImage } from "@/lib/image-processing";
+import { maybeGenerateAltText } from "./maybe-generate-alt";
 
 const MAX_FILE_BYTES = Number(process.env.MAX_UPLOAD_BYTES) || 100 * 1024 * 1024; // 100MB
 const ALLOWED_TYPES = /^image\/(jpeg|jpg|png|gif|webp|bmp)$/i;
@@ -55,7 +56,7 @@ export async function POST(request: Request) {
     const albumIdRaw = formData.get("album_id");
     const albumId = albumIdRaw != null ? parseInt(String(albumIdRaw), 10) : null;
     const caption = (formData.get("caption") as string)?.trim() ?? "";
-    const altText = (formData.get("alt_text") as string)?.trim() ?? "";
+    const altTextProvided = (formData.get("alt_text") as string)?.trim() ?? "";
 
     const files: File[] = [];
     const fileList = formData.getAll("files");
@@ -84,6 +85,13 @@ export async function POST(request: Request) {
 
       const buffer = Buffer.from(await file.arrayBuffer());
       const processed = await processImage(buffer);
+
+      // Prefer large JPEG for vision models (smaller than original, still clear)
+      const altText = await maybeGenerateAltText(
+        altTextProvided,
+        processed.large.buffer,
+        "image/jpeg"
+      );
 
       // 1. Create image record first with placeholder keys to get the ID
       const placeholderUuid = randomUUID();

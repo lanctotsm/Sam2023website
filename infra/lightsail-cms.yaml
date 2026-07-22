@@ -152,8 +152,9 @@ Resources:
       StaticIpName: !Ref StaticIpName
       AttachedTo: !Ref CmsInstance
 
-  # Policy for the IAM user that the CMS app uses to upload/delete/list objects (e.g. cms-s3-uploader).
+  # Policy for the CMS app IAM user (S3 uploads + Bedrock alt text).
   # Attach this policy to that user in IAM if the user was created outside this stack.
+  # One-time (outside CFN): enable Amazon Nova Lite model access in the Bedrock console.
   CmsS3UploaderPolicy:
     Type: AWS::IAM::ManagedPolicy
     Properties:
@@ -172,6 +173,12 @@ Resources:
             Effect: Allow
             Action: s3:ListBucket
             Resource: !Sub "arn:aws:s3:::${CmsBucket}"
+          - Sid: AllowBedrockInvokeNovaLite
+            Effect: Allow
+            Action:
+              - bedrock:InvokeModel
+            Resource:
+              - !Sub "arn:aws:bedrock:${AWS::Region}::foundation-model/amazon.nova-lite-v1:0"
 
 Outputs:
   CloudFrontDomain:
@@ -185,5 +192,5 @@ Outputs:
   CmsDataDiskName:
     Value: !Ref DataDiskName
   CmsS3UploaderPolicyArn:
-    Description: "Attach this policy to the IAM user used by the CMS app (e.g. cms-s3-uploader) if that user is not in this stack."
+    Description: "Attach this policy to the CMS app IAM user (S3 + Bedrock Nova Lite). Enable Nova Lite model access in the Bedrock console once."
     Value: !Ref CmsS3UploaderPolicy
