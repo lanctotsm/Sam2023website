@@ -23,7 +23,7 @@ if ! id -u "$RUNTIME_USER" >/dev/null 2>&1; then
   exit 1
 fi
 
-echo "[provision] Enable Ubuntu universe (certbot / apt-listchanges are not in main)..."
+echo "[provision] Enable Ubuntu universe (certbot is not in main)..."
 # Lightsail Ubuntu OS blueprints often ship with only main enabled. No Certbot PPA
 # needed - packages come from archive.ubuntu.com universe.
 # https://packages.ubuntu.com/jammy/certbot
@@ -51,17 +51,28 @@ apt-get install -y \
   git \
   openssl \
   apache2 \
-  certbot \
-  unattended-upgrades \
-  apt-listchanges
+  certbot
 
-echo "[provision] Enable unattended security upgrades..."
+# OS package updates come only from rebuilding the runtime image / host via GitHub
+# Actions. apt-daily on a 512MB nano can OOM the guest and take the site down.
+# Ubuntu cloud images often start apt-daily.service soon after first boot (timer
+# catch-up); stop/mask the *service* units as well as the timers so apt-get is
+# not blocked on the dpkg lock. See Ubuntu automatic-updates / systemd.timer docs.
+echo "[provision] Disable apt-daily / unattended upgrades (updates via host rebuild pipeline)..."
 cat >/etc/apt/apt.conf.d/20auto-upgrades <<'EOF'
-APT::Periodic::Update-Package-Lists "1";
-APT::Periodic::Unattended-Upgrade "1";
-APT::Periodic::Download-Upgradeable-Packages "1";
-APT::Periodic::AutocleanInterval "7";
+APT::Periodic::Update-Package-Lists "0";
+APT::Periodic::Unattended-Upgrade "0";
+APT::Periodic::Download-Upgradeable-Packages "0";
+APT::Periodic::AutocleanInterval "0";
 EOF
+systemctl stop apt-daily.service apt-daily-upgrade.service unattended-upgrades.service 2>/dev/null || true
+systemctl stop apt-daily.timer apt-daily-upgrade.timer 2>/dev/null || true
+systemctl disable apt-daily.timer apt-daily-upgrade.timer \
+  apt-daily.service apt-daily-upgrade.service unattended-upgrades.service 2>/dev/null || true
+systemctl mask apt-daily.timer apt-daily-upgrade.timer \
+  apt-daily.service apt-daily-upgrade.service unattended-upgrades.service 2>/dev/null || true
+apt-get -o DPkg::Lock::Timeout=60 remove -y unattended-upgrades apt-listchanges 2>/dev/null || true
+apt-get -o DPkg::Lock::Timeout=60 autoremove -y 2>/dev/null || true
 
 if ! command -v node >/dev/null 2>&1 || ! node -v | grep -q "v${NODE_MAJOR}"; then
   echo "[provision] Installing Node.js ${NODE_MAJOR} from NodeSource..."

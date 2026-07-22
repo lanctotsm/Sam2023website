@@ -7,9 +7,9 @@ Builds a **runtime-only** Lightsail instance snapshot for the Heron CMS nano VM:
 - Apache (`proxy` / `ssl` modules; vhost written at app deploy)
 - pm2 (per `ubuntu` user)
 - App dirs: `/opt/heron-cms`, `/var/lib/heron-cms/data`
-- Unattended security upgrades enabled
+- apt-daily / unattended upgrades **disabled** (OS updates via runtime bake + host rebuild only)
 
-The Next.js app is **not** baked into the image. App releases use the existing **Deploy Lightsail CMS** workflow (rsync + migrate + pm2).
+The Next.js app is **not** baked into the image. App releases use the existing **Deploy Lightsail CMS** workflow (rsync + migrate + pm2). Host OS package updates land when you rebuild the runtime image / host — not via apt-daily on the live nano.
 
 ## Snapshot naming
 

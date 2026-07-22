@@ -274,6 +274,9 @@ jobs:
       - name: Install DB backup cron
         run: ssh -F ssh_config lightsail "cd /opt/heron-cms && bash scripts/deploy-install-db-backup-cron.sh"
 
+      - name: Disable apt-daily / unattended upgrades
+        run: ssh -F ssh_config lightsail "cd /opt/heron-cms && bash scripts/deploy-disable-apt-daily.sh"
+
       - name: Configure Apache reverse proxy and Let's Encrypt
         env:
           SITE_DOMAIN: ${{ secrets.ROUTE53_RECORD_NAME }}
