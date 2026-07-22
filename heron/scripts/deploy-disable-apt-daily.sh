@@ -13,11 +13,11 @@ APT::Periodic::Download-Upgradeable-Packages "0";
 APT::Periodic::AutocleanInterval "0";
 EOF
 
-sudo systemctl stop apt-daily.timer apt-daily-upgrade.timer unattended-upgrades.service 2>/dev/null || true
+sudo systemctl stop apt-daily.timer apt-daily-upgrade.timer apt-daily.service apt-daily-upgrade.service unattended-upgrades.service 2>/dev/null || true
 sudo systemctl disable apt-daily.timer apt-daily-upgrade.timer unattended-upgrades.service 2>/dev/null || true
 sudo systemctl mask apt-daily.timer apt-daily-upgrade.timer unattended-upgrades.service 2>/dev/null || true
 
 # Best-effort remove; may already be absent on newer runtime images.
-sudo apt-get remove -y unattended-upgrades apt-listchanges 2>/dev/null || true
+sudo env DEBIAN_FRONTEND=noninteractive apt-get -o Dpkg::Lock::Timeout=60 remove -y unattended-upgrades apt-listchanges 2>/dev/null || true
 
 echo "✓ apt-daily / unattended upgrades disabled (OS updates via host rebuild pipeline)"
