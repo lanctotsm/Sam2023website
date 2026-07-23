@@ -23,7 +23,7 @@ describe("maybeGenerateAltText", () => {
     vi.clearAllMocks();
   });
 
-  it("returns provided alt without calling Bedrock", async () => {
+  it("returns provided alt without calling the AI helper", async () => {
     const alt = await maybeGenerateAltText("Manual alt", Buffer.from("x"), "image/jpeg");
     expect(alt).toBe("Manual alt");
     expect(getSetting).not.toHaveBeenCalled();
@@ -45,7 +45,7 @@ describe("maybeGenerateAltText", () => {
     expect(generateAltTextFromBytes).toHaveBeenCalledOnce();
   });
 
-  it("returns empty on Bedrock failure", async () => {
+  it("returns empty on generation failure", async () => {
     vi.mocked(getSetting).mockResolvedValue("true");
     vi.mocked(generateAltTextFromBytes).mockRejectedValue(new Error("boom"));
     const alt = await maybeGenerateAltText("", Buffer.from("x"), "image/jpeg");

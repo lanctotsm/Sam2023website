@@ -4,7 +4,7 @@ import {
   generateAltTextFromBytes
 } from "@/lib/ai/generate-image-alt";
 
-/** Fill empty alt via Bedrock when setting is on; never fail the upload. */
+/** Fill empty alt via AI when setting is on; never fail the upload. */
 export async function maybeGenerateAltText(
   providedAlt: string,
   imageBytes: Buffer,
@@ -21,10 +21,7 @@ export async function maybeGenerateAltText(
     const format = detectImageFormat(contentType);
     return await generateAltTextFromBytes({ bytes: imageBytes, format });
   } catch (err) {
-    console.error(
-      "[upload] AI alt text failed (continuing without):",
-      err instanceof Error ? err.message : err
-    );
+    console.error("[upload] AI alt text failed (continuing without):", err);
     return "";
   }
 }

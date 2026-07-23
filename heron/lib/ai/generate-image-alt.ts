@@ -40,7 +40,7 @@ export function parseNovaAltResponse(modelResponse: unknown): string {
   };
   const text = root?.output?.message?.content?.find((c) => typeof c.text === "string")?.text;
   if (!text || !text.trim()) {
-    throw new Error("Bedrock returned empty alt text");
+    throw new Error("AI returned empty alt text");
   }
   return text.trim().replace(/^["']|["']$/g, "");
 }
@@ -95,15 +95,16 @@ async function defaultInvoke(body: unknown): Promise<unknown> {
   );
   const raw = response.body;
   if (!raw) {
-    throw new Error("Empty Bedrock response body");
+    throw new Error("Empty AI response body");
   }
   const json = JSON.parse(Buffer.from(raw).toString("utf8"));
   return json;
 }
 
 /**
- * Generate accessibility alt text for an image using Amazon Nova Lite (Bedrock).
- * Requires APP_AWS credentials with bedrock:InvokeModel and Bedrock model access enabled.
+ * Generate accessibility alt text for an image via the configured vision model.
+ * Uses AWS_ACCESS_KEY_ID / AWS_SECRET_ACCESS_KEY (deploy maps APP_AWS_* secrets into these).
+ * IAM is on the CMS app managed policy (bedrock:InvokeModel for Nova Lite).
  */
 export async function generateAltTextFromBytes(
   params: GenerateAltFromBytesParams

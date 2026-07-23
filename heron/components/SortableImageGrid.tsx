@@ -134,6 +134,7 @@ function SortableItem({
                 onUpdateMetadata(image);
               }}
               className="rounded bg-chestnut px-2 py-1 text-xs font-medium text-desert-tan transition hover:bg-chestnut-dark dark:bg-caramel dark:text-chestnut-dark dark:hover:bg-caramel-light"
+              aria-label="Edit Info"
               type="button"
             >
               Edit Info

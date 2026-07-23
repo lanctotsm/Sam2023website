@@ -206,12 +206,17 @@ export default function AdminSettingsPage() {
 
                         <div className="flex items-start justify-between gap-4 rounded-lg border border-desert-tan-dark p-3 dark:border-dark-muted">
                             <div>
-                                <p className="m-0 text-sm font-semibold text-chestnut-dark dark:text-dark-text">
-                                    AI alt text (Bedrock)
+                                <p
+                                    id="settings-ai-alt-text-label"
+                                    className="m-0 text-sm font-semibold text-chestnut-dark dark:text-dark-text"
+                                >
+                                    AI alt text
                                 </p>
-                                <p className="mt-1 m-0 text-xs text-olive dark:text-dark-muted">
+                                <p
+                                    id="settings-ai-alt-text-help"
+                                    className="mt-1 m-0 text-xs text-olive dark:text-dark-muted"
+                                >
                                     When on, generate alt text on upload if empty, and allow Generate in Edit Info.
-                                    Requires Nova Lite model access in AWS Bedrock.
                                 </p>
                             </div>
                             <button
@@ -219,6 +224,8 @@ export default function AdminSettingsPage() {
                                 type="button"
                                 role="switch"
                                 aria-checked={aiAltTextEnabled}
+                                aria-labelledby="settings-ai-alt-text-label"
+                                aria-describedby="settings-ai-alt-text-help"
                                 onClick={() => setAiAltTextEnabled((v) => !v)}
                                 className={`relative h-7 w-12 shrink-0 rounded-full transition-colors ${
                                     aiAltTextEnabled

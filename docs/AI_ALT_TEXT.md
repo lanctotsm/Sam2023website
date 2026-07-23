@@ -1,16 +1,16 @@
-# AI alt text (Amazon Bedrock Nova Lite)
+# AI alt text
 
-Heron can generate accessibility alt text with **Amazon Nova Lite** via Bedrock.
+Heron can generate accessibility alt text with a vision model (Amazon Nova Lite via Bedrock).
+
+IAM (`bedrock:InvokeModel` for Nova Lite) is on the existing CMS app policy in [`infra/lightsail-cms.yaml`](../infra/lightsail-cms.yaml). Deploy the stack so that policy update applies; no separate AWS console setup. Runtime credentials are `AWS_ACCESS_KEY_ID` / `AWS_SECRET_ACCESS_KEY` (deploy maps GitHub `APP_AWS_*` secrets into those env vars).
 
 ## Enable
 
-1. **Bedrock console (one-time):** in the app region, enable model access for **Amazon Nova Lite** (`amazon.nova-lite-v1:0`).
-2. **IAM:** Deploy updates [`infra/lightsail-cms.yaml`](../infra/lightsail-cms.yaml) `CmsS3UploaderPolicy` with `bedrock:InvokeModel` on that foundation model. Ensure the CMS app IAM user (`APP_AWS_*`) still has this managed policy attached.
-3. **Admin:** Settings → General → turn on **AI alt text (Bedrock)** → Save All.
+**Admin:** Settings → General → turn on **AI alt text** → Save All.
 
 ## Behavior
 
-- **Upload:** if the setting is on and the form alt field is empty, generate and store alt text (best-effort; upload succeeds even if Bedrock fails).
+- **Upload:** if the setting is on and the form alt field is empty, generate and store alt text (best-effort; upload succeeds even if generation fails).
 - **Edit Info:** **Generate alt text** fills the field; click **Save** to persist.
 
 ## Disable

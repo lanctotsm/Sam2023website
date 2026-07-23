@@ -45,8 +45,7 @@ export async function POST(_request: Request, { params }: Params) {
     const alt_text = await generateAltTextFromBytes({ bytes, format });
     return NextResponse.json({ alt_text });
   } catch (err) {
-    const message = err instanceof Error ? err.message : "alt text generation failed";
-    console.error("[generate-alt]", message);
-    return errorResponse(message, 502);
+    console.error("[generate-alt]", err);
+    return errorResponse("Failed to generate alt text", 502);
   }
 }
