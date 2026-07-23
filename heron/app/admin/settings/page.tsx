@@ -50,6 +50,7 @@ export default function AdminSettingsPage() {
     // General
     const [siteTitle, setSiteTitle] = useState("");
     const [footerText, setFooterText] = useState("");
+    const [aiAltTextEnabled, setAiAltTextEnabled] = useState(false);
 
     // Home page
     const [config, setConfig] = useState<FrontPageSettings>(defaultFrontPage);
@@ -69,10 +70,11 @@ export default function AdminSettingsPage() {
         (async () => {
             try {
                 const data = await apiFetch<Record<string, string>>(
-                    "/settings?keys=site_title,footer_text,front_page,page_styles,nav_styles"
+                    "/settings?keys=site_title,footer_text,front_page,page_styles,nav_styles,ai_alt_text_enabled"
                 );
                 if (data.site_title) setSiteTitle(data.site_title);
                 if (data.footer_text) setFooterText(data.footer_text);
+                if (data.ai_alt_text_enabled === "true") setAiAltTextEnabled(true);
                 if (data.front_page) setConfig(parseFrontPageConfig(data.front_page));
                 if (data.page_styles) setPageStyles(parsePageStyles(data.page_styles));
                 if (data.nav_styles) setNavStyles(parseNavStyles(data.nav_styles));
@@ -100,6 +102,7 @@ export default function AdminSettingsPage() {
                     settings: {
                         site_title: siteTitle,
                         footer_text: footerText,
+                        ai_alt_text_enabled: aiAltTextEnabled ? "true" : "false",
                         front_page: JSON.stringify(config),
                         page_styles: JSON.stringify(pageStyles),
                         nav_styles: JSON.stringify(navStyles),
@@ -199,6 +202,43 @@ export default function AdminSettingsPage() {
                                 onChange={(e) => setFooterText(e.target.value)}
                                 placeholder="© 2024 Your Name. All rights reserved."
                             />
+                        </div>
+
+                        <div className="flex items-start justify-between gap-4 rounded-lg border border-desert-tan-dark p-3 dark:border-dark-muted">
+                            <div>
+                                <p
+                                    id="settings-ai-alt-text-label"
+                                    className="m-0 text-sm font-semibold text-chestnut-dark dark:text-dark-text"
+                                >
+                                    AI alt text
+                                </p>
+                                <p
+                                    id="settings-ai-alt-text-help"
+                                    className="mt-1 m-0 text-xs text-olive dark:text-dark-muted"
+                                >
+                                    When on, generate alt text on upload if empty, and allow Generate in Edit Info.
+                                </p>
+                            </div>
+                            <button
+                                id="settings-ai-alt-text"
+                                type="button"
+                                role="switch"
+                                aria-checked={aiAltTextEnabled}
+                                aria-labelledby="settings-ai-alt-text-label"
+                                aria-describedby="settings-ai-alt-text-help"
+                                onClick={() => setAiAltTextEnabled((v) => !v)}
+                                className={`relative h-7 w-12 shrink-0 rounded-full transition-colors ${
+                                    aiAltTextEnabled
+                                        ? "bg-chestnut dark:bg-caramel"
+                                        : "bg-desert-tan-dark dark:bg-dark-muted"
+                                }`}
+                            >
+                                <span
+                                    className={`absolute top-0.5 left-0.5 h-6 w-6 rounded-full bg-white shadow transition-transform ${
+                                        aiAltTextEnabled ? "translate-x-5" : "translate-x-0"
+                                    }`}
+                                />
+                            </button>
                         </div>
                         
                         <NavStyleEditor
