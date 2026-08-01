@@ -59,11 +59,26 @@ export async function apiFetch<T>(path: string, options?: RequestInit): Promise<
   });
 
   if (!response.ok) {
-    const text = await response.text();
-    throw new Error(text || `Request failed: ${response.status}`);
+    throw new Error(await errorMessageFromResponse(response));
   }
 
   return response.json() as Promise<T>;
+}
+
+async function errorMessageFromResponse(response: Response): Promise<string> {
+  const text = await response.text();
+  if (!text) {
+    return `Request failed: ${response.status}`;
+  }
+  try {
+    const parsed = JSON.parse(text) as { error?: unknown };
+    if (typeof parsed?.error === "string" && parsed.error.trim()) {
+      return parsed.error;
+    }
+  } catch {
+    // keep raw body
+  }
+  return text;
 }
 
 export async function getAlbums(): Promise<Album[]> {
@@ -96,8 +111,7 @@ export async function uploadImages(formData: FormData): Promise<{ images: Image[
     body: formData
   });
   if (!response.ok) {
-    const text = await response.text();
-    throw new Error(text || `Upload failed: ${response.status}`);
+    throw new Error(await errorMessageFromResponse(response));
   }
   return response.json() as Promise<{ images: Image[] }>;
 }

@@ -8,6 +8,7 @@ const ALLOWED_SETTING_KEYS = new Set([
     "front_page",
     "page_styles",
     "nav_styles",
+    "ai_alt_text_enabled",
 ]);
 
 const MAX_VALUE_LENGTH = 100_000; // 100 KB
