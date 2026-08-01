@@ -52,6 +52,7 @@ export default function AdminAlbumEditorPage() {
     tags: ""
   });
   const [editMetadataSaving, setEditMetadataSaving] = useState(false);
+  const [editMetadataGenerating, setEditMetadataGenerating] = useState(false);
   const [allImages, setAllImages] = useState<ImageMeta[]>([]);
   const [selectedImage, setSelectedImage] = useState<number | null>(null);
   const [sortOrder, setSortOrder] = useState(0);
@@ -179,6 +180,24 @@ export default function AdminAlbumEditorPage() {
       description: image.description ?? "",
       tags: image.tags ?? ""
     });
+  };
+
+  const handleGenerateAltText = async () => {
+    if (!editMetadataImage) return;
+    setEditMetadataGenerating(true);
+    try {
+      const data = await apiFetch<{ alt_text: string }>(
+        `/images/${editMetadataImage.id}/generate-alt`,
+        { method: "POST" }
+      );
+      setEditMetadataForm((f) => ({ ...f, alt_text: data.alt_text ?? "" }));
+      toast.success("Alt text generated — review and Save.");
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Failed to generate alt text";
+      toast.error(msg);
+    } finally {
+      setEditMetadataGenerating(false);
+    }
   };
 
   const handleEditMetadataSave = async () => {
@@ -666,13 +685,23 @@ export default function AdminAlbumEditorPage() {
               </div>
               <div>
                 <label className={labelClass} htmlFor="edit-alt">Alt text</label>
-                <input
-                  id="edit-alt"
-                  className={inputClass}
-                  value={editMetadataForm.alt_text}
-                  onChange={(e) => setEditMetadataForm((f) => ({ ...f, alt_text: e.target.value }))}
-                  placeholder="Accessibility description"
-                />
+                <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                  <input
+                    id="edit-alt"
+                    className={inputClass}
+                    value={editMetadataForm.alt_text}
+                    onChange={(e) => setEditMetadataForm((f) => ({ ...f, alt_text: e.target.value }))}
+                    placeholder="Accessibility description"
+                  />
+                  <button
+                    type="button"
+                    disabled={editMetadataGenerating || editMetadataSaving}
+                    onClick={handleGenerateAltText}
+                    className="shrink-0 rounded-lg border border-chestnut bg-transparent px-3 py-2.5 text-sm font-medium text-chestnut transition hover:bg-chestnut/5 disabled:opacity-60 dark:border-dark-text dark:text-dark-text dark:hover:bg-dark-bg"
+                  >
+                    {editMetadataGenerating ? "Generating…" : "Generate alt text"}
+                  </button>
+                </div>
               </div>
               <div>
                 <label className={labelClass} htmlFor="edit-description">Description</label>

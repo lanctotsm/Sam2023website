@@ -12,6 +12,7 @@
     "test:watch": "vitest --config=vitest.config.mts",
     "audit:responsive": "node scripts/audit-responsive.mjs",
     "seed:local": "tsx scripts/seed.ts",
+    "seed:gallery-fixtures": "tsx scripts/seed-gallery-fixtures.ts",
     "backfill:lqip": "tsx scripts/backfill-lqip.ts",
     "populate": "node scripts/populate-sample-data.mjs",
     "cleanup:orphan-s3": "tsx scripts/cleanup-orphan-s3.ts",
@@ -23,6 +24,7 @@
     "test:e2e:suite:report": "playwright test --config=playwright.e2e.config.ts --reporter=html"
   },
   "dependencies": {
+    "@aws-sdk/client-bedrock-runtime": "^3.1092.0",
     "@aws-sdk/client-s3": "^3.975.0",
     "@dnd-kit/core": "^6.3.1",
     "@dnd-kit/sortable": "^10.0.0",

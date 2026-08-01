@@ -33,6 +33,33 @@ async function gotoPopulatedAlbum(page: Page): Promise<boolean> {
   return false;
 }
 
+/**
+ * Like `gotoPopulatedAlbum`, but arrives via a real link click (from /albums)
+ * instead of `page.goto`, so the browser has a genuine history entry to go
+ * back to. Needed by the two tests below that assert on Back-button
+ * behavior; a fresh CI database may have an album with no photos yet, in
+ * which case those tests skip themselves rather than timing out.
+ */
+async function gotoPopulatedAlbumViaLink(
+  page: Page
+): Promise<{ populated: boolean; albumUrl: string }> {
+  await page.goto("/albums");
+  const albumLinks = page.locator('a:has-text("View album")');
+  const count = await albumLinks.count();
+
+  for (let i = 0; i < count; i++) {
+    await page.goto("/albums");
+    await albumLinks.nth(i).click();
+    try {
+      await galleryPhotos(page).first().waitFor({ state: "visible", timeout: 7000 });
+      return { populated: true, albumUrl: page.url() };
+    } catch {
+      // Empty album; try the next one.
+    }
+  }
+  return { populated: false, albumUrl: "" };
+}
+
 test.describe("Justified gallery", () => {
   test("packs rows flush to the container on desktop", async ({ page }) => {
     await page.setViewportSize(DESKTOP);
@@ -226,12 +253,8 @@ test.describe("Lightbox", () => {
     await page.setViewportSize(DESKTOP);
     // Arrive via /albums so there is a real previous entry to leave to if the
     // history handling is wrong.
-    await page.goto("/albums");
-    const albumLink = page.locator('a:has-text("View album")').first();
-    test.skip((await albumLink.count()) === 0, "No albums in this database");
-    await albumLink.click();
-    await galleryPhotos(page).first().waitFor({ state: "visible", timeout: 7000 });
-    const albumUrl = page.url();
+    const { populated, albumUrl } = await gotoPopulatedAlbumViaLink(page);
+    test.skip(!populated, "No album with photos in this database");
 
     await galleryPhotos(page).first().click();
     await expect(page.getByRole("dialog")).toBeVisible();
@@ -245,12 +268,8 @@ test.describe("Lightbox", () => {
 
   test("arrow navigation does not stack history entries", async ({ page }) => {
     await page.setViewportSize(DESKTOP);
-    await page.goto("/albums");
-    const albumLink = page.locator('a:has-text("View album")').first();
-    test.skip((await albumLink.count()) === 0, "No albums in this database");
-    await albumLink.click();
-    await galleryPhotos(page).first().waitFor({ state: "visible", timeout: 7000 });
-    const albumUrl = page.url();
+    const { populated, albumUrl } = await gotoPopulatedAlbumViaLink(page);
+    test.skip(!populated, "No album with photos in this database");
 
     const total = await galleryPhotos(page).count();
     test.skip(total < 3, "Album needs at least three photos");

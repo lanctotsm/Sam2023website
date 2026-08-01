@@ -162,19 +162,26 @@ and takes the whole site with it.
 
 **The changes, cheapest first.**
 
-1. Drop the `Buffer.from(input)` copy and pass `input` through. One line, saves
-   up to 100 MB per upload.
-2. `sharp.concurrency(1)` and `sharp.cache({ memory: 32 })` at module load, so
-   libvips cannot balloon on a small box.
+1. ✅ Drop the `Buffer.from(input)` copy and pass `input` through. One line,
+   saves up to 100 MB per upload. Done in the code review below.
+2. ✅ `sharp.concurrency(1)` and `sharp.cache({ memory: 32 })` at module load,
+   so libvips cannot balloon on a small box. Done in `lib/image-processing.ts`.
 3. Add a 2 GB swap file. The Lightsail Ubuntu blueprint has none by default;
-   swap converts an OOM-kill into a merely slow request.
+   swap converts an OOM-kill into a merely slow request. **Not done** — this
+   touches the live instance and the deploy workflow, which the code review
+   below deliberately left alone; do it as its own watched change.
 4. Set `NODE_OPTIONS=--max-old-space-size=384` in the deployed `.env` so V8 does
-   not try to grow into memory the box does not have.
-5. Lower `MAX_UPLOAD_BYTES` to ~25 MB, which still accepts anything a phone or a
-   full-frame camera produces. If you genuinely need larger files, write the
-   upload to a temp file and let sharp stream from disk instead of buffering.
+   not try to grow into memory the box does not have. **Not done**, same
+   reason as #3.
+5. ✅ Lower `MAX_UPLOAD_BYTES` to ~25 MB, which still accepts anything a phone
+   or a full-frame camera produces. Done — server default in
+   `app/api/images/upload/route.ts` and `.../replace/route.ts`, client-side
+   default in `lib/upload-utils.ts`. If you genuinely need larger files, write
+   the upload to a temp file and let sharp stream from disk instead of
+   buffering.
 
-**Effort.** Items 1–4 are under an hour combined.
+**Effort.** Items 1, 2, and 5 are done (app-level, low-risk). Items 3 and 4
+are infra changes against the live production instance and remain open.
 
 ---
 

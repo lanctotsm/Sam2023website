@@ -18,6 +18,9 @@ vi.mock("@/lib/image-processing", () => ({
   processImage: vi.fn()
 }));
 vi.mock("@/lib/serializers", () => ({ serializeImage: (i: unknown) => i }));
+vi.mock("./maybe-generate-alt", () => ({
+  maybeGenerateAltText: vi.fn(async (provided: string) => provided)
+}));
 
 const { getAuthUser } = await import("@/lib/api-utils");
 const { createImage, updateImage } = await import("@/services/images");
