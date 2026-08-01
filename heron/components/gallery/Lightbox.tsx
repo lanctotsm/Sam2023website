@@ -125,8 +125,10 @@ export default function Lightbox({ images, index, onIndexChange, onClose }: Ligh
       return img;
     });
     return () => {
+      // about:blank avoids the empty-src quirk that resolves to the document URL
+      // and triggers a spurious fetch of the current page.
       preloaded.forEach((img) => {
-        img.src = "";
+        img.src = "about:blank";
       });
     };
   }, [images, index, count]);
