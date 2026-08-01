@@ -35,6 +35,7 @@ export type Image = {
   alt_text?: string;
   description?: string;
   tags?: string;
+  lqip?: string | null;
   created_at: string;
 };
 

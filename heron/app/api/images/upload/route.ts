@@ -102,6 +102,7 @@ export async function POST(request: Request) {
           height: processed.large.height,
           caption,
           altText,
+          lqip: processed.lqip,
           createdBy: user.id
         });
         createdImageIds.push(row.id);

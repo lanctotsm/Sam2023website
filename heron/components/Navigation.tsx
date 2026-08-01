@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { signOut, useSession } from "next-auth/react";
 import ThemeToggle from "@/components/ThemeToggle";
 import SearchBar from "@/components/SearchBar";
@@ -28,11 +28,24 @@ export default function Navigation() {
   const router = useRouter();
   const { data: session, status } = useSession();
   const user = session?.user || null;
-  const [mobileOpen, setMobileOpen] = useState(false);
+  // Stores the pathname the drawer was opened on, so any navigation closes it
+  const [openedOnPath, setOpenedOnPath] = useState<string | null>(null);
+  const mobileOpen = openedOnPath === pathname;
+  const setMobileOpen = (open: boolean) => setOpenedOnPath(open ? pathname : null);
 
   const filteredItems = useMemo(() => {
     return navItems.filter((item) => !item.authOnly || user);
   }, [user]);
+
+  // Prevent the page behind the open drawer from scrolling
+  useEffect(() => {
+    if (!mobileOpen) return;
+    const previous = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = previous;
+    };
+  }, [mobileOpen]);
 
   const handleLogout = async () => {
     await signOut({ callbackUrl: "/" });
@@ -41,10 +54,8 @@ export default function Navigation() {
   };
 
   const navLinkClass = (item: NavItem) =>
-    `block py-2 transition-colors hover:opacity-80 md:py-0 ${
-      pathname === item.href
-        ? "font-semibold underline decoration-2 underline-offset-4"
-        : ""
+    `flex min-h-[44px] items-center rounded-full px-3 text-[0.95rem] transition-colors md:fine-pointer:min-h-0 md:fine-pointer:py-2 ${
+      pathname === item.href ? "bg-caramel/25 font-semibold" : "hover:bg-white/10"
     }`;
 
   const navLinkStyle: React.CSSProperties = {
@@ -58,14 +69,18 @@ export default function Navigation() {
 
   return (
     <nav
-      className="flex flex-wrap items-center justify-between gap-4 border-b border-chestnut-dark px-5 py-5 dark:border-dark-muted"
+      className="sticky top-0 z-50 flex flex-wrap items-center justify-between gap-3 border-b border-black/10 px-4 py-3 backdrop-blur-md sm:px-6 sm:py-4 lg:px-8 dark:border-white/10"
       style={{
-        backgroundColor: "var(--nav-bg, var(--color-chestnut-light))",
+        backgroundColor:
+          "var(--nav-bg, color-mix(in srgb, var(--color-chestnut-light) 88%, transparent))",
         fontFamily: "var(--nav-font, inherit)",
+        paddingTop: "max(0.75rem, env(safe-area-inset-top))",
+        paddingLeft: "max(1rem, env(safe-area-inset-left))",
+        paddingRight: "max(1rem, env(safe-area-inset-right))",
       }}
     >
       <div className="flex flex-1 items-center justify-between md:flex-initial md:justify-start">
-        <div className="hidden items-center gap-4 md:flex">
+        <div className="hidden items-center gap-1 md:flex">
           {filteredItems.map((item) => (
             <Link
               key={item.href}
@@ -79,8 +94,8 @@ export default function Navigation() {
         </div>
         <button
           type="button"
-          onClick={() => setMobileOpen((o) => !o)}
-          className="flex flex-col gap-1.5 rounded p-2 md:hidden"
+          onClick={() => setMobileOpen(!mobileOpen)}
+          className="tap-target flex-col gap-1.5 rounded md:hidden"
           aria-label={mobileOpen ? "Close menu" : "Open menu"}
           aria-expanded={mobileOpen}
         >
@@ -100,11 +115,11 @@ export default function Navigation() {
       </div>
 
       {mobileOpen && (
-        <div className="w-full md:hidden">
+        <div className="max-h-[calc(100svh-4rem)] w-full overflow-y-auto overscroll-contain md:hidden">
           <div className="mb-3 flex flex-col border-t border-desert-tan/30 pt-4 sm:hidden dark:border-dark-muted/30">
-            <SearchBar />
+            <SearchBar fullWidth />
           </div>
-          <div className="flex flex-col gap-2 border-t border-desert-tan/30 pt-4 dark:border-dark-muted/30">
+          <div className="flex flex-col gap-1 border-t border-desert-tan/30 pt-4 dark:border-dark-muted/30">
             {filteredItems.map((item) => (
               <Link
                 key={item.href}

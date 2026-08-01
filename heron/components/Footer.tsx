@@ -14,20 +14,23 @@ export default async function Footer() {
   const footerText = customFooter || `© ${year} Samuel Lanctot. All rights reserved.`;
 
   return (
-    <footer className="mt-auto shrink-0 border-t border-desert-tan-dark bg-surface px-5 py-6 dark:border-dark-muted dark:bg-dark-surface">
-      <div className="mx-auto flex max-w-[1100px] flex-col items-center justify-between gap-4 sm:flex-row">
-        <nav className="flex flex-wrap justify-center gap-4 sm:gap-6">
+    <footer
+      className="mt-auto shrink-0 border-t border-hairline bg-surface px-4 py-8 sm:px-6 lg:px-8 dark:border-dark-hairline dark:bg-dark-surface"
+      style={{ paddingBottom: "max(2rem, env(safe-area-inset-bottom))" }}
+    >
+      <div className="mx-auto flex max-w-[1100px] flex-col items-center justify-between gap-2 sm:flex-row sm:gap-4">
+        <nav className="flex flex-wrap justify-center gap-1 sm:gap-3">
           {footerLinks.map((link) => (
             <Link
               key={link.href}
               href={link.href}
-              className="text-sm font-medium text-chestnut-dark transition-colors hover:text-chestnut dark:text-dark-muted dark:hover:text-dark-text"
+              className="flex min-h-[44px] items-center rounded-lg px-2 text-sm font-medium text-chestnut-dark transition-colors hover:text-chestnut dark:text-dark-muted dark:hover:text-dark-text"
             >
               {link.label}
             </Link>
           ))}
         </nav>
-        <p className="text-sm text-olive dark:text-dark-muted">
+        <p className="text-center text-sm text-olive dark:text-dark-muted">
           {footerText}
         </p>
       </div>

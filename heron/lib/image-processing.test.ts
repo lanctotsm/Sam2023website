@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import sharp from "sharp";
-import { processImage, rotateImage } from "./image-processing";
+import { generateLqip, processImage, rotateImage } from "./image-processing";
 
 describe("lib/image-processing", () => {
   async function createSmallJpeg(width: number, height: number): Promise<Buffer> {
@@ -60,6 +60,34 @@ describe("lib/image-processing", () => {
     } finally {
       process.env.LARGE_IMAGE_MAX_MP = orig;
     }
+  });
+
+  it("processImage returns an inlinable lqip data URI", async () => {
+    const input = await createSmallJpeg(800, 600);
+    const result = await processImage(input);
+
+    expect(result.lqip).toMatch(/^data:image\/webp;base64,/);
+    // Small enough to inline in HTML for a whole album without bloating the page
+    expect(result.lqip.length).toBeLessThan(2000);
+  });
+
+  it("generateLqip caps the long edge at 24px", async () => {
+    const input = await createSmallJpeg(1200, 600);
+    const lqip = await generateLqip(input);
+
+    const base64 = lqip.replace(/^data:image\/webp;base64,/, "");
+    const meta = await sharp(Buffer.from(base64, "base64")).metadata();
+    expect(meta.format).toBe("webp");
+    expect(meta.width).toBeLessThanOrEqual(24);
+    expect(meta.height).toBeLessThanOrEqual(24);
+  });
+
+  it("generateLqip preserves aspect ratio", async () => {
+    const lqip = await generateLqip(await createSmallJpeg(1200, 400));
+    const base64 = lqip.replace(/^data:image\/webp;base64,/, "");
+    const meta = await sharp(Buffer.from(base64, "base64")).metadata();
+    expect(meta.width).toBe(24);
+    expect(meta.height).toBe(8);
   });
 
   it("rotateImage rotates buffer by 90 degrees", async () => {

@@ -1,6 +1,7 @@
 /** Curated list of Google Fonts available for page style customization. */
 export const AVAILABLE_FONTS = [
     "Inter",
+    "Fraunces",
     "Roboto",
     "Open Sans",
     "Lato",

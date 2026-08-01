@@ -55,6 +55,7 @@ async function fetchAlbumData(slug: string): Promise<{ status: "ok"; data: Album
                 altText: images.altText,
                 description: images.description,
                 tags: images.tags,
+                lqip: images.lqip,
                 createdBy: images.createdBy,
                 createdAt: images.createdAt,
                 sortOrder: albumImages.sortOrder
@@ -77,6 +78,7 @@ async function fetchAlbumData(slug: string): Promise<{ status: "ok"; data: Album
             alt_text: row.altText || "",
             description: row.description || "",
             tags: row.tags || "",
+            lqip: row.lqip ?? null,
             created_by: row.createdBy || null,
             created_at: row.createdAt
         }));

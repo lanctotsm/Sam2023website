@@ -83,7 +83,8 @@ export async function PUT(
       s3KeyLarge: keyLarge,
       s3KeyOriginal: keyOriginal,
       width: processed.large.width,
-      height: processed.large.height
+      height: processed.large.height,
+      lqip: processed.lqip
     });
 
     if (oldKeys.length > 0) {

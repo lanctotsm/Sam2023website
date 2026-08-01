@@ -23,6 +23,7 @@ export async function createImage(data: {
   altText?: string;
   description?: string;
   tags?: string;
+  lqip?: string | null;
   createdBy: number;
 }) {
   const created = await getDb()
@@ -39,6 +40,7 @@ export async function createImage(data: {
       altText: (data.altText || "").trim(),
       description: (data.description || "").trim(),
       tags: (data.tags || "").trim(),
+      lqip: data.lqip ?? null,
       createdBy: data.createdBy
     })
     .returning();
@@ -60,6 +62,7 @@ export async function updateImage(
     altText?: string;
     description?: string;
     tags?: string;
+    lqip?: string | null;
   }
 ) {
   const updated = await getDb()
