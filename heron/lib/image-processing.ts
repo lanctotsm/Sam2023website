@@ -1,5 +1,15 @@
 import sharp from "sharp";
 
+// The deploy target is a memory-constrained instance (see
+// docs/ARCHITECTURE_PROPOSAL.md, "Raise the memory ceiling on uploads").
+// libvips defaults to caching decoded pixel buffers across operations and
+// will happily spin up one worker thread per CPU core; on a small box a
+// single large upload processed with several concurrent requests can exceed
+// available RAM and get OOM-killed. Capping both keeps peak memory bounded
+// at the cost of some throughput, which is the right trade-off here.
+sharp.concurrency(1);
+sharp.cache({ memory: 32, files: 0, items: 100 });
+
 const THUMB_MAX_EDGE = 400;
 const THUMB_QUALITY = 80;
 const LARGE_MAX_MP = 25;
