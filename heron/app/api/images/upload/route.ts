@@ -10,7 +10,12 @@ import { putObject, deleteObjects } from "@/lib/s3";
 import { processImage } from "@/lib/image-processing";
 import { maybeGenerateAltText } from "./maybe-generate-alt";
 
-const MAX_FILE_BYTES = Number(process.env.MAX_UPLOAD_BYTES) || 100 * 1024 * 1024; // 100MB
+// Default lowered from 100MB to 25MB: the deploy target is a memory-
+// constrained instance, and decoding a large image into raw pixels for
+// resizing can use several times its compressed file size in RAM (see
+// docs/ARCHITECTURE_PROPOSAL.md, "Raise the memory ceiling on uploads").
+// 25MB comfortably covers a phone or full-frame camera photo.
+const MAX_FILE_BYTES = Number(process.env.MAX_UPLOAD_BYTES) || 25 * 1024 * 1024;
 const ALLOWED_TYPES = /^image\/(jpeg|jpg|png|gif|webp|bmp)$/i;
 
 async function rollback(uploadedKeys: string[], createdImageIds: number[]) {
@@ -110,6 +115,7 @@ export async function POST(request: Request) {
           height: processed.large.height,
           caption,
           altText,
+          lqip: processed.lqip,
           createdBy: user.id
         });
         createdImageIds.push(row.id);

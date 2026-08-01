@@ -173,6 +173,7 @@ describe("lib/serializers", () => {
         alt_text: "Alt",
         description: "",
         tags: "",
+        lqip: null,
         created_by: 1,
         created_at: "2024-01-01T00:00:00Z"
       });
@@ -204,6 +205,28 @@ describe("lib/serializers", () => {
       expect(out.name).toBe("");
       expect(out.description).toBe("");
       expect(out.tags).toBe("");
+      expect(out.lqip).toBeNull();
+    });
+
+    it("passes through an lqip data URI when present", () => {
+      const row = {
+        id: 3,
+        s3Key: "uploads/uuid/large.jpg",
+        s3KeyThumb: null,
+        s3KeyLarge: null,
+        s3KeyOriginal: null,
+        width: 100,
+        height: 100,
+        name: null,
+        caption: null,
+        altText: null,
+        description: null,
+        tags: null,
+        lqip: "data:image/webp;base64,AAAA",
+        createdBy: null,
+        createdAt: ""
+      };
+      expect(serializeImage(row).lqip).toBe("data:image/webp;base64,AAAA");
     });
   });
 });

@@ -8,7 +8,8 @@ import { deleteImage, getImageById, updateImage } from "@/services/images";
 import { deleteObjects, putObject } from "@/lib/s3";
 import { processImage } from "@/lib/image-processing";
 
-const MAX_FILE_BYTES = Number(process.env.MAX_UPLOAD_BYTES) || 100 * 1024 * 1024;
+// Kept in sync with app/api/images/upload/route.ts - see the comment there.
+const MAX_FILE_BYTES = Number(process.env.MAX_UPLOAD_BYTES) || 25 * 1024 * 1024;
 const ALLOWED_TYPES = /^image\/(jpeg|jpg|png|gif|webp|bmp)$/i;
 
 export async function PUT(
@@ -83,7 +84,8 @@ export async function PUT(
       s3KeyLarge: keyLarge,
       s3KeyOriginal: keyOriginal,
       width: processed.large.width,
-      height: processed.large.height
+      height: processed.large.height,
+      lqip: processed.lqip
     });
 
     if (oldKeys.length > 0) {

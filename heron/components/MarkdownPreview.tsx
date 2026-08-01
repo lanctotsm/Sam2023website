@@ -25,7 +25,7 @@ export default function MarkdownPreview({ markdown }: MarkdownPreviewProps) {
     });
 
     return (
-        <div className="prose prose-sm max-w-none prose-headings:text-chestnut prose-p:text-chestnut-dark dark:prose-headings:text-dark-text dark:prose-p:text-dark-muted">
+        <div className="markdown-body text-[0.95rem] text-chestnut-dark dark:text-dark-text">
             {parts}
         </div>
     );

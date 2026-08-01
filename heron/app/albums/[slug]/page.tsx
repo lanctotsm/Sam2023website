@@ -28,16 +28,20 @@ export default async function AlbumDetailPage({ params }: PageProps) {
     <div className="grid gap-4">
       <Link
         href="/albums"
-        className="inline-flex items-center gap-1.5 text-sm font-medium text-copper transition-colors hover:text-chestnut dark:text-caramel-light dark:hover:text-desert-tan"
+        className="tap-inline inline-flex items-center gap-1.5 self-start text-sm font-medium text-copper transition-colors hover:text-chestnut dark:text-caramel-light dark:hover:text-desert-tan"
       >
         ← Back to Albums
       </Link>
 
       <header className="flex flex-wrap items-start justify-between gap-4">
         <div>
-          <h1 className="text-chestnut dark:text-dark-text">{album.title}</h1>
-          <p className="text-chestnut-dark dark:text-dark-muted">{album.description}</p>
-          <p className="text-olive dark:text-dark-muted">{images.length} photos</p>
+          <h1 className="heading-rule text-chestnut dark:text-dark-text">{album.title}</h1>
+          {album.description && (
+            <p className="mt-3 text-chestnut-dark dark:text-dark-muted">{album.description}</p>
+          )}
+          <p className="mt-1 text-sm text-olive dark:text-dark-muted">
+            {images.length} {images.length === 1 ? "photo" : "photos"}
+          </p>
         </div>
         {user && (
           <Link

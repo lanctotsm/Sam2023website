@@ -1,9 +1,21 @@
 import sharp from "sharp";
 
+// The deploy target is a memory-constrained instance (see
+// docs/ARCHITECTURE_PROPOSAL.md, "Raise the memory ceiling on uploads").
+// libvips defaults to caching decoded pixel buffers across operations and
+// will happily spin up one worker thread per CPU core; on a small box a
+// single large upload processed with several concurrent requests can exceed
+// available RAM and get OOM-killed. Capping both keeps peak memory bounded
+// at the cost of some throughput, which is the right trade-off here.
+sharp.concurrency(1);
+sharp.cache({ memory: 32, files: 0, items: 100 });
+
 const THUMB_MAX_EDGE = 400;
 const THUMB_QUALITY = 80;
 const LARGE_MAX_MP = 25;
 const LARGE_QUALITY = 85;
+const LQIP_MAX_EDGE = 24;
+const LQIP_QUALITY = 40;
 
 function getLargeMaxDimension(): number {
   const mp = Number(process.env.LARGE_IMAGE_MAX_MP) || LARGE_MAX_MP;
@@ -14,7 +26,21 @@ export type ProcessedImage = {
   thumb: { buffer: Buffer; width: number; height: number };
   large: { buffer: Buffer; width: number; height: number };
   original: { buffer: Buffer; width: number; height: number; contentType: string };
+  /** Base64 WebP data URI, small enough to inline as a blur-up placeholder. */
+  lqip: string;
 };
+
+/**
+ * Build a tiny inlinable placeholder. Kept as a data URI rather than a blurhash
+ * so the client needs no decoder - it goes straight into a background-image.
+ */
+export async function generateLqip(input: Buffer): Promise<string> {
+  const buffer = await sharp(input)
+    .resize(LQIP_MAX_EDGE, LQIP_MAX_EDGE, { fit: "inside", withoutEnlargement: true })
+    .webp({ quality: LQIP_QUALITY, smartSubsample: true })
+    .toBuffer();
+  return `data:image/webp;base64,${buffer.toString("base64")}`;
+}
 
 /**
  * Process an image buffer into thumb (max 400px), large (cap 25MP), and original.
@@ -53,7 +79,10 @@ export async function processImage(input: Buffer): Promise<ProcessedImage> {
   };
   const originalContentType = mimeByFormat[format] ?? "image/jpeg";
 
+  const lqip = await generateLqip(input);
+
   return {
+    lqip,
     thumb: {
       buffer: thumb,
       width: thumbMeta.width ?? 0,
@@ -65,7 +94,9 @@ export async function processImage(input: Buffer): Promise<ProcessedImage> {
       height: largeMeta.height ?? height
     },
     original: {
-      buffer: Buffer.from(input),
+      // Passed through rather than copied: callers only upload it, and a copy
+      // doubles peak memory for a file that may be tens of megabytes.
+      buffer: input,
       width,
       height,
       contentType: originalContentType

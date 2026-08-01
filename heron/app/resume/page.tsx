@@ -18,22 +18,24 @@ function GitHubIcon({ className }: { className?: string }) {
 
 const iconClass = "inline-block size-5 shrink-0 align-middle";
 
-const sectionCard = "rounded-xl border border-[var(--page-card-border,var(--color-desert-tan-dark))] bg-[var(--page-card-bg,var(--color-surface))] p-4 shadow-[0_2px_8px_rgba(72,9,3,0.08)] dark:border-[var(--page-card-border-dark,var(--color-dark-muted))] dark:bg-[var(--page-card-bg-dark,var(--color-dark-surface))]";
+const sectionCard = "surface-card";
+const sectionHeading =
+  "heading-rule text-[var(--page-h2-color,var(--color-chestnut))] dark:text-[var(--page-h2-color-dark,var(--color-dark-text))]";
 
 export default function ResumePage() {
   return (
     <PageStyleProvider page="resume">
       <div className="mx-auto flex max-w-[900px] flex-col gap-6">
         <section className={sectionCard + " text-center"}>
-          <h1 className="mb-2 text-center text-[var(--page-h1-color,var(--color-chestnut))] dark:text-[var(--page-h1-color-dark,var(--color-dark-text))]" style={{ fontFamily: "var(--page-heading-font, inherit)" }}>Samuel Lanctot</h1>
+          <h1 className="mb-2 text-center text-[var(--page-h1-color,var(--color-chestnut))] dark:text-[var(--page-h1-color-dark,var(--color-dark-text))]" style={{ fontFamily: "var(--page-heading-font, var(--font-display))" }}>Samuel Lanctot</h1>
           <p className="mt-2 flex flex-wrap items-center justify-center gap-x-4 gap-y-1 text-sm text-[var(--page-body-color,var(--color-olive-dark))] dark:text-[var(--page-body-color-dark,var(--color-dark-muted))]" style={{ fontFamily: "var(--page-body-font, inherit)" }}>
             <span>Silver Spring, MD</span>
-            <a href="mailto:lanctotsm@gmail.com" className="text-[var(--page-link-color,var(--color-copper))] hover:underline dark:text-[var(--page-link-color-dark,var(--color-caramel-light))]">lanctotsm@gmail.com</a>
-            <a href="https://www.linkedin.com/in/samuel-lanctot/" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 text-[var(--page-link-color,var(--color-copper))] hover:underline dark:text-[var(--page-link-color-dark,var(--color-caramel-light))]" aria-label="LinkedIn">
+            <a href="mailto:lanctotsm@gmail.com" className="tap-inline text-[var(--page-link-color,var(--color-copper))] hover:underline dark:text-[var(--page-link-color-dark,var(--color-caramel-light))]">lanctotsm@gmail.com</a>
+            <a href="https://www.linkedin.com/in/samuel-lanctot/" target="_blank" rel="noopener noreferrer" className="tap-inline inline-flex items-center gap-1.5 text-[var(--page-link-color,var(--color-copper))] hover:underline dark:text-[var(--page-link-color-dark,var(--color-caramel-light))]" aria-label="LinkedIn">
               <LinkedInIcon className={iconClass} />
               LinkedIn
             </a>
-            <a href="https://github.com/samlanctot" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 text-[var(--page-link-color,var(--color-copper))] hover:underline dark:text-[var(--page-link-color-dark,var(--color-caramel-light))]" aria-label="GitHub">
+            <a href="https://github.com/samlanctot" target="_blank" rel="noopener noreferrer" className="tap-inline inline-flex items-center gap-1.5 text-[var(--page-link-color,var(--color-copper))] hover:underline dark:text-[var(--page-link-color-dark,var(--color-caramel-light))]" aria-label="GitHub">
               <GitHubIcon className={iconClass} />
               GitHub
             </a>
@@ -41,27 +43,27 @@ export default function ResumePage() {
         </section>
 
         <section className={sectionCard}>
-          <h2 className="text-[var(--page-h2-color,var(--color-chestnut))] dark:text-[var(--page-h2-color-dark,var(--color-dark-text))]" style={{ fontFamily: "var(--page-heading-font, inherit)" }}>Experience</h2>
-          <div className="border-b border-desert-tan-dark pb-6 pt-4 last:border-b-0 last:pb-0 dark:border-dark-muted">
-            <div className="mb-2 flex flex-wrap items-baseline gap-3">
-              <h3 className="m-0 text-xl text-[var(--page-h2-color,var(--color-chestnut))] dark:text-[var(--page-h2-color-dark,var(--color-dark-text))]" style={{ fontFamily: "var(--page-heading-font, inherit)" }}>Senior Software Engineer</h3>
+          <h2 className={sectionHeading} style={{ fontFamily: "var(--page-heading-font, var(--font-display))" }}>Experience</h2>
+          <div className="border-b border-hairline pb-6 pt-4 last:border-b-0 last:pb-0 dark:border-dark-hairline">
+            <div className="mb-2 flex flex-col gap-1 sm:flex-row sm:flex-wrap sm:items-baseline sm:gap-3">
+              <h3 className="m-0 text-xl/tight text-[var(--page-h2-color,var(--color-chestnut))] dark:text-[var(--page-h2-color-dark,var(--color-dark-text))]" style={{ fontFamily: "var(--page-heading-font, var(--font-display))" }}>Senior Software Engineer</h3>
               <span className="text-base font-semibold text-olive-dark dark:text-dark-muted">GEICO</span>
-              <span className="ml-auto text-sm italic text-olive dark:text-dark-muted">Present</span>
+              <span className="text-sm italic text-olive sm:ml-auto dark:text-dark-muted">Present</span>
             </div>
             <p className="m-0 leading-relaxed text-[var(--page-body-color,var(--color-chestnut-dark))] dark:text-[var(--page-body-color-dark,var(--color-dark-muted))]" style={{ fontFamily: "var(--page-body-font, inherit)" }}>Working on commercial software dealing with DuckCreek and Next.js based service applications. Building robust, scalable solutions for commercial insurance products.</p>
           </div>
-          <div className="border-b border-desert-tan-dark pb-6 pt-4 last:border-b-0 last:pb-0 dark:border-dark-muted">
-            <div className="mb-2 flex flex-wrap items-baseline gap-3">
-              <h3 className="m-0 text-xl text-[var(--page-h2-color,var(--color-chestnut))] dark:text-[var(--page-h2-color-dark,var(--color-dark-text))]" style={{ fontFamily: "var(--page-heading-font, inherit)" }}>Software Engineer</h3>
+          <div className="border-b border-hairline pb-6 pt-4 last:border-b-0 last:pb-0 dark:border-dark-hairline">
+            <div className="mb-2 flex flex-col gap-1 sm:flex-row sm:flex-wrap sm:items-baseline sm:gap-3">
+              <h3 className="m-0 text-xl/tight text-[var(--page-h2-color,var(--color-chestnut))] dark:text-[var(--page-h2-color-dark,var(--color-dark-text))]" style={{ fontFamily: "var(--page-heading-font, var(--font-display))" }}>Software Engineer</h3>
               <span className="text-base font-semibold text-olive-dark dark:text-dark-muted">Capital One</span>
-              <span className="ml-auto text-sm italic text-olive dark:text-dark-muted">Previous</span>
+              <span className="text-sm italic text-olive sm:ml-auto dark:text-dark-muted">Previous</span>
             </div>
             <p className="m-0 leading-relaxed text-[var(--page-body-color,var(--color-chestnut-dark))] dark:text-[var(--page-body-color-dark,var(--color-dark-muted))]" style={{ fontFamily: "var(--page-body-font, inherit)" }}>Full stack development with Node.js, Python, and Scala. Built and maintained microservices and distributed systems in a cloud-native environment.</p>
           </div>
         </section>
 
         <section className={sectionCard}>
-          <h2 className="text-[var(--page-h2-color,var(--color-chestnut))] dark:text-[var(--page-h2-color-dark,var(--color-dark-text))]" style={{ fontFamily: "var(--page-heading-font, inherit)" }}>Technical Skills</h2>
+          <h2 className={sectionHeading} style={{ fontFamily: "var(--page-heading-font, var(--font-display))" }}>Technical Skills</h2>
           <div className="mt-4 grid gap-5">
             <div>
               <h3 className="mb-2 text-xs uppercase tracking-wide text-olive-dark dark:text-dark-muted">Languages</h3>
@@ -79,7 +81,7 @@ export default function ResumePage() {
         </section>
 
         <section className={sectionCard}>
-          <h2 className="text-[var(--page-h2-color,var(--color-chestnut))] dark:text-[var(--page-h2-color-dark,var(--color-dark-text))]" style={{ fontFamily: "var(--page-heading-font, inherit)" }}>Experience Summary</h2>
+          <h2 className={sectionHeading} style={{ fontFamily: "var(--page-heading-font, var(--font-display))" }}>Experience Summary</h2>
           <ul className="mt-4 list-outside pl-6 leading-relaxed text-[var(--page-body-color,var(--color-chestnut-dark))] dark:text-[var(--page-body-color-dark,var(--color-dark-muted))] [&>li]:mb-2" style={{ fontFamily: "var(--page-body-font, inherit)" }}>
             <li>7+ years of full stack .NET development experience</li>
             <li>2+ years of Node.js/Python/Scala development experience</li>

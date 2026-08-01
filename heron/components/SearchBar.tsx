@@ -10,7 +10,12 @@ interface SearchResults {
   albums: Album[];
 }
 
-export default function SearchBar() {
+interface SearchBarProps {
+  /** Stretch the input to fill its container, for the mobile nav drawer. */
+  fullWidth?: boolean;
+}
+
+export default function SearchBar({ fullWidth = false }: SearchBarProps) {
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<SearchResults | null>(null);
   const [loading, setLoading] = useState(false);
@@ -67,7 +72,7 @@ export default function SearchBar() {
   const hasResults = results && (results.posts.length > 0 || results.albums.length > 0);
 
   return (
-    <div className="relative" ref={containerRef}>
+    <div className={`relative ${fullWidth ? "w-full" : ""}`} ref={containerRef}>
       <input
         type="search"
         placeholder="Search posts & albums..."
@@ -77,12 +82,14 @@ export default function SearchBar() {
           setShowResults(true);
         }}
         onFocus={() => setShowResults(true)}
-        className="w-44 rounded-lg border border-desert-tan-dark bg-white/90 px-3 py-1.5 text-sm text-chestnut-dark placeholder:text-olive/70 focus:border-chestnut focus:outline-none focus:ring-2 focus:ring-chestnut/10 dark:border-dark-muted dark:bg-dark-bg dark:text-dark-text dark:placeholder:text-dark-muted"
+        className={`${
+          fullWidth ? "w-full" : "w-44"
+        } min-h-[44px] rounded-lg border border-desert-tan-dark bg-white/90 px-3 py-1.5 text-base text-chestnut-dark placeholder:text-olive/70 focus:border-chestnut focus:outline-none focus:ring-2 focus:ring-chestnut/10 sm:fine-pointer:min-h-0 sm:fine-pointer:text-sm dark:border-dark-muted dark:bg-dark-bg dark:text-dark-text dark:placeholder:text-dark-muted`}
         aria-label="Search"
       />
 
       {showResults && query.length >= 2 && (
-        <div className="absolute top-full left-0 z-50 mt-1 w-80 rounded-xl border border-desert-tan-dark bg-surface py-2 shadow-lg dark:border-dark-muted dark:bg-dark-surface">
+        <div className="absolute top-full left-0 z-50 mt-1 w-[min(20rem,calc(100vw-2rem))] rounded-xl border border-desert-tan-dark bg-surface py-2 shadow-lg dark:border-dark-muted dark:bg-dark-surface">
           {loading ? (
             <div className="px-4 py-6 text-center text-sm text-olive dark:text-dark-muted">Searching...</div>
           ) : results == null ? (
@@ -98,7 +105,7 @@ export default function SearchBar() {
                     <Link
                       key={post.id}
                       href={`/posts/${post.slug}`}
-                      className="block rounded-lg px-3 py-2 text-sm text-chestnut-dark transition hover:bg-surface-hover dark:text-dark-text dark:hover:bg-dark-bg"
+                      className="flex min-h-[44px] items-center rounded-lg px-3 text-sm text-chestnut-dark transition hover:bg-surface-hover dark:text-dark-text dark:hover:bg-dark-bg"
                       onClick={() => setShowResults(false)}
                     >
                       {post.title}
@@ -113,7 +120,7 @@ export default function SearchBar() {
                     <Link
                       key={album.id}
                       href={`/albums/${album.slug}`}
-                      className="block rounded-lg px-3 py-2 text-sm text-chestnut-dark transition hover:bg-surface-hover dark:text-dark-text dark:hover:bg-dark-bg"
+                      className="flex min-h-[44px] items-center rounded-lg px-3 text-sm text-chestnut-dark transition hover:bg-surface-hover dark:text-dark-text dark:hover:bg-dark-bg"
                       onClick={() => setShowResults(false)}
                     >
                       {album.title}

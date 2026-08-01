@@ -39,7 +39,7 @@ export function BannerSectionView({ data }: { data: BannerSectionData }) {
     const customBg = hasCustomBackground(data);
     return (
         <section
-            className={`-mx-5 mt-0 rounded-2xl px-5 py-12 text-center md:-mx-5 md:px-10 md:py-20 ${
+            className={`-mx-4 mt-0 rounded-2xl px-5 py-10 text-center sm:-mx-6 sm:py-14 lg:-mx-8 lg:px-10 lg:py-20 ${
                 customBg
                     ? "text-white"
                     : "bg-gradient-to-br from-chestnut to-chestnut-light text-desert-tan dark:from-chestnut-dark dark:to-chestnut"
@@ -47,7 +47,7 @@ export function BannerSectionView({ data }: { data: BannerSectionData }) {
             style={customBg ? bannerStyle(data) : undefined}
         >
             <h1
-                className={`mb-4 text-3xl font-bold md:text-5xl ${customBg ? "" : "text-desert-tan"}`}
+                className={`mb-4 text-[length:var(--text-display)] font-bold ${customBg ? "" : "text-desert-tan"}`}
                 style={homeHeadingStyle}
             >
                 {data.title}

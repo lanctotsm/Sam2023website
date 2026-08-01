@@ -1,7 +1,12 @@
 import JSZip from "jszip";
 
-/** Max file size for upload (client-side check, must match or be under server MAX_UPLOAD_BYTES). 100MB. */
-export const MAX_UPLOAD_BYTES = 100 * 1024 * 1024;
+/**
+ * Max file size for upload (client-side check, must match or be under server
+ * MAX_UPLOAD_BYTES). 25MB - kept in sync with the server-side default in
+ * app/api/images/upload/route.ts; see docs/ARCHITECTURE_PROPOSAL.md,
+ * "Raise the memory ceiling on uploads".
+ */
+export const MAX_UPLOAD_BYTES = 25 * 1024 * 1024;
 
 export function isFileWithinSizeLimit(file: File): boolean {
   return file.size <= MAX_UPLOAD_BYTES;

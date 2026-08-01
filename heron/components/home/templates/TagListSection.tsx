@@ -4,12 +4,12 @@ import type { TagListSectionData, TagItem } from "@/lib/frontPageDefaults";
 import type { SectionEditorProps } from "@/components/home/sectionEditorTypes";
 import IconPicker from "@/components/IconPicker";
 import LucideIcon from "@/components/LucideIcon";
-import { homeBodyClass, homeH2Class, homeHeadingStyle } from "@/components/home/homeSectionStyles";
+import { homeBodyClass, homeHeadingStyle, homeSectionTitleClass } from "@/components/home/homeSectionStyles";
 
 export function TagListSectionView({ data }: { data: TagListSectionData }) {
     return (
         <section>
-            <h2 className={`mb-6 ${homeH2Class}`} style={homeHeadingStyle}>
+            <h2 className={`mb-6 ${homeSectionTitleClass}`} style={homeHeadingStyle}>
                 {data.heading}
             </h2>
             <div className="flex flex-wrap justify-center gap-3">

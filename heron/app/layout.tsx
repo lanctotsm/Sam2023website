@@ -1,13 +1,23 @@
 import "./globals.css";
 import type { ReactNode } from "react";
-import { Roboto } from "next/font/google";
+import { Fraunces, Inter } from "next/font/google";
 import Navigation from "@/components/Navigation";
 import NavStyleProvider from "@/components/NavStyleProvider";
 import Footer from "@/components/Footer";
 import Providers from "@/app/providers";
 import { getSetting } from "@/services/settings";
 
-const roboto = Roboto({ weight: "500", subsets: ["latin"] });
+const displayFont = Fraunces({
+  subsets: ["latin"],
+  display: "swap",
+  variable: "--font-display"
+});
+
+const bodyFont = Inter({
+  subsets: ["latin"],
+  display: "swap",
+  variable: "--font-body"
+});
 
 const baseUrl =
   process.env.NEXTAUTH_URL?.trim() ||
@@ -31,6 +41,17 @@ export async function generateMetadata() {
   };
 }
 
+export const viewport = {
+  width: "device-width",
+  initialScale: 1,
+  // Required for env(safe-area-inset-*) to resolve on notched devices
+  viewportFit: "cover" as const,
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "#f7f0e4" },
+    { media: "(prefers-color-scheme: dark)", color: "#171513" }
+  ]
+};
+
 const themeScript = `
 (function() {
   var t = localStorage.getItem('theme');
@@ -52,12 +73,23 @@ export default function RootLayout({ children }: { children: ReactNode }) {
           href={`${baseUrl.replace(/\/+$/, "")}/feed.xml`}
         />
       </head>
-      <body className={`m-0 bg-caramel-light text-chestnut-dark dark:bg-dark-bg dark:text-dark-text ${roboto.className}`}>
+      <body
+        className={`m-0 bg-canvas text-chestnut-dark dark:bg-dark-canvas dark:text-dark-text ${displayFont.variable} ${bodyFont.variable}`}
+      >
+        <a
+          href="#main-content"
+          className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-[100] focus:rounded-lg focus:bg-chestnut focus:px-4 focus:py-3 focus:text-desert-tan"
+        >
+          Skip to content
+        </a>
         <Providers>
           <NavStyleProvider>
             <Navigation />
           </NavStyleProvider>
-          <main className="mx-auto flex min-h-[calc(100vh-4rem)] max-w-[1100px] flex-col px-5 py-8 pb-6">
+          <main
+            id="main-content"
+            className="mx-auto flex min-h-[calc(100svh-4rem)] w-full max-w-[1100px] flex-col px-4 py-6 sm:px-6 sm:py-8 lg:px-8"
+          >
             {children}
             <Footer />
           </main>

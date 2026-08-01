@@ -54,6 +54,7 @@ export function serializeImage(row: ImageRow) {
     alt_text: row.altText || "",
     description: row.description || "",
     tags: row.tags || "",
+    lqip: row.lqip ?? null,
     created_by: row.createdBy ?? null,
     created_at: row.createdAt
   };

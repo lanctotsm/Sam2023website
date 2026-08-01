@@ -8,6 +8,7 @@ import {
     homeBodyStyle,
     homeCardClass,
     homeH2Class,
+    homeSectionTitleClass,
     homeHeadingStyle,
 } from "@/components/home/homeSectionStyles";
 
@@ -22,14 +23,14 @@ export function CardGridSectionView({ data }: { data: CardGridSectionData }) {
                 : "sm:grid-cols-2";
     return (
         <section>
-            <h2 className={`mb-6 ${homeH2Class}`} style={homeHeadingStyle}>
+            <h2 className={`mb-6 ${homeSectionTitleClass}`} style={homeHeadingStyle}>
                 {data.heading}
             </h2>
             <div className={`grid gap-5 ${gridCols}`}>
                 {data.items.map((item, idx) => (
                     <div
                         key={idx}
-                        className={`${homeCardClass} p-6 text-center transition-all hover:-translate-y-1 hover:shadow-[0_12px_32px_rgba(72,9,3,0.12)] dark:hover:shadow-none`}
+                        className={`${homeCardClass} text-center transition-all hover:-translate-y-1 hover:shadow-card-hover dark:hover:shadow-none`}
                     >
                         <div className={`mb-3 flex justify-center ${homeH2Class}`}>
                             <LucideIcon name={item.icon} size={36} />

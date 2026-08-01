@@ -1,185 +1,140 @@
 "use client";
 
-import { useState, useCallback, useEffect } from "react";
-import Image from "next/image";
-import { buildLargeUrl, buildThumbUrl } from "@/lib/images";
+import { useCallback, useEffect, useRef, useState } from "react";
+import JustifiedGallery from "@/components/gallery/JustifiedGallery";
+import Lightbox from "@/components/gallery/Lightbox";
 import type { Image as AlbumImage } from "@/lib/api";
-
-type ViewMode = "grid" | "masonry";
 
 interface AlbumViewerProps {
     images: AlbumImage[];
 }
 
+const PHOTO_PARAM = "photo";
+
+function photoUrl(imageId: number | null) {
+    const url = new URL(window.location.href);
+    if (imageId === null) url.searchParams.delete(PHOTO_PARAM);
+    else url.searchParams.set(PHOTO_PARAM, String(imageId));
+    return url;
+}
+
+/**
+ * Preserving the existing history state keeps the App Router's own bookkeeping
+ * intact, so popping our entry does not trigger a route change.
+ */
+function replacePhotoParam(imageId: number | null) {
+    window.history.replaceState(window.history.state, "", photoUrl(imageId));
+}
+
+function withViewTransition(update: () => void) {
+    const startViewTransition = (
+        document as Document & { startViewTransition?: (cb: () => void) => void }
+    ).startViewTransition;
+
+    const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+    if (typeof startViewTransition === "function" && !prefersReducedMotion) {
+        startViewTransition.call(document, update);
+        return;
+    }
+    update();
+}
+
 export default function AlbumViewer({ images }: AlbumViewerProps) {
-    const [viewMode, setViewMode] = useState<ViewMode>("masonry");
-    const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
+    const [openIndex, setOpenIndex] = useState<number | null>(null);
+    // The thumbnail that acts as the morph source. Only one element may carry
+    // the view-transition-name per snapshot, so the gallery holds it while
+    // closed and the lightbox takes over once open.
+    const [morphIndex, setMorphIndex] = useState<number | null>(null);
 
-    const openLightbox = (index: number) => setLightboxIndex(index);
-    const closeLightbox = () => setLightboxIndex(null);
+    // Restore a shared ?photo=<id> link on first paint.
+    useEffect(() => {
+        const id = Number(new URLSearchParams(window.location.search).get(PHOTO_PARAM));
+        if (!Number.isFinite(id) || id <= 0) return;
+        const index = images.findIndex((image) => image.id === id);
+        if (index >= 0) setOpenIndex(index);
+        // Intentionally only on mount: later changes are driven by user actions.
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
 
-    const nextImage = useCallback(() => {
-        setLightboxIndex((prev) => (prev === null ? null : (prev + 1) % images.length));
-    }, [images.length]);
+    // True while we own a pushed history entry that Back should consume.
+    const pushedEntry = useRef(false);
 
-    const prevImage = useCallback(() => {
-        setLightboxIndex((prev) =>
-            prev === null ? null : (prev - 1 + images.length) % images.length
-        );
-    }, [images.length]);
+    const open = useCallback(
+        (index: number) => {
+            // Name the source thumbnail first, then start the transition on the
+            // next frame so the old snapshot has something to morph from.
+            setMorphIndex(index);
+            requestAnimationFrame(() => {
+                withViewTransition(() => setOpenIndex(index));
+                const id = images[index]?.id ?? null;
+                // One entry per open, so Back closes the photo instead of
+                // leaving the album. Arrow presses replace it rather than stack.
+                if (pushedEntry.current) {
+                    replacePhotoParam(id);
+                } else {
+                    window.history.pushState(window.history.state, "", photoUrl(id));
+                    pushedEntry.current = true;
+                }
+            });
+        },
+        [images]
+    );
+
+    const close = useCallback(() => {
+        if (pushedEntry.current) {
+            // Let popstate drive the close so the history stack stays consistent
+            // whether the user clicks Close or presses Back.
+            window.history.back();
+            return;
+        }
+        // Arrived via a shared ?photo= link, so there is no entry of ours to pop.
+        withViewTransition(() => setOpenIndex(null));
+        replacePhotoParam(null);
+    }, []);
+
+    const changeIndex = useCallback(
+        (index: number) => {
+            setOpenIndex(index);
+            setMorphIndex(index);
+            replacePhotoParam(images[index]?.id ?? null);
+        },
+        [images]
+    );
 
     useEffect(() => {
-        const handleKeyDown = (e: KeyboardEvent) => {
-            if (lightboxIndex === null) return;
-            if (e.key === "Escape") closeLightbox();
-            if (e.key === "ArrowRight") nextImage();
-            if (e.key === "ArrowLeft") prevImage();
+        const onPopState = () => {
+            const id = Number(new URLSearchParams(window.location.search).get(PHOTO_PARAM));
+            const index = images.findIndex((image) => image.id === id);
+            pushedEntry.current = false;
+            withViewTransition(() => setOpenIndex(index >= 0 ? index : null));
         };
-        window.addEventListener("keydown", handleKeyDown);
-        return () => window.removeEventListener("keydown", handleKeyDown);
-    }, [lightboxIndex, nextImage, prevImage]);
+        window.addEventListener("popstate", onPopState);
+        return () => window.removeEventListener("popstate", onPopState);
+    }, [images]);
 
     if (images.length === 0) {
         return (
-            <p className="rounded-xl border border-desert-tan-dark bg-surface p-4 text-center text-olive dark:border-dark-muted dark:bg-dark-surface dark:text-dark-muted">
+            <p className="surface-card text-center text-olive dark:text-dark-muted">
                 This album is empty.
             </p>
         );
     }
 
-    const currentImage = lightboxIndex !== null ? images[lightboxIndex] : null;
-
-    const buttonBase = "rounded-lg border border-desert-tan-dark px-4 py-2 text-sm font-medium transition dark:border-dark-muted";
-    const buttonActive = "bg-chestnut text-desert-tan dark:bg-caramel dark:text-chestnut-dark";
-    const buttonInactive = "bg-surface text-chestnut-dark hover:bg-surface-hover dark:bg-dark-surface dark:text-dark-text dark:hover:bg-dark-bg";
-
     return (
         <article className="grid gap-4">
-            <nav className="flex flex-wrap gap-2" aria-label="Gallery view options">
-                <button
-                    type="button"
-                    onClick={() => setViewMode("grid")}
-                    className={`${buttonBase} ${viewMode === "grid" ? buttonActive : buttonInactive}`}
-                >
-                    Grid
-                </button>
-                <button
-                    type="button"
-                    onClick={() => setViewMode("masonry")}
-                    className={`${buttonBase} ${viewMode === "masonry" ? buttonActive : buttonInactive}`}
-                >
-                    Masonry
-                </button>
-            </nav>
-
-            <div>
-                {viewMode === "grid" ? (
-                    <div className="grid grid-cols-[repeat(auto-fill,minmax(280px,1fr))] gap-5">
-                        {images.map((image, idx) => (
-                            <figure
-                                key={image.id}
-                                className="m-0"
-                            >
-                                <button
-                                    type="button"
-                                    onClick={() => openLightbox(idx)}
-                                    className="w-full cursor-pointer overflow-hidden rounded-xl border border-desert-tan-dark bg-surface p-3 text-left shadow-[0_2px_8px_rgba(72,9,3,0.08)] transition-all hover:-translate-y-0.5 hover:border-caramel hover:shadow-[0_8px_24px_rgba(72,9,3,0.15)] dark:border-dark-muted dark:bg-dark-surface dark:hover:border-caramel/50"
-                                    aria-label={image.alt_text || image.caption || `View image ${idx + 1} of ${images.length}`}
-                                >
-                                    <span className="relative block h-[220px] w-full overflow-hidden rounded-lg">
-                                        <Image
-                                            src={buildThumbUrl(image)}
-                                            alt={image.alt_text || image.caption || "Album image"}
-                                            fill
-                                            className="object-cover"
-                                            sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-                                            unoptimized
-                                        />
-                                    </span>
-                                </button>
-                                {image.caption && <figcaption className="sr-only">{image.caption}</figcaption>}
-                            </figure>
-                        ))}
-                    </div>
-                ) : (
-                    <div className="grid grid-cols-[repeat(auto-fill,minmax(280px,1fr))] gap-5">
-                        {images.map((image, idx) => (
-                            <figure
-                                key={image.id}
-                                className="m-0"
-                            >
-                                <button
-                                    type="button"
-                                    onClick={() => openLightbox(idx)}
-                                    className="w-full cursor-pointer overflow-hidden rounded-xl border border-desert-tan-dark bg-surface p-3 text-left shadow-[0_2px_8px_rgba(72,9,3,0.08)] transition-all hover:-translate-y-0.5 hover:border-caramel hover:shadow-[0_8px_24px_rgba(72,9,3,0.15)] dark:border-dark-muted dark:bg-dark-surface dark:hover:border-caramel/50"
-                                    aria-label={image.alt_text || image.caption || `View image ${idx + 1} of ${images.length}`}
-                                >
-                                    <Image
-                                        src={buildThumbUrl(image)}
-                                        alt={image.alt_text || image.caption || "Album image"}
-                                        width={image.width || 600}
-                                        height={image.height || 400}
-                                        className="block w-full rounded-lg object-cover"
-                                        style={{ height: "220px" }}
-                                        sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-                                        unoptimized
-                                    />
-                                </button>
-                                {image.caption && <figcaption className="sr-only">{image.caption}</figcaption>}
-                            </figure>
-                        ))}
-                    </div>
-                )}
-            </div>
-
-            {currentImage && (
-                <div
-                    role="dialog"
-                    aria-modal="true"
-                    className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4"
-                    onClick={closeLightbox}
-                >
-                    <button
-                        type="button"
-                        onClick={closeLightbox}
-                        className="absolute right-4 top-4 rounded-lg bg-white/10 p-2 text-white transition hover:bg-white/20"
-                        aria-label="Close lightbox"
-                    >
-                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
-                    </button>
-
-                    <button
-                        type="button"
-                        onClick={(e) => { e.stopPropagation(); prevImage(); }}
-                        className="absolute left-4 top-1/2 -translate-y-1/2 rounded-lg bg-white/10 p-2 text-white transition hover:bg-white/20"
-                        aria-label="Previous image"
-                    >
-                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg>
-                    </button>
-
-                    <button
-                        type="button"
-                        onClick={(e) => { e.stopPropagation(); nextImage(); }}
-                        className="absolute right-4 top-1/2 -translate-y-1/2 rounded-lg bg-white/10 p-2 text-white transition hover:bg-white/20"
-                        aria-label="Next image"
-                    >
-                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
-                    </button>
-
-                    <div className="max-h-[90vh] max-w-[90vw]" onClick={(e) => e.stopPropagation()}>
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img
-                            src={buildLargeUrl(currentImage)}
-                            alt={currentImage.caption || "Fullscreen image"}
-                            className="max-h-[85vh] w-auto max-w-full rounded-lg object-contain"
-                        />
-                        {currentImage.caption && (
-                            <p className="mt-2 text-center text-sm text-white/90">
-                                {currentImage.caption}
-                            </p>
-                        )}
-                    </div>
-                </div>
+            <JustifiedGallery
+                images={images}
+                onOpen={open}
+                activeIndex={openIndex === null ? morphIndex : null}
+            />
+            {openIndex !== null && (
+                <Lightbox
+                    images={images}
+                    index={openIndex}
+                    onIndexChange={changeIndex}
+                    onClose={close}
+                />
             )}
         </article>
     );

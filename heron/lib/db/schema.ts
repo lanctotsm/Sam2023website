@@ -90,6 +90,7 @@ export const images = sqliteTable(
     altText: text("alt_text"),
     description: text("description"),
     tags: text("tags"),
+    lqip: text("lqip"),
     createdBy: integer("created_by").references(() => users.id, { onDelete: "set null" }),
     createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`)
   },

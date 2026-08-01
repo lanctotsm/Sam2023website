@@ -8,14 +8,14 @@ import {
     homeBodyClass,
     homeBodyStyle,
     homeCardClass,
-    homeH2Class,
+    homeSectionTitleClass,
     homeHeadingStyle,
 } from "@/components/home/homeSectionStyles";
 
 export function ContactSectionView({ data }: { data: ContactSectionData }) {
     return (
         <section className={`${homeCardClass} text-center`}>
-            <h2 className={homeH2Class} style={homeHeadingStyle}>
+            <h2 className={homeSectionTitleClass} style={homeHeadingStyle}>
                 {data.heading}
             </h2>
             <p

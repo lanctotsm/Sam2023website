@@ -111,9 +111,9 @@ export default async function PostDetailPage({ params }: PageProps) {
       >
         ← Back to Posts
       </Link>
-      <div className="rounded-xl border border-desert-tan-dark bg-surface p-6 shadow-[0_2px_8px_rgba(72,9,3,0.08)] dark:border-dark-muted dark:bg-dark-surface md:p-8">
+      <div className="surface-card">
         <header className="mb-6">
-          <h1 className="text-3xl font-bold leading-tight text-chestnut dark:text-dark-text md:text-4xl">
+          <h1 className="font-bold text-chestnut dark:text-dark-text">
             {post.title}
           </h1>
           {post.summary && (
@@ -149,9 +149,9 @@ export default async function PostDetailPage({ params }: PageProps) {
               </div>
             );
           })()}
-          <hr className="mt-6 border-desert-tan-dark dark:border-dark-muted" />
+          <hr className="mt-6 border-hairline dark:border-dark-hairline" />
         </header>
-        <div className="prose prose-lg max-w-none leading-relaxed prose-headings:text-chestnut prose-p:text-chestnut-dark prose-li:text-chestnut-dark dark:prose-headings:text-dark-text dark:prose-p:text-dark-muted dark:prose-strong:text-dark-text dark:prose-li:text-dark-muted dark:prose-a:text-caramel-light dark:prose-a:hover:text-desert-tan">
+        <div className="markdown-body text-chestnut-dark dark:text-dark-text">
           {await renderWithShortcodes(post.markdown)}
         </div>
       </div>

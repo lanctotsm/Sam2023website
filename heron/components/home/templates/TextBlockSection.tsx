@@ -7,14 +7,14 @@ import {
     homeBodyClass,
     homeBodyStyle,
     homeCardClass,
-    homeH2Class,
+    homeSectionTitleClass,
     homeHeadingStyle,
 } from "@/components/home/homeSectionStyles";
 
 export function TextBlockSectionView({ data }: { data: TextBlockSectionData }) {
     return (
         <section className={homeCardClass}>
-            <h2 className={homeH2Class} style={homeHeadingStyle}>
+            <h2 className={homeSectionTitleClass} style={homeHeadingStyle}>
                 {data.heading}
             </h2>
             <div className={`mt-4 space-y-4 text-[1.05rem] leading-relaxed ${homeBodyClass}`} style={homeBodyStyle}>

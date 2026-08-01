@@ -21,6 +21,7 @@ export async function getAlbumImages(albumId: number) {
       altText: images.altText,
       description: images.description,
       tags: images.tags,
+      lqip: images.lqip,
       createdBy: images.createdBy,
       createdAt: images.createdAt,
       sortOrder: albumImages.sortOrder
