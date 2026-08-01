@@ -91,9 +91,9 @@ function SortableItem({
       </div>
       <div className="flex flex-wrap items-center justify-between gap-2">
         <p className="m-0 text-xs text-olive dark:text-dark-muted">
-          {onUpdateMetadata ? "Click image to edit metadata" : "Drag image to reorder"}
+          Drag to reorder
         </p>
-        <div className="flex flex-wrap justify-end gap-1">
+        <div className="flex flex-wrap items-center justify-end gap-1">
           {onRotate && (
             <button
               type="button"
@@ -127,20 +127,20 @@ function SortableItem({
           >
             🗑️
           </button>
+          {onUpdateMetadata && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                onUpdateMetadata(image);
+              }}
+              className="rounded bg-chestnut px-2 py-1 text-xs font-medium text-desert-tan transition hover:bg-chestnut-dark dark:bg-caramel dark:text-chestnut-dark dark:hover:bg-caramel-light"
+              aria-label="Edit Info"
+              type="button"
+            >
+              Edit Info
+            </button>
+          )}
         </div>
-
-        {onUpdateMetadata && (
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              onUpdateMetadata(image);
-            }}
-            className="mt-auto mb-4 rounded-lg bg-chestnut px-3 py-1.5 text-sm font-semibold text-desert-tan transition hover:bg-chestnut-dark disabled:opacity-60 dark:text-dark-text"
-            type="button"
-          >
-            Edit Info
-          </button>
-        )}
       </div>
       {(image.name || image.alt_text) && (
         <div className="min-w-0">
