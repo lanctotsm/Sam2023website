@@ -149,3 +149,6 @@ playwright/.cache/
 .agent/
 .agents/
 **/skills/
+
+# Local design/architecture proposals (not committed)
+proposal/
