@@ -5,7 +5,8 @@ import { unstable_cache, revalidateTag } from "next/cache";
 
 function invalidateSettingsCache() {
     try {
-        revalidateTag("settings");
+        // Next.js 16 requires a cacheLife profile as the second argument.
+        revalidateTag("settings", "max");
     } catch (err) {
         console.error("Failed to revalidate settings cache:", err);
     }
