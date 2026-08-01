@@ -15,10 +15,10 @@ export default async function Footer() {
 
   return (
     <footer
-      className="mt-auto shrink-0 border-t border-hairline bg-surface px-4 py-8 sm:px-6 lg:px-8 dark:border-dark-hairline dark:bg-dark-surface"
-      style={{ paddingBottom: "max(2rem, env(safe-area-inset-bottom))" }}
+      className="w-full shrink-0 border-t border-hairline bg-surface px-4 py-5 sm:px-6 lg:px-8 dark:border-dark-hairline dark:bg-dark-surface"
+      style={{ paddingBottom: "max(1.25rem, env(safe-area-inset-bottom))" }}
     >
-      <div className="mx-auto flex max-w-[1100px] flex-col items-center justify-between gap-2 sm:flex-row sm:gap-4">
+      <div className="mx-auto flex max-w-[1100px] flex-col items-center justify-between gap-1 sm:flex-row sm:gap-4">
         <nav className="flex flex-wrap justify-center gap-1 sm:gap-3">
           {footerLinks.map((link) => (
             <Link

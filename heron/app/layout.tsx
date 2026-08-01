@@ -74,7 +74,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
         />
       </head>
       <body
-        className={`m-0 bg-canvas text-chestnut-dark dark:bg-dark-canvas dark:text-dark-text ${displayFont.variable} ${bodyFont.variable}`}
+        className={`m-0 flex min-h-svh flex-col bg-canvas text-chestnut-dark dark:bg-dark-canvas dark:text-dark-text ${displayFont.variable} ${bodyFont.variable}`}
       >
         <a
           href="#main-content"
@@ -88,11 +88,11 @@ export default function RootLayout({ children }: { children: ReactNode }) {
           </NavStyleProvider>
           <main
             id="main-content"
-            className="mx-auto flex min-h-[calc(100svh-4rem)] w-full max-w-[1100px] flex-col px-4 py-6 sm:px-6 sm:py-8 lg:px-8"
+            className="mx-auto flex w-full max-w-[1100px] flex-1 flex-col px-4 py-6 sm:px-6 sm:py-8 lg:px-8"
           >
             {children}
-            <Footer />
           </main>
+          <Footer />
         </Providers>
       </body>
     </html>
