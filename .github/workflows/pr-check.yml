@@ -108,6 +108,17 @@ jobs:
       - name: Seed database
         run: npm run seed:local
 
+      # gallery.spec.ts needs a populated album to exercise the justified
+      # layout and lightbox; without this every one of those tests skips
+      # itself (correctly) except two that assert on browser-back history
+      # behavior, which time out instead because they navigate via a real
+      # link click rather than the shared skip-if-empty helper. The image
+      # bytes are never served in this job (S3 env vars above are dummy
+      # values), but the DOM only depends on the seeded width/height/lqip
+      # metadata, not on the underlying files actually loading.
+      - name: Seed gallery fixtures
+        run: npm run seed:gallery-fixtures -- ./tmp/s3
+
       - name: Run Playwright tests
         run: npx playwright test
 
