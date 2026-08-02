@@ -3,6 +3,7 @@
 import { useCallback } from "react";
 import type { NavStyleConfig } from "@/lib/frontPageDefaults";
 import { AVAILABLE_FONTS } from "@/lib/fonts";
+import NavStylePreview from "@/components/NavStylePreview";
 
 type Props = {
     value: NavStyleConfig;
@@ -72,6 +73,10 @@ export default function NavStyleEditor({ value, onChange }: Props) {
                 <ColorField label="Text Color (dark)" value={value.textColorDark} onChange={(v) => onChange({ textColorDark: v })} placeholder="#b8a86c" />
                 <ColorField label="Accent Color" value={value.accentColor} onChange={(v) => onChange({ accentColor: v })} placeholder="#e8a060" />
                 <ColorField label="Accent Color (dark)" value={value.accentColorDark} onChange={(v) => onChange({ accentColorDark: v })} placeholder="#e8a060" />
+            </div>
+
+            <div className="mt-4">
+                <NavStylePreview value={value} />
             </div>
         </div>
     );
