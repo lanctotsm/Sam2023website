@@ -80,7 +80,8 @@ export default function AdminSettingsPage() {
         (async () => {
             try {
                 const data = await apiFetch<Record<string, string>>(
-                    "/settings?keys=site_title,footer_text,front_page,page_styles,nav_styles,ai_alt_text_enabled"
+                    "/settings?keys=site_title,footer_text,front_page,page_styles,nav_styles,ai_alt_text_enabled",
+                    { cache: "no-store" }
                 );
                 if (data.site_title) setSiteTitle(data.site_title);
                 if (data.footer_text) setFooterText(data.footer_text);
