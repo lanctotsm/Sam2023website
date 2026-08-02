@@ -73,6 +73,10 @@
    * Tailwind Preflight resets headings to inherit, which left every heading on
    * the site at body size. Restoring them here rather than in utilities keeps
    * per-element text-* classes winning.
+   *
+   * --page-heading-font is set by PageStyleProvider to a next/font var()
+   * reference (e.g. var(--font-playfair-display), serif). When unset, fall
+   * back to the theme display face (Fraunces via --font-display).
    */
   h1,
   h2,

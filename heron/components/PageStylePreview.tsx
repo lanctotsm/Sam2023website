@@ -1,7 +1,6 @@
 "use client";
 
 import type { PageStyleEntry } from "@/lib/frontPageDefaults";
-import { buildGoogleFontsUrl } from "@/lib/fonts";
 import { buildPageBgStyle, buildPageCssVars } from "@/lib/pageStyleVars";
 
 type Props = {
@@ -37,21 +36,11 @@ export default function PageStylePreview({ label, value }: Props) {
     const cssVars = buildPageCssVars(style);
     const bgStyles = background.backgroundType !== "none" ? buildPageBgStyle(background) : {};
 
-    const fonts: string[] = [];
-    if (style.headingFont) fonts.push(style.headingFont);
-    if (style.bodyFont) fonts.push(style.bodyFont);
-    const fontUrl = buildGoogleFontsUrl(fonts);
-
     return (
         <div className="rounded-lg border border-desert-tan-dark/40 bg-white/60 p-4 dark:border-dark-muted/40 dark:bg-dark-bg/60">
             <p className="mb-3 text-xs font-bold uppercase tracking-wider text-olive dark:text-dark-muted">
                 Live Preview — {label}
             </p>
-
-            {fontUrl && (
-                // eslint-disable-next-line @next/next/no-page-custom-font
-                <link rel="stylesheet" href={fontUrl} />
-            )}
 
             <div className="grid gap-3 sm:grid-cols-2">
                 {/* Light mode mockup */}

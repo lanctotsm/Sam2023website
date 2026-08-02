@@ -50,10 +50,10 @@ test.describe("Admin settings UI", () => {
         const homeEditor = page
             .locator("div.rounded-xl")
             .filter({ has: page.getByRole("heading", { name: "🏠 Home Page" }) });
-        // The heading-font <select> is the one offering "Theme default (Roboto)"
+        // The heading-font <select> is the one offering "Theme default (Fraunces)"
         // (the body-font select offers "Theme default (Inter)" instead).
         const headingFontSelect = homeEditor.locator(
-            'select:has(option:text-is("Theme default (Roboto)"))'
+            'select:has(option:text-is("Theme default (Fraunces)"))'
         );
         await headingFontSelect.selectOption("Montserrat");
 

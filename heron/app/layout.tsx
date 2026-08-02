@@ -1,23 +1,11 @@
 import "./globals.css";
 import type { ReactNode } from "react";
-import { Fraunces, Inter } from "next/font/google";
 import Navigation from "@/components/Navigation";
 import NavStyleProvider from "@/components/NavStyleProvider";
 import Footer from "@/components/Footer";
 import Providers from "@/app/providers";
 import { getSetting } from "@/services/settings";
-
-const displayFont = Fraunces({
-  subsets: ["latin"],
-  display: "swap",
-  variable: "--font-display"
-});
-
-const bodyFont = Inter({
-  subsets: ["latin"],
-  display: "swap",
-  variable: "--font-body"
-});
+import { siteFontsClassName } from "@/lib/siteFonts";
 
 const baseUrl =
   process.env.NEXTAUTH_URL?.trim() ||
@@ -74,7 +62,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
         />
       </head>
       <body
-        className={`m-0 flex min-h-svh flex-col bg-canvas text-chestnut-dark dark:bg-dark-canvas dark:text-dark-text ${displayFont.variable} ${bodyFont.variable}`}
+        className={`m-0 flex min-h-svh flex-col bg-canvas text-chestnut-dark dark:bg-dark-canvas dark:text-dark-text ${siteFontsClassName}`}
       >
         <a
           href="#main-content"
