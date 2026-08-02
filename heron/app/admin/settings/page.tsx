@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
+import { useRouter } from "next/navigation";
 import { apiFetch } from "@/lib/api";
 import {
     defaultFrontPage,
@@ -64,6 +65,15 @@ export default function AdminSettingsPage() {
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
     const [toast, setToast] = useState<Toast | null>(null);
+    const router = useRouter();
+
+    // Snapshot of the last-saved (or last-loaded) page/nav styles, used to detect
+    // whether a Save actually changed anything visual (colors/fonts) so we know
+    // whether the live site needs a refresh to pick up the new look.
+    const savedStylesRef = useRef<{ pageStyles: string; navStyles: string }>({
+        pageStyles: JSON.stringify(defaultPageStyles),
+        navStyles: JSON.stringify(defaultNavStyle),
+    });
 
     // ── Load ────────────────────────────────────────────────────────────────────
     useEffect(() => {
@@ -76,8 +86,15 @@ export default function AdminSettingsPage() {
                 if (data.footer_text) setFooterText(data.footer_text);
                 if (data.ai_alt_text_enabled === "true") setAiAltTextEnabled(true);
                 if (data.front_page) setConfig(parseFrontPageConfig(data.front_page));
-                if (data.page_styles) setPageStyles(parsePageStyles(data.page_styles));
-                if (data.nav_styles) setNavStyles(parseNavStyles(data.nav_styles));
+
+                const loadedPageStyles = parsePageStyles(data.page_styles ?? null);
+                const loadedNavStyles = parseNavStyles(data.nav_styles ?? null);
+                setPageStyles(loadedPageStyles);
+                setNavStyles(loadedNavStyles);
+                savedStylesRef.current = {
+                    pageStyles: JSON.stringify(loadedPageStyles),
+                    navStyles: JSON.stringify(loadedNavStyles),
+                };
             } catch {
                 // settings not saved yet, defaults are fine
             } finally {
@@ -87,15 +104,21 @@ export default function AdminSettingsPage() {
     }, []);
 
     // ── Toast ───────────────────────────────────────────────────────────────────
-    const showToast = useCallback((message: string, type: "success" | "error") => {
+    const showToast = useCallback((message: string, type: "success" | "error", durationMs = 3000) => {
         setToast({ message, type });
-        setTimeout(() => setToast(null), 3000);
+        setTimeout(() => setToast(null), durationMs);
     }, []);
 
     // ── Save (all tabs at once) ─────────────────────────────────────────────────
     const handleSave = async () => {
         setSaving(true);
         try {
+            const newPageStylesJson = JSON.stringify(pageStyles);
+            const newNavStylesJson = JSON.stringify(navStyles);
+            const stylesChanged =
+                newPageStylesJson !== savedStylesRef.current.pageStyles ||
+                newNavStylesJson !== savedStylesRef.current.navStyles;
+
             await apiFetch("/settings", {
                 method: "PUT",
                 body: JSON.stringify({
@@ -104,12 +127,29 @@ export default function AdminSettingsPage() {
                         footer_text: footerText,
                         ai_alt_text_enabled: aiAltTextEnabled ? "true" : "false",
                         front_page: JSON.stringify(config),
-                        page_styles: JSON.stringify(pageStyles),
-                        nav_styles: JSON.stringify(navStyles),
+                        page_styles: newPageStylesJson,
+                        nav_styles: newNavStylesJson,
                     },
                 }),
             });
-            showToast("Settings saved!", "success");
+
+            savedStylesRef.current = { pageStyles: newPageStylesJson, navStyles: newNavStylesJson };
+
+            const savedAt = new Date().toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
+            if (stylesChanged) {
+                showToast(
+                    `Settings saved at ${savedAt}. The site has been updated — refreshing to show the new colors and font…`,
+                    "success",
+                    4000
+                );
+                // Let the toast render before the refresh swaps in the new
+                // server-rendered styles (nav bar, page backgrounds, fonts).
+                setTimeout(() => {
+                    router.refresh();
+                }, 600);
+            } else {
+                showToast(`Settings saved at ${savedAt}. The site has been updated.`, "success");
+            }
         } catch {
             showToast("Failed to save settings", "error");
         } finally {
@@ -149,7 +189,7 @@ export default function AdminSettingsPage() {
             {/* Toast */}
             {toast && (
                 <div
-                    className={`fixed right-4 top-4 z-50 rounded-lg px-4 py-3 text-sm font-medium shadow-lg ${
+                    className={`fixed right-4 top-4 z-50 max-w-sm rounded-lg px-4 py-3 text-sm font-medium shadow-lg ${
                         toast.type === "success" ? "bg-green-600 text-white" : "bg-red-600 text-white"
                     }`}
                 >
