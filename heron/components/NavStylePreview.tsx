@@ -1,7 +1,7 @@
 "use client";
 
 import type { NavStyleConfig } from "@/lib/frontPageDefaults";
-import { AVAILABLE_FONTS, buildGoogleFontsUrl, type AvailableFont } from "@/lib/fonts";
+import { fontFamilyValue, isAvailableFont } from "@/lib/fonts";
 
 type Props = {
     value: NavStyleConfig;
@@ -12,15 +12,17 @@ type Props = {
  * nav style values, so an admin can see the effect of a color/font change
  * before saving. Mirrors the light/dark variable fallbacks used by the real
  * <Navigation /> component and NavStyleProvider.
+ *
+ * Fonts come from self-hosted next/font CSS variables on <body> — no Google
+ * Fonts <link> needed for the preview to match production.
  */
 export default function NavStylePreview({ value }: Props) {
-    const fontValid = value.font && AVAILABLE_FONTS.includes(value.font as AvailableFont);
-    const fontUrl = fontValid ? buildGoogleFontsUrl([value.font]) : null;
+    const fontCss = isAvailableFont(value.font) ? fontFamilyValue(value.font) : null;
 
-    const navStyle = (bg: string, text: string, accent: string, font: string): React.CSSProperties => ({
+    const navStyle = (bg: string, text: string, accent: string): React.CSSProperties => ({
         backgroundColor: bg || "color-mix(in srgb, var(--color-chestnut-light) 88%, transparent)",
         color: text || "var(--color-desert-tan)",
-        fontFamily: font ? `"${font}", sans-serif` : "inherit",
+        fontFamily: fontCss || "inherit",
         ["--nav-accent" as string]: accent || text || "var(--color-desert-tan)",
     });
 
@@ -30,16 +32,11 @@ export default function NavStylePreview({ value }: Props) {
                 Live Preview — Navigation
             </p>
 
-            {fontUrl && (
-                // eslint-disable-next-line @next/next/no-page-custom-font
-                <link rel="stylesheet" href={fontUrl} />
-            )}
-
             <div className="grid gap-3 sm:grid-cols-2">
                 {/* Light */}
                 <div
                     className="flex items-center justify-between gap-3 rounded-lg border border-desert-tan-dark px-3 py-2.5 text-sm"
-                    style={navStyle(value.bgColor, value.textColor, value.accentColor, fontValid ? value.font : "")}
+                    style={navStyle(value.bgColor, value.textColor, value.accentColor)}
                 >
                     <div className="flex items-center gap-3 overflow-hidden">
                         <span className="font-semibold" style={{ color: "var(--nav-accent)" }}>About</span>
@@ -55,8 +52,7 @@ export default function NavStylePreview({ value }: Props) {
                     style={navStyle(
                         value.bgColorDark || value.bgColor,
                         value.textColorDark || value.textColor,
-                        value.accentColorDark || value.accentColor,
-                        fontValid ? value.font : ""
+                        value.accentColorDark || value.accentColor
                     )}
                 >
                     <div className="flex items-center gap-3 overflow-hidden">

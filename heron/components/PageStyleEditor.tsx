@@ -3,7 +3,7 @@
 import { useCallback } from "react";
 import LucideIcon from "@/components/LucideIcon";
 import type { PageBackgroundConfig, PageStyleConfig, PageStyleEntry } from "@/lib/frontPageDefaults";
-import { AVAILABLE_FONTS } from "@/lib/fonts";
+import { AVAILABLE_FONTS, fontFamilyValue } from "@/lib/fonts";
 import PageStylePreview from "@/components/PageStylePreview";
 
 type Props = {
@@ -161,7 +161,7 @@ export default function PageStyleEditor({ label, value, onChange, onUpload, show
                     <div>
                         <label className={labelClass}>Heading Font (H1, H2, H3)</label>
                         <select className={inputClass} value={style.headingFont} onChange={(e) => updateStyle({ headingFont: e.target.value })}>
-                            <option value="">Theme default (Roboto)</option>
+                            <option value="">Theme default (Fraunces)</option>
                             {AVAILABLE_FONTS.map((f) => <option key={f} value={f}>{f}</option>)}
                         </select>
                     </div>
@@ -179,12 +179,18 @@ export default function PageStyleEditor({ label, value, onChange, onUpload, show
                     <div className="mt-3 rounded-lg border border-desert-tan-dark/40 bg-white/60 p-4 dark:border-dark-muted/40 dark:bg-dark-bg/60">
                         <p className="mb-1 text-xs font-medium text-olive dark:text-dark-muted">Preview</p>
                         {style.headingFont && (
-                            <p className="text-xl font-bold text-chestnut dark:text-dark-text" style={{ fontFamily: `"${style.headingFont}", sans-serif` }}>
+                            <p
+                                className="text-xl font-bold text-chestnut dark:text-dark-text"
+                                style={{ fontFamily: fontFamilyValue(style.headingFont) || undefined }}
+                            >
                                 Heading in {style.headingFont}
                             </p>
                         )}
                         {style.bodyFont && (
-                            <p className="text-sm text-chestnut-dark dark:text-dark-muted" style={{ fontFamily: `"${style.bodyFont}", sans-serif` }}>
+                            <p
+                                className="text-sm text-chestnut-dark dark:text-dark-muted"
+                                style={{ fontFamily: fontFamilyValue(style.bodyFont) || undefined }}
+                            >
                                 Body text sample in {style.bodyFont}. The quick brown fox jumps over the lazy dog.
                             </p>
                         )}

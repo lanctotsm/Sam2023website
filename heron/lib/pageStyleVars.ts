@@ -1,5 +1,6 @@
 import type { CSSProperties } from "react";
 import type { PageBackgroundConfig, PageStyleConfig } from "@/lib/frontPageDefaults";
+import { fontFamilyValue } from "@/lib/fonts";
 
 /**
  * Pure, framework-agnostic helpers for turning a PageStyleConfig /
@@ -40,8 +41,14 @@ export function buildPageBgStyle(
 
 export function buildPageCssVars(style: PageStyleConfig): CSSProperties {
     const vars: Record<string, string> = {};
-    if (style.headingFont) vars["--page-heading-font"] = `"${style.headingFont}", sans-serif`;
-    if (style.bodyFont) vars["--page-body-font"] = `"${style.bodyFont}", sans-serif`;
+    // Use next/font CSS var references (no quoted family names). Quoted names
+    // like `"Playfair Display", sans-serif` break when serialized into an HTML
+    // style="..." attribute during SSR, so --page-heading-font never applied
+    // and headings fell back to Fraunces (--font-display).
+    const headingFont = fontFamilyValue(style.headingFont);
+    const bodyFont = fontFamilyValue(style.bodyFont);
+    if (headingFont) vars["--page-heading-font"] = headingFont;
+    if (bodyFont) vars["--page-body-font"] = bodyFont;
     if (style.h1Color) vars["--page-h1-color"] = style.h1Color;
     if (style.h1ColorDark) vars["--page-h1-color-dark"] = style.h1ColorDark;
     if (style.h2Color) vars["--page-h2-color"] = style.h2Color;
