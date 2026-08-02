@@ -2,6 +2,19 @@ import { NextResponse } from "next/server";
 import { errorResponse, getAuthUser } from "@/lib/api-utils";
 import { getSetting, getSettings, updateSetting, updateSettings } from "@/services/settings";
 
+// Settings change immediately after a save (see services/settings.ts), and the
+// admin Settings page relies on GET here always reflecting the latest values —
+// never a browser/CDN-cached response from an earlier visit. Force dynamic
+// rendering and an explicit no-store header so nothing caches this route.
+export const dynamic = "force-dynamic";
+
+function jsonNoStore(body: unknown, status = 200) {
+    return NextResponse.json(body, {
+        status,
+        headers: { "Cache-Control": "no-store" },
+    });
+}
+
 const ALLOWED_SETTING_KEYS = new Set([
     "site_title",
     "footer_text",
@@ -25,13 +38,13 @@ export async function GET(request: Request) {
 
     if (key) {
         const value = await getSetting(key);
-        return NextResponse.json({ key, value });
+        return jsonNoStore({ key, value });
     }
 
     if (keys) {
         const keyList = keys.split(",").map((k) => k.trim()).filter(Boolean);
         const result = await getSettings(keyList);
-        return NextResponse.json(result);
+        return jsonNoStore(result);
     }
 
     return errorResponse("key or keys query parameter required", 400);

@@ -5,8 +5,14 @@ import { unstable_cache, revalidateTag } from "next/cache";
 
 function invalidateSettingsCache() {
     try {
-        // Next.js 16 requires a cacheLife profile as the second argument.
-        revalidateTag("settings", "max");
+        // A cacheLife profile like "max" only marks the tag "stale": the very
+        // next read still gets the old cached value while a revalidation
+        // happens in the background (stale-while-revalidate). Settings must be
+        // visible immediately to the admin page's router.refresh(), so we pass
+        // an explicit `{ expire: 0 }` cache-life config instead — this sets
+        // `expired: now` on the tag, forcing the next read to synchronously
+        // re-fetch from the DB rather than serving a stale value.
+        revalidateTag("settings", { expire: 0 });
     } catch (err) {
         console.error("Failed to revalidate settings cache:", err);
     }
@@ -77,4 +83,3 @@ export async function updateSettings(entries: Record<string, string>): Promise<v
     });
     invalidateSettingsCache();
 }
-

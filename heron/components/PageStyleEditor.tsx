@@ -4,6 +4,7 @@ import { useCallback } from "react";
 import LucideIcon from "@/components/LucideIcon";
 import type { PageBackgroundConfig, PageStyleConfig, PageStyleEntry } from "@/lib/frontPageDefaults";
 import { AVAILABLE_FONTS } from "@/lib/fonts";
+import PageStylePreview from "@/components/PageStylePreview";
 
 type Props = {
     label: string;
@@ -219,6 +220,11 @@ export default function PageStyleEditor({ label, value, onChange, onUpload, show
                         <ColorField label="Card Border (dark)" value={style.cardBorderDark} onChange={(v) => updateStyle({ cardBorderDark: v })} placeholder="#b8a86c" />
                     </div>
                 </div>
+            </div>
+
+            {/* ── Live preview of the full look (background + typography + colors) ── */}
+            <div className="mt-4">
+                <PageStylePreview label={label} value={value} />
             </div>
         </div>
     );

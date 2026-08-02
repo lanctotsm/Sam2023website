@@ -31,7 +31,7 @@ test.describe("Admin settings UI", () => {
             const save = waitForSave();
             await page.locator("#settings-save-btn").click();
             expect((await save).status()).toBe(200);
-            await expect(page.getByText("Settings saved!")).toBeVisible();
+            await expect(page.getByText(/Settings saved at/)).toBeVisible();
         } finally {
             // Restore original value even if the test fails mid-way, so
             // subsequent runs don't see a leaked "Playwright Test Site" title.
@@ -64,7 +64,7 @@ test.describe("Admin settings UI", () => {
 
         const response = await saveResponse;
         expect(response.status()).toBe(200);
-        await expect(page.getByText("Settings saved!")).toBeVisible();
+        await expect(page.getByText(/Settings saved at/)).toBeVisible();
     });
 
     test("home page tab shows section editor", async ({ page }) => {
