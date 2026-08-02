@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Ensure a small swapfile on the root disk for RAM spillover during image
-# processing. Idempotent — safe on every deploy. Does not use the CMS data disk.
+# processing. Idempotent - safe on every deploy. Does not use the CMS data disk.
 set -euo pipefail
 
 SWAPFILE="${HERON_SWAPFILE:-/swapfile}"
@@ -43,7 +43,7 @@ if swapon --show=NAME --noheadings 2>/dev/null | grep -qx "$SWAPFILE"; then
 fi
 
 if [ -f "$SWAPFILE" ]; then
-  # Not active or wrong size — replace cleanly.
+  # Not active or wrong size - replace cleanly.
   sudo swapoff "$SWAPFILE" 2>/dev/null || true
   sudo rm -f "$SWAPFILE"
 fi
