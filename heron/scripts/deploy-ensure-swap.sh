@@ -59,5 +59,5 @@ sudo swapon "$SWAPFILE"
 ensure_fstab
 ensure_swappiness
 
-log "Done. $(free -h | awk '/^Swap:/ {print "Swap:", $2, "total,", $3, "used"}')"
+log "Done. $(free -h | awk '/^Swap:/ {print "Swap: " $2 " total, " $3 " used"}')"
 swapon --show
