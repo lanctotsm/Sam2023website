@@ -235,8 +235,8 @@ jobs:
           # sharp needs platform packages (@img/*); compiled binaries are also
           # required beyond what standalone tracing usually includes. Overlay
           # from the Linux CI install (glibc x64 — matches Ubuntu runtime).
-          rsync -az -e "ssh $SSH_OPTS" heron/node_modules/sharp/ lightsail:/opt/heron-cms/node_modules/sharp/
-          rsync -az -e "ssh $SSH_OPTS" heron/node_modules/@img/ lightsail:/opt/heron-cms/node_modules/@img/
+          rsync -az --delete -e "ssh $SSH_OPTS" heron/node_modules/sharp/ lightsail:/opt/heron-cms/node_modules/sharp/
+          rsync -az --delete -e "ssh $SSH_OPTS" heron/node_modules/@img/ lightsail:/opt/heron-cms/node_modules/@img/
           echo "✓ Files synced"
 
       - name: Prepare instance
