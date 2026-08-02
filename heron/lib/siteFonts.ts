@@ -46,12 +46,14 @@ const roboto = Roboto({
     subsets: ["latin"],
     display: "swap",
     variable: "--font-roboto",
+    preload: false,
 });
 
 const openSans = Open_Sans({
     subsets: ["latin"],
     display: "swap",
     variable: "--font-open-sans",
+    preload: false,
 });
 
 const lato = Lato({
@@ -59,18 +61,21 @@ const lato = Lato({
     subsets: ["latin"],
     display: "swap",
     variable: "--font-lato",
+    preload: false,
 });
 
 const montserrat = Montserrat({
     subsets: ["latin"],
     display: "swap",
     variable: "--font-montserrat",
+    preload: false,
 });
 
 const playfairDisplay = Playfair_Display({
     subsets: ["latin"],
     display: "swap",
     variable: "--font-playfair-display",
+    preload: false,
 });
 
 const merriweather = Merriweather({
@@ -78,12 +83,14 @@ const merriweather = Merriweather({
     subsets: ["latin"],
     display: "swap",
     variable: "--font-merriweather",
+    preload: false,
 });
 
 const raleway = Raleway({
     subsets: ["latin"],
     display: "swap",
     variable: "--font-raleway",
+    preload: false,
 });
 
 const poppins = Poppins({
@@ -91,30 +98,35 @@ const poppins = Poppins({
     subsets: ["latin"],
     display: "swap",
     variable: "--font-poppins",
+    preload: false,
 });
 
 const sourceSans3 = Source_Sans_3({
     subsets: ["latin"],
     display: "swap",
     variable: "--font-source-sans-3",
+    preload: false,
 });
 
 const nunito = Nunito({
     subsets: ["latin"],
     display: "swap",
     variable: "--font-nunito",
+    preload: false,
 });
 
 const outfit = Outfit({
     subsets: ["latin"],
     display: "swap",
     variable: "--font-outfit",
+    preload: false,
 });
 
 const dmSans = DM_Sans({
     subsets: ["latin"],
     display: "swap",
     variable: "--font-dm-sans",
+    preload: false,
 });
 
 const cormorantGaramond = Cormorant_Garamond({
@@ -122,6 +134,7 @@ const cormorantGaramond = Cormorant_Garamond({
     subsets: ["latin"],
     display: "swap",
     variable: "--font-cormorant-garamond",
+    preload: false,
 });
 
 const crimsonText = Crimson_Text({
@@ -129,6 +142,7 @@ const crimsonText = Crimson_Text({
     subsets: ["latin"],
     display: "swap",
     variable: "--font-crimson-text",
+    preload: false,
 });
 
 /** Space-separated class names that define every `--font-*` CSS variable on an element. */
