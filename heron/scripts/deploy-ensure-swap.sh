@@ -13,10 +13,8 @@ log() { echo "[deploy-ensure-swap] $*"; }
 desired_bytes=$((SWAP_SIZE_MB * 1024 * 1024))
 
 ensure_fstab() {
-  if grep -q "$FSTAB_TAG" /etc/fstab 2>/dev/null; then
-    return 0
-  fi
-  # Remove any prior plain entry for this path, then add tagged line.
+  # Remove any existing tagged entry (upgrade/path changes), then ensure exactly one correct line.
+  sudo sed -i "\#${FSTAB_TAG}#d" /etc/fstab
   sudo sed -i "\#^${SWAPFILE}[[:space:]]#d" /etc/fstab
   echo "${SWAPFILE} none swap sw 0 0  # ${FSTAB_TAG}" | sudo tee -a /etc/fstab >/dev/null
 }
