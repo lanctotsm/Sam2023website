@@ -84,7 +84,7 @@
   h4,
   h5,
   h6 {
-    font-family: var(--page-heading-font, var(--font-display), Georgia, serif);
+    font-family: var(--page-heading-font, var(--font-display)), Georgia, serif;
     font-weight: 600;
     line-height: 1.15;
     letter-spacing: -0.015em;
