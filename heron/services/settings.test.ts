@@ -55,14 +55,14 @@ describe("services/settings", () => {
             expect(mocks.run).toHaveBeenCalledTimes(2);
         });
 
-        it("calls revalidateTag with cache profile after persisting", async () => {
+        it("calls revalidateTag with an immediate-expiration cache-life config, not a stale-while-revalidate profile", async () => {
             const { db } = createSyncDbMock();
             mockGetDb.mockReturnValue(db);
 
             await updateSettings({ site_title: "Test" });
 
             expect(mockRevalidateTag).toHaveBeenCalledTimes(1);
-            expect(mockRevalidateTag).toHaveBeenCalledWith("settings", "max");
+            expect(mockRevalidateTag).toHaveBeenCalledWith("settings", { expire: 0 });
         });
 
         it("upserts each key-value pair via onConflictDoUpdate", async () => {
@@ -95,7 +95,7 @@ describe("services/settings", () => {
             await updateSetting("site_title", "Test");
 
             expect(mockRevalidateTag).toHaveBeenCalledTimes(1);
-            expect(mockRevalidateTag).toHaveBeenCalledWith("settings", "max");
+            expect(mockRevalidateTag).toHaveBeenCalledWith("settings", { expire: 0 });
         });
     });
 });
