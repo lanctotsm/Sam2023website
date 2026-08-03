@@ -1,14 +1,21 @@
 "use client";
 
-import type { FrontPageSettings, HomeSection, HomeSectionTemplateData } from "@/lib/frontPageDefaults";
+import type {
+    FrontPageSettings,
+    HomeSectionTemplateData,
+    PageStyleConfig,
+} from "@/lib/frontPageDefaults";
 import { findSection, getSectionDisplayLabel } from "@/lib/frontPageDefaults";
 import { HOME_SECTION_REGISTRY } from "@/components/home/sectionRegistry";
 import type { SectionEditorUi } from "@/components/home/sectionEditorTypes";
+import { homeHeadingStyle } from "@/components/home/homeSectionStyles";
 import HomePageSectionOrderPanel from "@/components/admin/HomePageSectionOrderPanel";
+import { buildPageCssVars } from "@/lib/pageStyleVars";
 
 type Props = {
     config: FrontPageSettings;
     setConfig: React.Dispatch<React.SetStateAction<FrontPageSettings>>;
+    homePageStyle: PageStyleConfig;
     showToast: (message: string, type: "success" | "error") => void;
     uploadBackgroundImage: (file: File) => Promise<string>;
     sectionClass: string;
@@ -22,6 +29,7 @@ type Props = {
 export default function HomePageSettingsTab({
     config,
     setConfig,
+    homePageStyle,
     showToast,
     uploadBackgroundImage,
     sectionClass,
@@ -71,7 +79,12 @@ export default function HomePageSettingsTab({
             <section key={id} className={sectionClass}>
                 <div className="mb-4 flex items-center justify-between">
                     <div>
-                        <h2 className="text-lg font-semibold text-chestnut dark:text-dark-text">{title}</h2>
+                        <h2
+                            className="text-lg font-semibold text-chestnut dark:text-dark-text"
+                            style={homeHeadingStyle}
+                        >
+                            {title}
+                        </h2>
                         <p className="text-xs text-olive-dark dark:text-dark-muted">
                             Template: {entry.label} — {entry.description}
                         </p>
@@ -94,8 +107,10 @@ export default function HomePageSettingsTab({
         );
     };
 
+    const cssVars = buildPageCssVars(homePageStyle);
+
     return (
-        <>
+        <div style={cssVars}>
             <HomePageSectionOrderPanel
                 config={config}
                 setConfig={setConfig}
@@ -105,6 +120,6 @@ export default function HomePageSettingsTab({
                 btnDanger={btnDanger}
             />
             {config.sectionOrder.map((id) => renderSectionEditor(id))}
-        </>
+        </div>
     );
 }
