@@ -142,7 +142,11 @@ export default function AlbumViewer({ images }: AlbumViewerProps) {
                 />
             )}
             {printImage && (
-                <PrintConfigurator image={printImage} onClose={() => setPrintImage(null)} />
+                <PrintConfigurator
+                    key={printImage.id}
+                    image={printImage}
+                    onClose={() => setPrintImage(null)}
+                />
             )}
         </article>
     );

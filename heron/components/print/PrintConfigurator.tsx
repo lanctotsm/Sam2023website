@@ -34,12 +34,10 @@ export default function PrintConfigurator({ image, onClose }: PrintConfiguratorP
   const [sizeId, setSizeId] = useState(firstSelectable?.id ?? "4x6");
   const [frameId, setFrameId] = useState<FrameStyleId>("black");
 
-  useEffect(() => {
-    setSizeId(firstSelectable?.id ?? "4x6");
-  }, [image.id, firstSelectable?.id]);
-
   const selected: SizedOption =
-    sizes.find((s) => s.id === sizeId) ?? firstSelectable ?? sizes[0];
+    sizes.find((s) => s.id === sizeId && s.quality !== "block") ??
+    firstSelectable ??
+    sizes[0];
 
   const mm = printSizeMmForImage(
     image.width ?? selected.longIn,
