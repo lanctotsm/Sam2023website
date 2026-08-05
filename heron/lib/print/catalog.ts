@@ -57,3 +57,13 @@ export function isPrintOrderingEnabled(): boolean {
 export function peechoButtonScriptId(): string {
   return (process.env.NEXT_PUBLIC_PEECHO_BUTTON_SCRIPT_ID || "").trim();
 }
+
+/** Infer Peecho data-filetype from a public object URL (original may be png/webp/jpeg). */
+export function peechoFiletypeFromUrl(url: string): string {
+  const path = url.split("?")[0].toLowerCase();
+  if (path.endsWith(".png")) return "png";
+  if (path.endsWith(".webp")) return "webp";
+  if (path.endsWith(".gif")) return "gif";
+  if (path.endsWith(".pdf")) return "pdf";
+  return "jpg";
+}

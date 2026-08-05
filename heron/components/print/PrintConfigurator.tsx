@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { buildLargeUrl, buildOriginalUrl } from "@/lib/images";
 import type { Image as AlbumImage } from "@/lib/api";
 import {
@@ -16,7 +16,7 @@ import {
   type SizedOption
 } from "@/lib/print/quality";
 import WallPreview from "@/components/print/WallPreview";
-import PeechoPrintButton, { clickPeechoPrintButton } from "@/components/print/PeechoPrintButton";
+import PeechoPrintButton, { openPeechoCheckout } from "@/components/print/PeechoPrintButton";
 
 type PrintConfiguratorProps = {
   image: AlbumImage;
@@ -25,6 +25,15 @@ type PrintConfiguratorProps = {
 
 export default function PrintConfigurator({ image, onClose }: PrintConfiguratorProps) {
   const handoffRef = useRef<HTMLDivElement | null>(null);
+  const dialogRef = useRef<HTMLDivElement | null>(null);
+  const closeRef = useRef<HTMLButtonElement | null>(null);
+  const [peechoReady, setPeechoReady] = useState(false);
+  const [checkoutError, setCheckoutError] = useState<string | null>(null);
+
+  const onPeechoReady = useCallback((ready: boolean) => {
+    setPeechoReady(ready);
+  }, []);
+
   const sizes = useMemo(
     () => filterSizesForImage(image.width, image.height, PRINT_SIZES),
     [image.width, image.height]
@@ -51,6 +60,11 @@ export default function PrintConfigurator({ image, onClose }: PrintConfiguratorP
   const title = image.name || image.caption || `Photo ${image.id}`;
   const blocked = selected.quality === "block";
   const hasScript = Boolean(peechoButtonScriptId());
+  const canCheckout = !blocked && hasScript && peechoReady;
+
+  useEffect(() => {
+    closeRef.current?.focus();
+  }, []);
 
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
@@ -58,6 +72,21 @@ export default function PrintConfigurator({ image, onClose }: PrintConfiguratorP
         event.stopPropagation();
         event.preventDefault();
         onClose();
+        return;
+      }
+      if (event.key !== "Tab" || !dialogRef.current) return;
+      const focusable = dialogRef.current.querySelectorAll<HTMLElement>(
+        'button:not([disabled]), a[href], [tabindex]:not([tabindex="-1"])'
+      );
+      if (focusable.length === 0) return;
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
       }
     };
     window.addEventListener("keydown", onKey, true);
@@ -65,8 +94,12 @@ export default function PrintConfigurator({ image, onClose }: PrintConfiguratorP
   }, [onClose]);
 
   const onCheckout = () => {
-    if (blocked) return;
-    clickPeechoPrintButton(handoffRef.current);
+    if (!canCheckout) return;
+    setCheckoutError(null);
+    const ok = openPeechoCheckout(handoffRef.current);
+    if (!ok) {
+      setCheckoutError("Peecho checkout is still loading. Try again in a moment.");
+    }
   };
 
   return (
@@ -79,7 +112,10 @@ export default function PrintConfigurator({ image, onClose }: PrintConfiguratorP
         if (event.target === event.currentTarget) onClose();
       }}
     >
-      <div className="flex max-h-[95svh] w-full max-w-3xl flex-col overflow-hidden rounded-t-2xl bg-surface shadow-xl dark:bg-dark-surface sm:rounded-2xl">
+      <div
+        ref={dialogRef}
+        className="flex max-h-[95svh] w-full max-w-3xl flex-col overflow-hidden rounded-t-2xl bg-surface shadow-xl dark:bg-dark-surface sm:rounded-2xl"
+      >
         <header className="flex items-center justify-between gap-3 border-b border-desert-tan-dark px-4 py-3 dark:border-dark-muted">
           <h2
             id="print-configurator-title"
@@ -88,6 +124,7 @@ export default function PrintConfigurator({ image, onClose }: PrintConfiguratorP
             Order a print
           </h2>
           <button
+            ref={closeRef}
             type="button"
             onClick={onClose}
             className="rounded-lg border border-desert-tan-dark px-3 py-1.5 text-sm text-chestnut hover:bg-desert-tan dark:border-dark-muted dark:text-dark-text dark:hover:bg-dark-bg"
@@ -180,19 +217,25 @@ export default function PrintConfigurator({ image, onClose }: PrintConfiguratorP
                 widthMm={mm.widthMm}
                 heightMm={mm.heightMm}
                 hideChrome
+                onReadyChange={onPeechoReady}
               />
               <button
                 type="button"
-                disabled={blocked || !hasScript}
+                disabled={!canCheckout}
                 onClick={onCheckout}
                 className="rounded-lg bg-chestnut px-4 py-3 text-sm font-medium text-desert-tan disabled:cursor-not-allowed disabled:opacity-50 dark:bg-caramel dark:text-chestnut"
               >
-                Checkout with Peecho
+                {hasScript && !peechoReady ? "Loading Peecho…" : "Checkout with Peecho"}
               </button>
               {!hasScript && (
                 <p className="m-0 text-xs text-olive dark:text-dark-muted">
                   Add your Peecho Button Key to{" "}
                   <code className="text-[0.7rem]">NEXT_PUBLIC_PEECHO_BUTTON_SCRIPT_ID</code>.
+                </p>
+              )}
+              {checkoutError && (
+                <p className="m-0 text-xs text-red-700 dark:text-red-300" role="alert">
+                  {checkoutError}
                 </p>
               )}
             </div>

@@ -22,9 +22,9 @@ NEXT_PUBLIC_PEECHO_BUTTON_SCRIPT_ID=your_button_key_here
 
 1. Open an album photo → **Order print** (lightbox control; only when `NEXT_PUBLIC_PRINT_ORDERING=peecho`).
 2. Pick size (filtered by original pixel DPI) and frame (preview only).
-3. **Checkout with Peecho** loads Peecho’s Print Button with `data-src` = CloudFront original URL and `data-width` / `data-height` in mm for the chosen size.
+3. **Checkout with Peecho** calls `window.peecho.send(anchor)` after the Print Button script loads (Peecho binds checkout on `mouseup` / `send`, not a plain `click()`). Attrs: `data-src` = CloudFront original, `data-width` / `data-height` in mm, `data-filetype` from the file extension.
 
-Patterns match [peecho/peecho-wordpress-plugin](https://github.com/peecho/peecho-wordpress-plugin) (script once + `.peecho-print-button`) and the [Print Button docs](https://support.peecho.com/hc/en-us/articles/360017392160-Print-Button-Technical-information) (`data-src` for hosted files).
+Patterns match [peecho/peecho-wordpress-plugin](https://github.com/peecho/peecho-wordpress-plugin) (script once + `.peecho-print-button` + `window.peecho.attach`) and the [Print Button docs](https://support.peecho.com/hc/en-us/articles/360017392160-Print-Button-Technical-information) (`data-src` for hosted files).
 
 ## Quality / DPI
 
