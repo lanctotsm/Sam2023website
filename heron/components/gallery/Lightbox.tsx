@@ -9,6 +9,8 @@ interface LightboxProps {
   index: number;
   onIndexChange: (index: number) => void;
   onClose: () => void;
+  /** When set, shows an Order print control for the current photo. */
+  onOrderPrint?: (image: AlbumImage) => void;
 }
 
 const MAX_SCALE = 4;
@@ -34,7 +36,13 @@ function iconProps(size = 22) {
   };
 }
 
-export default function Lightbox({ images, index, onIndexChange, onClose }: LightboxProps) {
+export default function Lightbox({
+  images,
+  index,
+  onIndexChange,
+  onClose,
+  onOrderPrint
+}: LightboxProps) {
   const overlayRef = useRef<HTMLDivElement | null>(null);
   const stageRef = useRef<HTMLDivElement | null>(null);
   const filmstripRef = useRef<HTMLDivElement | null>(null);
@@ -451,6 +459,21 @@ export default function Lightbox({ images, index, onIndexChange, onClose }: Ligh
               <line x1="12" y1="15" x2="12" y2="3" />
             </svg>
           </a>
+          {onOrderPrint && (
+            <button
+              type="button"
+              onClick={() => onOrderPrint(image)}
+              className={controlClass}
+              aria-label="Order a print of this photo"
+              title="Order print"
+            >
+              <svg {...iconProps()}>
+                <rect x="3" y="3" width="18" height="18" rx="2" />
+                <circle cx="8.5" cy="8.5" r="1.5" />
+                <polyline points="21 15 16 10 5 21" />
+              </svg>
+            </button>
+          )}
           <button type="button" onClick={onClose} className={controlClass} aria-label="Close">
             <svg {...iconProps()}>
               <line x1="18" y1="6" x2="6" y2="18" />
