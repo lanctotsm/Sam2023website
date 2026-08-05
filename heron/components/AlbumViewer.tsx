@@ -3,6 +3,8 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import JustifiedGallery from "@/components/gallery/JustifiedGallery";
 import Lightbox from "@/components/gallery/Lightbox";
+import PrintConfigurator from "@/components/print/PrintConfigurator";
+import { isPrintOrderingEnabled } from "@/lib/print/catalog";
 import type { Image as AlbumImage } from "@/lib/api";
 
 interface AlbumViewerProps {
@@ -46,6 +48,8 @@ export default function AlbumViewer({ images }: AlbumViewerProps) {
     // the view-transition-name per snapshot, so the gallery holds it while
     // closed and the lightbox takes over once open.
     const [morphIndex, setMorphIndex] = useState<number | null>(null);
+    const [printImage, setPrintImage] = useState<AlbumImage | null>(null);
+    const printOrdering = isPrintOrderingEnabled();
 
     // Restore a shared ?photo=<id> link on first paint.
     useEffect(() => {
@@ -134,6 +138,14 @@ export default function AlbumViewer({ images }: AlbumViewerProps) {
                     index={openIndex}
                     onIndexChange={changeIndex}
                     onClose={close}
+                    onOrderPrint={printOrdering ? (image) => setPrintImage(image) : undefined}
+                />
+            )}
+            {printImage && (
+                <PrintConfigurator
+                    key={printImage.id}
+                    image={printImage}
+                    onClose={() => setPrintImage(null)}
                 />
             )}
         </article>
