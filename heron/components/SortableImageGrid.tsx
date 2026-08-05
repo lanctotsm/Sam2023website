@@ -10,7 +10,9 @@ import {
   useSensor,
   useSensors,
   DragOverlay,
-  defaultDropAnimationSideEffects
+  defaultDropAnimationSideEffects,
+  type DragEndEvent,
+  type DragStartEvent
 } from "@dnd-kit/core";
 import {
   arrayMove,
@@ -20,37 +22,35 @@ import {
 } from "@dnd-kit/sortable";
 import type { Image as ImageType } from "@/lib/api";
 import { buildImageUrl } from "@/lib/images";
-import { useState, useEffect } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import Image from "next/image";
+import { Pencil } from "lucide-react";
 
 export type SortableImage = ImageType;
 
 interface Props {
   images: SortableImage[];
   onReorder: (newOrder: number[]) => void;
-  onDelete: (imageId: number) => void;
-  onRotate: (imageId: number) => void;
-  onCrop?: (image: SortableImage) => void;
-  onUpdateMetadata?: (image: SortableImage) => void;
+  onEdit: (image: SortableImage) => void;
+  selectedIds: Set<number>;
+  onSelectionChange: (ids: Set<number>) => void;
   cardClass?: string;
 }
 
 interface ItemProps {
   image: SortableImage;
-  onDelete: (id: number) => void;
-  onRotate: (id: number) => void;
-  onCrop?: (img: SortableImage) => void;
-  onUpdateMetadata?: (img: SortableImage) => void;
+  onEdit: (img: SortableImage) => void;
+  selected: boolean;
+  onToggleSelect: (id: number, event: React.MouseEvent | React.ChangeEvent) => void;
   isOverlay?: boolean;
   cardClass?: string;
 }
 
 function SortableItem({
   image,
-  onDelete,
-  onRotate,
-  onCrop,
-  onUpdateMetadata,
+  onEdit,
+  selected,
+  onToggleSelect,
   isOverlay,
   cardClass = ""
 }: ItemProps) {
@@ -68,83 +68,74 @@ function SortableItem({
     transition
   };
 
+  const label = image.name || image.caption || null;
+
   return (
     <div
       ref={setNodeRef}
       style={style}
-      className={`group relative flex flex-col gap-3 rounded-xl border border-desert-tan-dark bg-surface p-3 shadow-[0_2px_8px_rgba(72,9,3,0.08)] dark:border-dark-muted dark:bg-dark-surface ${cardClass} ${isDragging ? "opacity-60 shadow-lg" : ""}`}
+      className={`group relative overflow-hidden rounded-xl border bg-surface shadow-[0_2px_8px_rgba(72,9,3,0.08)] dark:bg-dark-surface ${
+        selected
+          ? "border-chestnut ring-2 ring-chestnut/40 dark:border-caramel dark:ring-caramel/40"
+          : "border-desert-tan-dark dark:border-dark-muted"
+      } ${cardClass} ${isDragging || isOverlay ? "opacity-60 shadow-lg" : ""}`}
     >
-      <div
-        {...attributes}
-        {...listeners}
-        className="cursor-grab touch-none active:cursor-grabbing"
-        aria-label="Drag to reorder"
-      >
-        <Image
-          src={buildImageUrl(image.s3_key)}
-          alt={image.alt_text || image.caption || "Image"}
-          width={image.width || 300}
-          height={image.height || 200}
-          className="block h-[150px] w-full rounded-lg object-cover"
-          unoptimized
-        />
-      </div>
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <p className="m-0 text-xs text-olive dark:text-dark-muted">
-          Drag to reorder
-        </p>
-        <div className="flex flex-wrap items-center justify-end gap-1">
-          {onRotate && (
-            <button
-              type="button"
-              onClick={(e) => {
-                e.stopPropagation();
-                onRotate(image.id);
-              }}
-              className="rounded bg-chestnut px-2 py-1 text-xs font-medium text-desert-tan transition hover:bg-chestnut-dark dark:bg-caramel dark:text-chestnut-dark dark:hover:bg-caramel-light"
-              aria-label="Rotate"
-            >
-              Rotate
-            </button>
-          )}
-          {onCrop && (
-            <button
-              onClick={() => onCrop(image)}
-              className="rounded border border-desert-tan-dark px-2 py-1 text-xs transition hover:bg-surface-hover dark:border-dark-muted dark:hover:bg-dark-bg"
-              title="Crop image"
-              aria-label="Crop image"
-              type="button"
-            >
-              ✂️
-            </button>
-          )}
-          <button
-            onClick={() => onDelete(image.id)}
-            className="rounded border border-copper px-2 py-1 text-xs text-copper transition hover:bg-copper/10 dark:border-copper dark:text-copper-light dark:hover:bg-copper/20"
-            title="Delete image"
-            aria-label="Delete image"
-            type="button"
-          >
-            🗑️
-          </button>
-          {onUpdateMetadata && (
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                onUpdateMetadata(image);
-              }}
-              className="rounded bg-chestnut px-2 py-1 text-xs font-medium text-desert-tan transition hover:bg-chestnut-dark dark:bg-caramel dark:text-chestnut-dark dark:hover:bg-caramel-light"
-              aria-label="Edit Info"
-              type="button"
-            >
-              Edit Info
-            </button>
-          )}
+      <div className="relative">
+        <div
+          {...attributes}
+          {...listeners}
+          className="cursor-grab touch-none active:cursor-grabbing"
+          aria-label="Drag to reorder"
+        >
+          <Image
+            src={buildImageUrl(image.s3_key)}
+            alt={image.alt_text || image.caption || "Image"}
+            width={image.width || 300}
+            height={image.height || 200}
+            className="block h-[160px] w-full object-cover"
+            unoptimized
+          />
         </div>
+
+        <label
+          className={`absolute left-2 top-2 z-10 flex h-6 w-6 cursor-pointer items-center justify-center rounded-md border shadow-sm transition ${
+            selected
+              ? "border-chestnut bg-chestnut text-desert-tan opacity-100"
+              : "border-white/80 bg-white/90 text-transparent opacity-0 group-hover:opacity-100 focus-within:opacity-100 dark:border-dark-muted dark:bg-dark-surface/90"
+          }`}
+          onClick={(e) => e.stopPropagation()}
+          onPointerDown={(e) => e.stopPropagation()}
+        >
+          <input
+            type="checkbox"
+            checked={selected}
+            onChange={(e) => onToggleSelect(image.id, e)}
+            className="sr-only"
+            aria-label={`Select image ${label || image.id}`}
+          />
+          <span aria-hidden className="text-xs font-bold leading-none">
+            ✓
+          </span>
+        </label>
+
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            onEdit(image);
+          }}
+          onPointerDown={(e) => e.stopPropagation()}
+          className="absolute right-2 top-2 z-10 flex h-8 w-8 items-center justify-center rounded-full border border-white/80 bg-white/95 text-chestnut shadow-sm opacity-90 transition hover:bg-white sm:opacity-0 sm:group-hover:opacity-100 sm:focus:opacity-100 dark:border-dark-muted dark:bg-dark-surface/95 dark:text-dark-text dark:hover:bg-dark-bg"
+          aria-label="Edit photo"
+          title="Edit photo"
+        >
+          <Pencil className="h-4 w-4" strokeWidth={2} />
+        </button>
       </div>
-      {(image.name || image.alt_text) && (
-        <div className="min-w-0">
-          <p className="m-0 truncate text-xs text-olive-dark dark:text-dark-muted">{image.name || image.alt_text}</p>
+
+      {label && (
+        <div className="min-w-0 px-2.5 py-2">
+          <p className="m-0 truncate text-xs text-olive-dark dark:text-dark-muted">{label}</p>
         </div>
       )}
     </div>
@@ -154,14 +145,14 @@ function SortableItem({
 export default function SortableImageGrid({
   images,
   onReorder,
-  onDelete,
-  onRotate,
-  onCrop,
-  onUpdateMetadata,
+  onEdit,
+  selectedIds,
+  onSelectionChange,
   cardClass
 }: Props) {
   const [items, setItems] = useState<SortableImage[]>(images);
   const [activeId, setActiveId] = useState<number | null>(null);
+  const lastClickedIdRef = useRef<number | null>(null);
 
   useEffect(() => {
     setItems(images);
@@ -178,63 +169,104 @@ export default function SortableImageGrid({
     })
   );
 
-  function handleDragStart(event: any) {
-    setActiveId(event.active.id);
+  const handleToggleSelect = useCallback(
+    (id: number, event: React.MouseEvent | React.ChangeEvent) => {
+      const native = "nativeEvent" in event ? event.nativeEvent : event;
+      const shiftKey = "shiftKey" in native && Boolean(native.shiftKey);
+      const next = new Set(selectedIds);
+
+      if (shiftKey && lastClickedIdRef.current != null) {
+        const ids = items.map((img) => img.id);
+        const start = ids.indexOf(lastClickedIdRef.current);
+        const end = ids.indexOf(id);
+        if (start !== -1 && end !== -1) {
+          const [from, to] = start < end ? [start, end] : [end, start];
+          for (let i = from; i <= to; i++) {
+            next.add(ids[i]);
+          }
+          onSelectionChange(next);
+          lastClickedIdRef.current = id;
+          return;
+        }
+      }
+
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        next.add(id);
+      }
+      onSelectionChange(next);
+      lastClickedIdRef.current = id;
+    },
+    [items, onSelectionChange, selectedIds]
+  );
+
+  function handleDragStart(event: DragStartEvent) {
+    setActiveId(Number(event.active.id));
   }
 
-  function handleDragEnd(event: any) {
+  function handleDragEnd(event: DragEndEvent) {
     const { active, over } = event;
     setActiveId(null);
 
-    if (active.id !== over?.id) {
-      const oldIndex = items.findIndex((img) => img.id === active.id);
-      const newIndex = items.findIndex((img) => img.id === over.id);
-      const newItems = arrayMove(items, oldIndex, newIndex);
-      setItems(newItems);
-      onReorder(newItems.map(img => img.id));
-    }
+    if (!over || active.id === over.id) return;
+
+    const oldIndex = items.findIndex((img) => img.id === active.id);
+    const newIndex = items.findIndex((img) => img.id === over.id);
+    if (oldIndex < 0 || newIndex < 0) return;
+
+    const newItems = arrayMove(items, oldIndex, newIndex);
+    setItems(newItems);
+    onReorder(newItems.map((img) => img.id));
   }
 
   const activeImage = activeId ? items.find((img) => img.id === activeId) : null;
 
   return (
-    <div className="grid grid-cols-[repeat(auto-fill,minmax(200px,1fr))] gap-4">
-      <DndContext sensors={sensors} collisionDetection={closestCenter} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
+    <div className="grid grid-cols-[repeat(auto-fill,minmax(180px,1fr))] gap-3">
+      <DndContext
+        sensors={sensors}
+        collisionDetection={closestCenter}
+        onDragStart={handleDragStart}
+        onDragEnd={handleDragEnd}
+      >
         <SortableContext items={items.map((i) => i.id)} strategy={rectSortingStrategy}>
           {items.map((image) => (
             <SortableItem
               key={image.id}
               image={image}
-              onDelete={onDelete}
-              onRotate={onRotate}
-              onCrop={onCrop}
-              onUpdateMetadata={onUpdateMetadata}
+              onEdit={onEdit}
+              selected={selectedIds.has(image.id)}
+              onToggleSelect={handleToggleSelect}
               cardClass={cardClass}
             />
           ))}
         </SortableContext>
 
-      <DragOverlay dropAnimation={{
-        sideEffects: defaultDropAnimationSideEffects({
-          styles: {
-            active: {
-              opacity: "0.5"
-            }
-          }
-        })
-      }}>
-        {activeImage ? (
-          <div className="relative h-[150px] w-[200px] overflow-hidden rounded-xl border border-desert-tan-dark bg-surface shadow-lg dark:border-dark-muted dark:bg-dark-surface">
-            <Image
-              src={buildImageUrl(activeImage.s3_key)}
-              alt=""
-              fill
-              className="object-cover"
-            />
-          </div>
-        ) : null}
-      </DragOverlay>
-    </DndContext>
+        <DragOverlay
+          dropAnimation={{
+            sideEffects: defaultDropAnimationSideEffects({
+              styles: {
+                active: {
+                  opacity: "0.5"
+                }
+              }
+            })
+          }}
+        >
+          {activeImage ? (
+            <div className="relative h-[160px] w-[180px] overflow-hidden rounded-xl border border-desert-tan-dark bg-surface shadow-lg dark:border-dark-muted dark:bg-dark-surface">
+              <Image
+                src={buildImageUrl(activeImage.s3_key)}
+                alt=""
+                fill
+                className="object-cover"
+                unoptimized
+              />
+            </div>
+          ) : null}
+        </DragOverlay>
+      </DndContext>
     </div>
   );
 }
