@@ -113,6 +113,7 @@ function SortableItem({
           aria-label="Drag to reorder"
           onPointerDown={(event) => {
             pointerStartRef.current = { x: event.clientX, y: event.clientY };
+            listeners?.onPointerDown?.(event);
           }}
           onClick={handleThumbnailClick}
         >
