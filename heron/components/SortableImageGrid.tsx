@@ -80,8 +80,10 @@ function selectionModifiersFromEvent(event: React.MouseEvent): {
  * Intent: let admins select by clicking the image (not only the checkbox)
  * while still dragging to reorder.
  *
- * Implementation: dnd-kit listeners live on the image; `pointerStartRef` +
- * `handleThumbnailClick` skip selection after a real drag; checkbox uses
+ * Implementation: dnd-kit `{...listeners}` live on the image, but a custom
+ * `onPointerDown` records the click origin and must forward
+ * `listeners.onPointerDown` so drag activation still works.
+ * `handleThumbnailClick` skips selection after a real drag; the checkbox uses
  * `onClick` (not `onChange`) so Shift/Ctrl modifiers are present.
  */
 function SortableItem({
