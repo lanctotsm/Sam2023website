@@ -8,8 +8,8 @@ import { toast } from "sonner";
 import type { Album, Image as ImageMeta } from "@/lib/api";
 import type { SortableImage } from "@/components/SortableImageGrid";
 import SortableImageGrid from "@/components/SortableImageGrid";
+import ImageEditModal, { type ImageEditMetadata } from "@/components/ImageEditModal";
 import { apiFetch, getImages, linkAlbumImage } from "@/lib/api";
-import ImageCropModal from "@/components/ImageCropModal";
 import {
   extractImagesFromZip,
   isZipFile,
@@ -41,18 +41,10 @@ export default function AdminAlbumEditorPage() {
   const [uploadingFiles, setUploadingFiles] = useState<UploadingFile[]>([]);
   const [extracting, setExtracting] = useState(false);
   const [uploadError, setUploadError] = useState("");
-  const [cropImageId, setCropImageId] = useState<number | null>(null);
   const [addPhotosOpen, setAddPhotosOpen] = useState(false);
-  const [editMetadataImage, setEditMetadataImage] = useState<SortableImage | null>(null);
-  const [editMetadataForm, setEditMetadataForm] = useState({
-    name: "",
-    caption: "",
-    alt_text: "",
-    description: "",
-    tags: ""
-  });
-  const [editMetadataSaving, setEditMetadataSaving] = useState(false);
-  const [editMetadataGenerating, setEditMetadataGenerating] = useState(false);
+  const [editingImage, setEditingImage] = useState<SortableImage | null>(null);
+  const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
+  const [bulkDeleting, setBulkDeleting] = useState(false);
   const [allImages, setAllImages] = useState<ImageMeta[]>([]);
   const [selectedImage, setSelectedImage] = useState<number | null>(null);
   const [sortOrder, setSortOrder] = useState(0);
@@ -109,30 +101,39 @@ export default function AdminAlbumEditorPage() {
     }
   };
 
-  const handleRotateImage = async (imageId: number) => {
+  const refreshEditingImage = useCallback(
+    async (imageId: number) => {
+      const imagesData = await apiFetch<SortableImage[]>(`/albums/${id}/images`);
+      const list = Array.isArray(imagesData) ? imagesData : [];
+      setImages(list);
+      const updated = list.find((img) => img.id === imageId) ?? null;
+      setEditingImage(updated);
+      return updated;
+    },
+    [id]
+  );
+
+  const handleRotateEditingImage = async () => {
+    if (!editingImage) return;
     try {
-      await apiFetch(`/images/${imageId}/rotate`, {
+      await apiFetch(`/images/${editingImage.id}/rotate`, {
         method: "PATCH",
         body: JSON.stringify({ rotate: 90 })
       });
-      await fetchData();
+      await refreshEditingImage(editingImage.id);
       toast.success("Image rotated.");
     } catch {
       toast.error("Failed to rotate image.");
+      throw new Error("rotate failed");
     }
   };
 
-  const handleCropImage = (image: SortableImage) => {
-    setCropImageId(image.id);
-  };
-
-  const handleCropApply = async (blob: Blob) => {
-    if (!cropImageId) return;
-    setCropImageId(null);
+  const handleCropEditingImage = async (blob: Blob) => {
+    if (!editingImage) return;
     try {
       const formData = new FormData();
       formData.append("file", blob, "cropped.jpg");
-      const res = await fetch(`${API_BASE}/images/${cropImageId}/replace`, {
+      const res = await fetch(`${API_BASE}/images/${editingImage.id}/replace`, {
         method: "PUT",
         credentials: "include",
         body: formData
@@ -141,21 +142,47 @@ export default function AdminAlbumEditorPage() {
         const text = await res.text();
         throw new Error(text || `Replace failed (${res.status})`);
       }
-      await fetchData();
+      await refreshEditingImage(editingImage.id);
       toast.success("Image cropped.");
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Failed to crop image.");
+      throw err;
     }
   };
 
-  const handleDeleteImage = async (imageId: number) => {
-    if (!confirm("Delete this image from the album and remove it from storage?")) return;
+  const handleBulkDelete = async () => {
+    const ids = Array.from(selectedIds);
+    if (ids.length === 0) return;
+    if (
+      !confirm(
+        `Delete ${ids.length} selected image${ids.length === 1 ? "" : "s"} from the album and remove from storage?`
+      )
+    ) {
+      return;
+    }
+    setBulkDeleting(true);
+    let failed = 0;
     try {
-      await apiFetch(`/images/${imageId}`, { method: "DELETE" });
-      setImages((prev) => prev.filter((img) => img.id !== imageId));
-      toast.success("Image deleted.");
-    } catch {
-      toast.error("Failed to delete image.");
+      for (const imageId of ids) {
+        try {
+          await apiFetch(`/images/${imageId}`, { method: "DELETE" });
+        } catch {
+          failed += 1;
+        }
+      }
+      const deleted = ids.length - failed;
+      setSelectedIds(new Set());
+      if (editingImage && ids.includes(editingImage.id)) {
+        setEditingImage(null);
+      }
+      await fetchData();
+      if (failed === 0) {
+        toast.success(`Deleted ${deleted} image${deleted === 1 ? "" : "s"}.`);
+      } else {
+        toast.error(`Deleted ${deleted}, failed ${failed}.`);
+      }
+    } finally {
+      setBulkDeleting(false);
     }
   };
 
@@ -171,63 +198,40 @@ export default function AdminAlbumEditorPage() {
     }
   };
 
-  const handleUpdateImageMetadata = (image: SortableImage) => {
-    setEditMetadataImage(image);
-    setEditMetadataForm({
-      name: image.name ?? "",
-      caption: image.caption ?? "",
-      alt_text: image.alt_text ?? "",
-      description: image.description ?? "",
-      tags: image.tags ?? ""
-    });
-  };
-
-  const handleGenerateAltText = async () => {
-    if (!editMetadataImage) return;
-    setEditMetadataGenerating(true);
-    try {
-      const data = await apiFetch<{ alt_text: string }>(
-        `/images/${editMetadataImage.id}/generate-alt`,
-        { method: "POST" }
-      );
-      setEditMetadataForm((f) => ({ ...f, alt_text: data.alt_text ?? "" }));
-      toast.success("Alt text generated — review and Save.");
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : "Failed to generate alt text";
-      toast.error(msg);
-    } finally {
-      setEditMetadataGenerating(false);
-    }
-  };
-
-  const handleEditMetadataSave = async () => {
-    if (!editMetadataImage) return;
-    const payload = {
-      name: editMetadataForm.name.trim(),
-      caption: editMetadataForm.caption.trim(),
-      alt_text: editMetadataForm.alt_text.trim(),
-      description: editMetadataForm.description.trim(),
-      tags: editMetadataForm.tags.trim()
-    };
+  const handleSaveEditingMetadata = async (payload: ImageEditMetadata) => {
+    if (!editingImage) return;
     const hasAny = Object.values(payload).some((v) => v !== "");
     if (!hasAny) {
       toast.error("Enter at least one field to update.");
-      return;
+      throw new Error("empty metadata");
     }
-    setEditMetadataSaving(true);
     try {
-      await apiFetch(`/images/${editMetadataImage.id}`, {
+      await apiFetch(`/images/${editingImage.id}`, {
         method: "PATCH",
         body: JSON.stringify(payload)
       });
-      await fetchData();
-      setEditMetadataImage(null);
+      await refreshEditingImage(editingImage.id);
       toast.success("Image info updated.");
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Failed to update image info";
       toast.error(msg);
-    } finally {
-      setEditMetadataSaving(false);
+      throw err;
+    }
+  };
+
+  const handleGenerateAltText = async () => {
+    if (!editingImage) return "";
+    try {
+      const data = await apiFetch<{ alt_text: string }>(
+        `/images/${editingImage.id}/generate-alt`,
+        { method: "POST" }
+      );
+      toast.success("Alt text generated — review and Save info.");
+      return data.alt_text ?? "";
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Failed to generate alt text";
+      toast.error(msg);
+      throw err;
     }
   };
 
@@ -617,11 +621,51 @@ export default function AdminAlbumEditorPage() {
         )}
       </section>
 
-      <section className="flex flex-col gap-6">
-        <header className="mb-0">
-          <h2 className="text-chestnut dark:text-dark-text">Gallery Arrangement ({images.length})</h2>
-          <p className="text-chestnut-dark dark:text-dark-muted">Drag and drop photos to reorder them in the public album.</p>
+      <section className="flex flex-col gap-4">
+        <header className="mb-0 flex flex-wrap items-end justify-between gap-3">
+          <div>
+            <h2 className="text-chestnut dark:text-dark-text">Gallery Arrangement ({images.length})</h2>
+            <p className="text-chestnut-dark dark:text-dark-muted">
+              Drag to reorder. Hover for edit. Select photos to delete.
+            </p>
+          </div>
+          {images.length > 0 && (
+            <div className="flex flex-wrap items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setSelectedIds(new Set(images.map((img) => img.id)))}
+                className="rounded-lg border border-desert-tan-dark px-3 py-1.5 text-sm text-chestnut transition hover:bg-surface-hover dark:border-dark-muted dark:text-dark-text dark:hover:bg-dark-bg"
+              >
+                Select all
+              </button>
+              {selectedIds.size > 0 && (
+                <button
+                  type="button"
+                  onClick={() => setSelectedIds(new Set())}
+                  className="rounded-lg border border-desert-tan-dark px-3 py-1.5 text-sm text-chestnut transition hover:bg-surface-hover dark:border-dark-muted dark:text-dark-text dark:hover:bg-dark-bg"
+                >
+                  Clear
+                </button>
+              )}
+            </div>
+          )}
         </header>
+
+        {selectedIds.size > 0 && (
+          <div className="sticky top-2 z-20 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-chestnut/30 bg-surface/95 px-4 py-3 shadow-md backdrop-blur dark:border-caramel/30 dark:bg-dark-surface/95">
+            <p className="m-0 text-sm font-medium text-chestnut dark:text-dark-text">
+              {selectedIds.size} selected
+            </p>
+            <button
+              type="button"
+              disabled={bulkDeleting}
+              onClick={handleBulkDelete}
+              className="rounded-lg border border-copper bg-copper/10 px-4 py-2 text-sm font-semibold text-copper transition hover:bg-copper/20 disabled:opacity-60 dark:border-copper dark:text-copper-light"
+            >
+              {bulkDeleting ? "Deleting…" : `Delete ${selectedIds.size}`}
+            </button>
+          </div>
+        )}
 
         {images.length === 0 && pendingFiles.length === 0 && uploadingFiles.length === 0 ? (
           <div className={`${cardClass} py-12 text-center`}>
@@ -638,111 +682,23 @@ export default function AdminAlbumEditorPage() {
           <SortableImageGrid
             images={images}
             onReorder={handleReorder}
-            onDelete={handleDeleteImage}
-            onRotate={handleRotateImage}
-            onCrop={handleCropImage}
-            onUpdateMetadata={handleUpdateImageMetadata}
+            onEdit={setEditingImage}
+            selectedIds={selectedIds}
+            onSelectionChange={setSelectedIds}
           />
         )}
       </section>
 
-      {cropImageId && (() => {
-        const img = images.find((i) => i.id === cropImageId);
-        const url = img ? `/api/images/${cropImageId}/proxy` : "";
-        return img ? (
-          <ImageCropModal
-            imageUrl={url}
-            onCrop={handleCropApply}
-            onCancel={() => setCropImageId(null)}
-          />
-        ) : null;
-      })()}
-
-      {editMetadataImage && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
-          <div className="w-full max-w-md rounded-xl border border-desert-tan-dark bg-surface p-4 shadow-xl dark:border-dark-muted dark:bg-dark-surface">
-            <h3 className="mb-4 text-chestnut dark:text-dark-text">Edit image info</h3>
-            <div className="flex flex-col gap-3">
-              <div>
-                <label className={labelClass} htmlFor="edit-name">Name</label>
-                <input
-                  id="edit-name"
-                  className={inputClass}
-                  value={editMetadataForm.name}
-                  onChange={(e) => setEditMetadataForm((f) => ({ ...f, name: e.target.value }))}
-                  placeholder="Short name"
-                />
-              </div>
-              <div>
-                <label className={labelClass} htmlFor="edit-caption">Caption</label>
-                <input
-                  id="edit-caption"
-                  className={inputClass}
-                  value={editMetadataForm.caption}
-                  onChange={(e) => setEditMetadataForm((f) => ({ ...f, caption: e.target.value }))}
-                  placeholder="Caption"
-                />
-              </div>
-              <div>
-                <label className={labelClass} htmlFor="edit-alt">Alt text</label>
-                <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-                  <input
-                    id="edit-alt"
-                    className={inputClass}
-                    value={editMetadataForm.alt_text}
-                    onChange={(e) => setEditMetadataForm((f) => ({ ...f, alt_text: e.target.value }))}
-                    placeholder="Accessibility description"
-                  />
-                  <button
-                    type="button"
-                    disabled={editMetadataGenerating || editMetadataSaving}
-                    onClick={handleGenerateAltText}
-                    className="shrink-0 rounded-lg border border-chestnut bg-transparent px-3 py-2.5 text-sm font-medium text-chestnut transition hover:bg-chestnut/5 disabled:opacity-60 dark:border-dark-text dark:text-dark-text dark:hover:bg-dark-bg"
-                  >
-                    {editMetadataGenerating ? "Generating…" : "Generate alt text"}
-                  </button>
-                </div>
-              </div>
-              <div>
-                <label className={labelClass} htmlFor="edit-description">Description</label>
-                <input
-                  id="edit-description"
-                  className={inputClass}
-                  value={editMetadataForm.description}
-                  onChange={(e) => setEditMetadataForm((f) => ({ ...f, description: e.target.value }))}
-                  placeholder="Longer description"
-                />
-              </div>
-              <div>
-                <label className={labelClass} htmlFor="edit-tags">Tags</label>
-                <input
-                  id="edit-tags"
-                  className={inputClass}
-                  value={editMetadataForm.tags}
-                  onChange={(e) => setEditMetadataForm((f) => ({ ...f, tags: e.target.value }))}
-                  placeholder="Comma-separated tags"
-                />
-              </div>
-            </div>
-            <div className="mt-4 flex flex-wrap gap-2">
-              <button
-                type="button"
-                disabled={editMetadataSaving}
-                onClick={handleEditMetadataSave}
-                className="rounded-lg bg-chestnut px-4 py-2.5 font-semibold text-desert-tan transition hover:bg-chestnut-dark disabled:opacity-60 dark:text-dark-text"
-              >
-                {editMetadataSaving ? "Saving..." : "Save"}
-              </button>
-              <button
-                type="button"
-                onClick={() => setEditMetadataImage(null)}
-                className="rounded-lg border border-chestnut bg-transparent px-4 py-2.5 text-chestnut transition hover:bg-chestnut/5 dark:border-dark-text dark:text-dark-text dark:hover:bg-dark-bg"
-              >
-                Cancel
-              </button>
-            </div>
-          </div>
-        </div>
+      {editingImage && (
+        <ImageEditModal
+          image={editingImage}
+          imageUrl={`/api/images/${editingImage.id}/proxy`}
+          onSaveMetadata={handleSaveEditingMetadata}
+          onRotate={handleRotateEditingImage}
+          onCrop={handleCropEditingImage}
+          onGenerateAlt={handleGenerateAltText}
+          onClose={() => setEditingImage(null)}
+        />
       )}
     </article>
   );
