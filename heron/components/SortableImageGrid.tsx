@@ -29,8 +29,14 @@ import { Pencil } from "lucide-react";
 
 export type SortableImage = ImageType;
 
+/**
+ * Shared pixel threshold for “click vs drag” on a thumbnail.
+ * PointerSensor uses this so DnD does not steal short clicks; the item also
+ * ignores click selection when the pointer moved farther than this distance.
+ */
 const CLICK_DRAG_THRESHOLD_PX = 8;
 
+/** Controlled props for the reorderable, multi-select album grid. */
 interface Props {
   images: SortableImage[];
   onReorder: (newOrder: number[]) => void;
@@ -40,15 +46,24 @@ interface Props {
   cardClass?: string;
 }
 
+/**
+ * Single thumbnail card: drag handle on the image, selection via click /
+ * checkbox, and pencil opens the edit modal without affecting selection.
+ */
 interface ItemProps {
   image: SortableImage;
   onEdit: (img: SortableImage) => void;
   selected: boolean;
+  /** Bubbles modifier keys so the parent can run `applyImageSelection`. */
   onSelect: (id: number, event: React.MouseEvent) => void;
   isOverlay?: boolean;
   cardClass?: string;
 }
 
+/**
+ * Maps a DOM mouse event into the modifier flags `applyImageSelection` expects.
+ * Meta covers Cmd on macOS; Ctrl covers Windows/Linux additive toggle.
+ */
 function selectionModifiersFromEvent(event: React.MouseEvent): {
   shiftKey: boolean;
   ctrlOrMeta: boolean;
@@ -59,6 +74,16 @@ function selectionModifiersFromEvent(event: React.MouseEvent): {
   };
 }
 
+/**
+ * One sortable album photo tile.
+ *
+ * Intent: let admins select by clicking the image (not only the checkbox)
+ * while still dragging to reorder.
+ *
+ * Implementation: dnd-kit listeners live on the image; `pointerStartRef` +
+ * `handleThumbnailClick` skip selection after a real drag; checkbox uses
+ * `onClick` (not `onChange`) so Shift/Ctrl modifiers are present.
+ */
 function SortableItem({
   image,
   onEdit,
@@ -85,6 +110,10 @@ function SortableItem({
 
   const label = image.name || image.caption || null;
 
+  /**
+   * Treat a thumbnail activation as a select only when the pointer barely
+   * moved — otherwise this was a reorder drag and selection should no-op.
+   */
   const handleThumbnailClick = (event: React.MouseEvent) => {
     const start = pointerStartRef.current;
     pointerStartRef.current = null;
@@ -178,6 +207,17 @@ function SortableItem({
   );
 }
 
+/**
+ * Admin album gallery: drag-to-reorder plus desktop-style multiselect.
+ *
+ * Intent: selection works from the thumbnail (click / Ctrl|Cmd / Shift) while
+ * reorder remains a short drag on the same surface.
+ *
+ * Implementation: local `items` mirrors props for optimistic reorder;
+ * `lastClickedIdRef` stores the Shift-range anchor; `handleSelect` delegates
+ * set math to `applyImageSelection` and pushes both the new Set and anchor
+ * back into parent/ref state.
+ */
 export default function SortableImageGrid({
   images,
   onReorder,
@@ -188,6 +228,7 @@ export default function SortableImageGrid({
 }: Props) {
   const [items, setItems] = useState<SortableImage[]>(images);
   const [activeId, setActiveId] = useState<number | null>(null);
+  /** Last selected image id; Shift+click ranges from here. */
   const lastClickedIdRef = useRef<number | null>(null);
 
   useEffect(() => {
@@ -205,6 +246,10 @@ export default function SortableImageGrid({
     })
   );
 
+  /**
+   * Applies one selection gesture from a thumbnail or checkbox click, then
+   * updates parent `selectedIds` and the Shift-range anchor ref.
+   */
   const handleSelect = useCallback(
     (id: number, event: React.MouseEvent) => {
       const result = applyImageSelection({
@@ -220,10 +265,15 @@ export default function SortableImageGrid({
     [items, onSelectionChange, selectedIds]
   );
 
+  /** Tracks the active drag id so DragOverlay can mirror the moving card. */
   function handleDragStart(event: DragStartEvent) {
     setActiveId(Number(event.active.id));
   }
 
+  /**
+   * Commits a successful drop by reordering local `items` and notifying the
+   * parent with the new id sequence (no-op if dropped on self / invalid over).
+   */
   function handleDragEnd(event: DragEndEvent) {
     const { active, over } = event;
     setActiveId(null);
