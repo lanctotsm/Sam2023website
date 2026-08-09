@@ -22,12 +22,20 @@ import {
 } from "@dnd-kit/sortable";
 import type { Image as ImageType } from "@/lib/api";
 import { buildImageUrl } from "@/lib/images";
+import { applyImageSelection, type SelectionModifiers } from "@/lib/imageSelection";
 import { useCallback, useEffect, useRef, useState } from "react";
 import Image from "next/image";
-import { Pencil } from "lucide-react";
 
 export type SortableImage = ImageType;
 
+/**
+ * Shared pixel threshold for “click vs drag” on a thumbnail.
+ * PointerSensor uses this so DnD does not steal short clicks; the item also
+ * ignores click selection when the pointer moved farther than this distance.
+ */
+const CLICK_DRAG_THRESHOLD_PX = 8;
+
+/** Controlled props for the reorderable, multi-select album grid. */
 interface Props {
   images: SortableImage[];
   onReorder: (newOrder: number[]) => void;
@@ -37,20 +45,49 @@ interface Props {
   cardClass?: string;
 }
 
+/**
+ * Single thumbnail card: drag handle on the image, plain click opens edit,
+ * modifier-click / checkbox updates multiselect.
+ */
 interface ItemProps {
   image: SortableImage;
   onEdit: (img: SortableImage) => void;
   selected: boolean;
-  onToggleSelect: (id: number, event: React.MouseEvent | React.ChangeEvent) => void;
+  /** Runs `applyImageSelection` with the given modifiers. */
+  onSelect: (id: number, modifiers: SelectionModifiers) => void;
   isOverlay?: boolean;
   cardClass?: string;
 }
 
+/**
+ * Maps a DOM mouse event into the modifier flags `applyImageSelection` expects.
+ * Meta covers Cmd on macOS; Ctrl covers Windows/Linux additive toggle.
+ */
+function selectionModifiersFromEvent(event: React.MouseEvent): SelectionModifiers {
+  return {
+    shiftKey: event.shiftKey,
+    ctrlOrMeta: event.ctrlKey || event.metaKey
+  };
+}
+
+/**
+ * One sortable album photo tile.
+ *
+ * Intent: plain click opens the edit modal; Ctrl/Cmd and Shift clicks run
+ * multiselect; drag still reorders. Checkbox is selection-only.
+ *
+ * Implementation: dnd-kit `{...listeners}` live on the image, but a custom
+ * `onPointerDown` records the click origin and must forward
+ * `listeners.onPointerDown` so drag activation still works.
+ * `handleThumbnailClick` ignores selection/edit after a real drag; modifier
+ * clicks call `onSelect`, otherwise `onEdit`. Checkbox uses `onClick` (not
+ * `onChange`) so Shift/Ctrl modifiers are present.
+ */
 function SortableItem({
   image,
   onEdit,
   selected,
-  onToggleSelect,
+  onSelect,
   isOverlay,
   cardClass = ""
 }: ItemProps) {
@@ -63,12 +100,34 @@ function SortableItem({
     isDragging
   } = useSortable({ id: image.id });
 
+  const pointerStartRef = useRef<{ x: number; y: number } | null>(null);
+
   const style = {
     transform: CSS.Transform.toString(transform),
     transition
   };
 
   const label = image.name || image.caption || null;
+
+  /**
+   * Short pointer travel → edit (plain click) or multiselect (modifiers).
+   * Longer travel → drag reorder already handled by dnd-kit; no-op here.
+   */
+  const handleThumbnailClick = (event: React.MouseEvent) => {
+    const start = pointerStartRef.current;
+    pointerStartRef.current = null;
+    if (start) {
+      const distance = Math.hypot(event.clientX - start.x, event.clientY - start.y);
+      if (distance > CLICK_DRAG_THRESHOLD_PX) return;
+    }
+
+    if (event.shiftKey || event.ctrlKey || event.metaKey) {
+      onSelect(image.id, selectionModifiersFromEvent(event));
+      return;
+    }
+
+    onEdit(image);
+  };
 
   return (
     <div
@@ -84,8 +143,13 @@ function SortableItem({
         <div
           {...attributes}
           {...listeners}
-          className="cursor-grab touch-none active:cursor-grabbing"
-          aria-label="Drag to reorder"
+          className="cursor-pointer touch-none active:cursor-grabbing"
+          aria-label={`Edit photo${label ? ` ${label}` : ""}. Drag to reorder. Use Ctrl or Shift with click to multi-select.`}
+          onPointerDown={(event) => {
+            pointerStartRef.current = { x: event.clientX, y: event.clientY };
+            listeners?.onPointerDown?.(event);
+          }}
+          onClick={handleThumbnailClick}
         >
           <Image
             src={buildImageUrl(image.s3_key)}
@@ -103,13 +167,25 @@ function SortableItem({
               ? "border-chestnut bg-chestnut text-desert-tan opacity-100"
               : "border-white/80 bg-white/90 text-transparent opacity-0 group-hover:opacity-100 focus-within:opacity-100 dark:border-dark-muted dark:bg-dark-surface/90"
           }`}
-          onClick={(e) => e.stopPropagation()}
           onPointerDown={(e) => e.stopPropagation()}
         >
           <input
             type="checkbox"
             checked={selected}
-            onChange={(e) => onToggleSelect(image.id, e)}
+            onChange={() => {
+              /* selection handled in onClick so modifiers are available */
+            }}
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              // Checkbox is selection-only: Shift ranges, otherwise toggle.
+              onSelect(
+                image.id,
+                e.shiftKey
+                  ? selectionModifiersFromEvent(e)
+                  : { shiftKey: false, ctrlOrMeta: true }
+              );
+            }}
             className="sr-only"
             aria-label={`Select image ${label || image.id}`}
           />
@@ -117,20 +193,6 @@ function SortableItem({
             ✓
           </span>
         </label>
-
-        <button
-          type="button"
-          onClick={(e) => {
-            e.stopPropagation();
-            onEdit(image);
-          }}
-          onPointerDown={(e) => e.stopPropagation()}
-          className="absolute right-2 top-2 z-10 flex h-8 w-8 items-center justify-center rounded-full border border-white/80 bg-white/95 text-chestnut shadow-sm opacity-90 transition hover:bg-white sm:opacity-0 sm:group-hover:opacity-100 sm:focus:opacity-100 dark:border-dark-muted dark:bg-dark-surface/95 dark:text-dark-text dark:hover:bg-dark-bg"
-          aria-label="Edit photo"
-          title="Edit photo"
-        >
-          <Pencil className="h-4 w-4" strokeWidth={2} />
-        </button>
       </div>
 
       {label && (
@@ -142,6 +204,17 @@ function SortableItem({
   );
 }
 
+/**
+ * Admin album gallery: drag-to-reorder, click-to-edit, and modifier multiselect.
+ *
+ * Intent: plain click opens the image edit modal; Ctrl/Cmd and Shift clicks
+ * (or the checkbox) manage selection; short drag reorders.
+ *
+ * Implementation: local `items` mirrors props for optimistic reorder;
+ * `lastClickedIdRef` stores the Shift-range anchor; `handleSelect` delegates
+ * set math to `applyImageSelection` and pushes both the new Set and anchor
+ * back into parent/ref state.
+ */
 export default function SortableImageGrid({
   images,
   onReorder,
@@ -152,6 +225,7 @@ export default function SortableImageGrid({
 }: Props) {
   const [items, setItems] = useState<SortableImage[]>(images);
   const [activeId, setActiveId] = useState<number | null>(null);
+  /** Last selected image id; Shift+click ranges from here. */
   const lastClickedIdRef = useRef<number | null>(null);
 
   useEffect(() => {
@@ -161,7 +235,7 @@ export default function SortableImageGrid({
   const sensors = useSensors(
     useSensor(PointerSensor, {
       activationConstraint: {
-        distance: 8
+        distance: CLICK_DRAG_THRESHOLD_PX
       }
     }),
     useSensor(KeyboardSensor, {
@@ -169,42 +243,34 @@ export default function SortableImageGrid({
     })
   );
 
-  const handleToggleSelect = useCallback(
-    (id: number, event: React.MouseEvent | React.ChangeEvent) => {
-      const native = "nativeEvent" in event ? event.nativeEvent : event;
-      const shiftKey = "shiftKey" in native && Boolean(native.shiftKey);
-      const next = new Set(selectedIds);
-
-      if (shiftKey && lastClickedIdRef.current != null) {
-        const ids = items.map((img) => img.id);
-        const start = ids.indexOf(lastClickedIdRef.current);
-        const end = ids.indexOf(id);
-        if (start !== -1 && end !== -1) {
-          const [from, to] = start < end ? [start, end] : [end, start];
-          for (let i = from; i <= to; i++) {
-            next.add(ids[i]);
-          }
-          onSelectionChange(next);
-          lastClickedIdRef.current = id;
-          return;
-        }
-      }
-
-      if (next.has(id)) {
-        next.delete(id);
-      } else {
-        next.add(id);
-      }
-      onSelectionChange(next);
-      lastClickedIdRef.current = id;
+  /**
+   * Applies one selection gesture from a thumbnail or checkbox click, then
+   * updates parent `selectedIds` and the Shift-range anchor ref.
+   */
+  const handleSelect = useCallback(
+    (id: number, modifiers: SelectionModifiers) => {
+      const result = applyImageSelection({
+        orderedIds: items.map((img) => img.id),
+        selectedIds,
+        targetId: id,
+        anchorId: lastClickedIdRef.current,
+        modifiers
+      });
+      onSelectionChange(result.selectedIds);
+      lastClickedIdRef.current = result.anchorId;
     },
     [items, onSelectionChange, selectedIds]
   );
 
+  /** Tracks the active drag id so DragOverlay can mirror the moving card. */
   function handleDragStart(event: DragStartEvent) {
     setActiveId(Number(event.active.id));
   }
 
+  /**
+   * Commits a successful drop by reordering local `items` and notifying the
+   * parent with the new id sequence (no-op if dropped on self / invalid over).
+   */
   function handleDragEnd(event: DragEndEvent) {
     const { active, over } = event;
     setActiveId(null);
@@ -237,7 +303,7 @@ export default function SortableImageGrid({
               image={image}
               onEdit={onEdit}
               selected={selectedIds.has(image.id)}
-              onToggleSelect={handleToggleSelect}
+              onSelect={handleSelect}
               cardClass={cardClass}
             />
           ))}
