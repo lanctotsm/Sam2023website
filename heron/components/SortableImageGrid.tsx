@@ -82,8 +82,11 @@ function selectionModifiersFromEvent(event: React.MouseEvent): SelectionModifier
  *
  * Implementation: dnd-kit `{...listeners}` live on the image, but a custom
  * `onPointerDown` records the click origin and must forward
- * `listeners.onPointerDown` so drag activation still works. A check badge is
- * rendered only while selected (no empty unchecked box).
+ * `listeners.onPointerDown` so drag activation still works. A separate
+ * `<button>` provides an accessible, keyboard-focusable selection control
+ * (dnd-kit consumes Enter/Space on the drag handle, so selection can't live
+ * there); it's visually hidden until selected, hovered, or focused, and
+ * exposes `aria-pressed` for its selected state.
  */
 function SortableItem({
   image,
@@ -189,23 +192,34 @@ function SortableItem({
           </span>
         )}
 
-        {selected && !rangeBadge && (
-          <span
-            className="pointer-events-none absolute left-2 top-2 z-10 flex h-6 w-6 items-center justify-center rounded-md border border-chestnut bg-chestnut text-desert-tan shadow-sm dark:border-caramel dark:bg-caramel dark:text-chestnut-dark"
-            aria-hidden
-          >
-            <span className="text-xs font-bold leading-none">✓</span>
+        <button
+          type="button"
+          onClick={(event) => {
+            event.stopPropagation();
+            const modifiers = selectionModifiersFromEvent(event);
+            // This control always toggles/ranges selection directly (like a
+            // checkbox), so a plain activation (mouse or keyboard, no
+            // modifier) still toggles just this item instead of replacing
+            // the whole selection.
+            onSelect(image.id, {
+              shiftKey: modifiers.shiftKey,
+              ctrlOrMeta: modifiers.shiftKey ? modifiers.ctrlOrMeta : true
+            });
+          }}
+          aria-pressed={selected}
+          aria-label={`${selected ? "Deselect" : "Select"} photo${label ? ` ${label}` : ""}`}
+          className={`absolute top-2 z-20 flex h-6 w-6 items-center justify-center rounded-md border shadow-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-chestnut dark:focus-visible:ring-caramel ${
+            rangeBadge ? "right-2" : "left-2"
+          } ${
+            selected
+              ? "border-chestnut bg-chestnut text-desert-tan dark:border-caramel dark:bg-caramel dark:text-chestnut-dark"
+              : "border-desert-tan-dark bg-surface/80 text-transparent opacity-0 focus-visible:opacity-100 group-hover:opacity-100 dark:border-dark-muted dark:bg-dark-surface/80"
+          }`}
+        >
+          <span className="text-xs font-bold leading-none" aria-hidden>
+            ✓
           </span>
-        )}
-
-        {selected && rangeBadge && (
-          <span
-            className="pointer-events-none absolute right-2 top-2 z-10 flex h-6 w-6 items-center justify-center rounded-md border border-chestnut bg-chestnut text-desert-tan shadow-sm dark:border-caramel dark:bg-caramel dark:text-chestnut-dark"
-            aria-hidden
-          >
-            <span className="text-xs font-bold leading-none">✓</span>
-          </span>
-        )}
+        </button>
       </div>
 
       {label && (
