@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
+import { useDialog } from "@/components/ui/DialogProvider";
 import { apiFetch } from "@/lib/api";
 
 type AdminUser = {
@@ -18,6 +19,7 @@ const cardClass =
   "rounded-xl border border-desert-tan-dark bg-surface p-4 shadow-[0_2px_8px_rgba(72,9,3,0.08)] dark:border-dark-muted dark:bg-dark-surface";
 
 export default function AdminUsersPage() {
+  const { confirm } = useDialog();
   const [users, setUsers] = useState<AdminUser[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -69,7 +71,14 @@ export default function AdminUsersPage() {
       toast.error("Base admin cannot be removed.");
       return;
     }
-    if (!confirm(`Remove admin access for ${user.email}?`)) return;
+    const confirmed = await confirm({
+      title: "Remove admin access",
+      message: `Remove admin access for ${user.email}?`,
+      confirmLabel: "Remove",
+      cancelLabel: "Cancel",
+      variant: "danger"
+    });
+    if (!confirmed) return;
     try {
       await apiFetch(`/admin/users/${user.id}`, { method: "DELETE" });
       setUsers((prev) => prev.filter((x) => x.id !== user.id));
