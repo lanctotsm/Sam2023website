@@ -42,18 +42,22 @@ interface Props {
   onEdit: (image: SortableImage) => void;
   selectedIds: Set<number>;
   onSelectionChange: (ids: Set<number>) => void;
+  /** Bumped by the parent when Clear / Select all resets selection externally. */
+  selectionEpoch?: number;
   cardClass?: string;
 }
 
 /**
  * Single thumbnail card: drag handle on the image, plain click opens edit,
- * modifier-click / checkbox updates multiselect.
+ * modifier-click updates multiselect. Selected tiles show a check; unselected
+ * tiles show no checkbox.
  */
 interface ItemProps {
   image: SortableImage;
   onEdit: (img: SortableImage) => void;
   selected: boolean;
-  /** Runs `applyImageSelection` with the given modifiers. */
+  /** Shift-range endpoint marker: start, end, or neither. */
+  rangeRole: "start" | "end" | "start-pending" | null;
   onSelect: (id: number, modifiers: SelectionModifiers) => void;
   isOverlay?: boolean;
   cardClass?: string;
@@ -73,20 +77,19 @@ function selectionModifiersFromEvent(event: React.MouseEvent): SelectionModifier
 /**
  * One sortable album photo tile.
  *
- * Intent: plain click opens the edit modal; Ctrl/Cmd and Shift clicks run
- * multiselect; drag still reorders. Checkbox is selection-only.
+ * Intent: plain click opens the edit modal; Ctrl/Cmd toggles selection;
+ * Shift uses a two-click start/end range; drag reorders.
  *
  * Implementation: dnd-kit `{...listeners}` live on the image, but a custom
  * `onPointerDown` records the click origin and must forward
- * `listeners.onPointerDown` so drag activation still works.
- * `handleThumbnailClick` ignores selection/edit after a real drag; modifier
- * clicks call `onSelect`, otherwise `onEdit`. Checkbox uses `onClick` (not
- * `onChange`) so Shift/Ctrl modifiers are present.
+ * `listeners.onPointerDown` so drag activation still works. A check badge is
+ * rendered only while selected (no empty unchecked box).
  */
 function SortableItem({
   image,
   onEdit,
   selected,
+  rangeRole,
   onSelect,
   isOverlay,
   cardClass = ""
@@ -129,6 +132,13 @@ function SortableItem({
     onEdit(image);
   };
 
+  const rangeBadge =
+    rangeRole === "start" || rangeRole === "start-pending"
+      ? { text: "Start", pending: rangeRole === "start-pending" }
+      : rangeRole === "end"
+        ? { text: "End", pending: false }
+        : null;
+
   return (
     <div
       ref={setNodeRef}
@@ -137,6 +147,10 @@ function SortableItem({
         selected
           ? "border-chestnut ring-2 ring-chestnut/40 dark:border-caramel dark:ring-caramel/40"
           : "border-desert-tan-dark dark:border-dark-muted"
+      } ${
+        rangeRole === "start-pending"
+          ? "ring-2 ring-dashed ring-chestnut dark:ring-caramel"
+          : ""
       } ${cardClass} ${isDragging || isOverlay ? "opacity-60 shadow-lg" : ""}`}
     >
       <div className="relative">
@@ -144,7 +158,7 @@ function SortableItem({
           {...attributes}
           {...listeners}
           className="cursor-pointer touch-none active:cursor-grabbing"
-          aria-label={`Edit photo${label ? ` ${label}` : ""}. Drag to reorder. Use Ctrl or Shift with click to multi-select.`}
+          aria-label={`Edit photo${label ? ` ${label}` : ""}. Drag to reorder. Shift+click start/end for a range; Ctrl/Cmd+click to add or remove.`}
           onPointerDown={(event) => {
             pointerStartRef.current = { x: event.clientX, y: event.clientY };
             listeners?.onPointerDown?.(event);
@@ -161,38 +175,35 @@ function SortableItem({
           />
         </div>
 
-        <label
-          className={`absolute left-2 top-2 z-10 flex h-6 w-6 cursor-pointer items-center justify-center rounded-md border shadow-sm transition ${
-            selected
-              ? "border-chestnut bg-chestnut text-desert-tan opacity-100"
-              : "border-white/80 bg-white/90 text-transparent opacity-0 group-hover:opacity-100 focus-within:opacity-100 dark:border-dark-muted dark:bg-dark-surface/90"
-          }`}
-          onPointerDown={(e) => e.stopPropagation()}
-        >
-          <input
-            type="checkbox"
-            checked={selected}
-            onChange={() => {
-              /* selection handled in onClick so modifiers are available */
-            }}
-            onClick={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              // Checkbox is selection-only: Shift ranges, otherwise toggle.
-              onSelect(
-                image.id,
-                e.shiftKey
-                  ? selectionModifiersFromEvent(e)
-                  : { shiftKey: false, ctrlOrMeta: true }
-              );
-            }}
-            className="sr-only"
-            aria-label={`Select image ${label || image.id}`}
-          />
-          <span aria-hidden className="text-xs font-bold leading-none">
-            ✓
+        {rangeBadge && (
+          <span
+            className={`pointer-events-none absolute left-2 top-2 z-10 rounded-md px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide shadow-sm ${
+              rangeBadge.pending
+                ? "bg-chestnut text-desert-tan dark:bg-caramel dark:text-chestnut-dark"
+                : "bg-chestnut/95 text-desert-tan dark:bg-caramel dark:text-chestnut-dark"
+            }`}
+          >
+            {rangeBadge.text}
           </span>
-        </label>
+        )}
+
+        {selected && !rangeBadge && (
+          <span
+            className="pointer-events-none absolute left-2 top-2 z-10 flex h-6 w-6 items-center justify-center rounded-md border border-chestnut bg-chestnut text-desert-tan shadow-sm dark:border-caramel dark:bg-caramel dark:text-chestnut-dark"
+            aria-hidden
+          >
+            <span className="text-xs font-bold leading-none">✓</span>
+          </span>
+        )}
+
+        {selected && rangeBadge && (
+          <span
+            className="pointer-events-none absolute right-2 top-2 z-10 flex h-6 w-6 items-center justify-center rounded-md border border-chestnut bg-chestnut text-desert-tan shadow-sm dark:border-caramel dark:bg-caramel dark:text-chestnut-dark"
+            aria-hidden
+          >
+            <span className="text-xs font-bold leading-none">✓</span>
+          </span>
+        )}
       </div>
 
       {label && (
@@ -207,13 +218,12 @@ function SortableItem({
 /**
  * Admin album gallery: drag-to-reorder, click-to-edit, and modifier multiselect.
  *
- * Intent: plain click opens the image edit modal; Ctrl/Cmd and Shift clicks
- * (or the checkbox) manage selection; short drag reorders.
+ * Intent: plain click opens edit; Shift+click #1 starts a range (clears),
+ * Shift+click #2 closes it; Ctrl/Cmd toggles without clearing.
  *
- * Implementation: local `items` mirrors props for optimistic reorder;
- * `lastClickedIdRef` stores the Shift-range anchor; `handleSelect` delegates
- * set math to `applyImageSelection` and pushes both the new Set and anchor
- * back into parent/ref state.
+ * Implementation: `pendingShiftStartId` + `rangeStartId`/`rangeEndId` come from
+ * `applyImageSelection`. Parent Clear/Select all bumps `selectionEpoch` so
+ * pending/range markers reset with the controlled selection.
  */
 export default function SortableImageGrid({
   images,
@@ -221,16 +231,32 @@ export default function SortableImageGrid({
   onEdit,
   selectedIds,
   onSelectionChange,
+  selectionEpoch = 0,
   cardClass
 }: Props) {
   const [items, setItems] = useState<SortableImage[]>(images);
   const [activeId, setActiveId] = useState<number | null>(null);
-  /** Last selected image id; Shift+click ranges from here. */
-  const lastClickedIdRef = useRef<number | null>(null);
+  const [pendingShiftStartId, setPendingShiftStartId] = useState<number | null>(null);
+  const [rangeStartId, setRangeStartId] = useState<number | null>(null);
+  const [rangeEndId, setRangeEndId] = useState<number | null>(null);
 
   useEffect(() => {
     setItems(images);
   }, [images]);
+
+  useEffect(() => {
+    setPendingShiftStartId(null);
+    setRangeStartId(null);
+    setRangeEndId(null);
+  }, [selectionEpoch]);
+
+  useEffect(() => {
+    if (selectedIds.size === 0) {
+      setPendingShiftStartId(null);
+      setRangeStartId(null);
+      setRangeEndId(null);
+    }
+  }, [selectedIds]);
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -244,8 +270,8 @@ export default function SortableImageGrid({
   );
 
   /**
-   * Applies one selection gesture from a thumbnail or checkbox click, then
-   * updates parent `selectedIds` and the Shift-range anchor ref.
+   * Applies one selection gesture, then updates parent selection and local
+   * Shift-range start/end markers.
    */
   const handleSelect = useCallback(
     (id: number, modifiers: SelectionModifiers) => {
@@ -253,13 +279,15 @@ export default function SortableImageGrid({
         orderedIds: items.map((img) => img.id),
         selectedIds,
         targetId: id,
-        anchorId: lastClickedIdRef.current,
+        pendingShiftStartId,
         modifiers
       });
       onSelectionChange(result.selectedIds);
-      lastClickedIdRef.current = result.anchorId;
+      setPendingShiftStartId(result.pendingShiftStartId);
+      setRangeStartId(result.rangeStartId);
+      setRangeEndId(result.rangeEndId);
     },
-    [items, onSelectionChange, selectedIds]
+    [items, onSelectionChange, pendingShiftStartId, selectedIds]
   );
 
   /** Tracks the active drag id so DragOverlay can mirror the moving card. */
@@ -288,6 +316,13 @@ export default function SortableImageGrid({
 
   const activeImage = activeId ? items.find((img) => img.id === activeId) : null;
 
+  function rangeRoleFor(id: number): ItemProps["rangeRole"] {
+    if (pendingShiftStartId === id) return "start-pending";
+    if (rangeStartId === id && rangeEndId != null) return "start";
+    if (rangeEndId === id) return "end";
+    return null;
+  }
+
   return (
     <div className="grid grid-cols-[repeat(auto-fill,minmax(180px,1fr))] gap-3">
       <DndContext
@@ -303,6 +338,7 @@ export default function SortableImageGrid({
               image={image}
               onEdit={onEdit}
               selected={selectedIds.has(image.id)}
+              rangeRole={rangeRoleFor(image.id)}
               onSelect={handleSelect}
               cardClass={cardClass}
             />

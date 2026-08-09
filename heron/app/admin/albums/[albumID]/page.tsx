@@ -44,6 +44,7 @@ export default function AdminAlbumEditorPage() {
   const [addPhotosOpen, setAddPhotosOpen] = useState(false);
   const [editingImage, setEditingImage] = useState<SortableImage | null>(null);
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
+  const [selectionEpoch, setSelectionEpoch] = useState(0);
   const [bulkDeleting, setBulkDeleting] = useState(false);
   const [allImages, setAllImages] = useState<ImageMeta[]>([]);
   const [selectedImage, setSelectedImage] = useState<number | null>(null);
@@ -150,6 +151,16 @@ export default function AdminAlbumEditorPage() {
     }
   };
 
+  const clearSelection = useCallback(() => {
+    setSelectedIds(new Set());
+    setSelectionEpoch((n) => n + 1);
+  }, []);
+
+  const selectAllImages = useCallback(() => {
+    setSelectedIds(new Set(images.map((img) => img.id)));
+    setSelectionEpoch((n) => n + 1);
+  }, [images]);
+
   const handleBulkDelete = async () => {
     const ids = Array.from(selectedIds);
     if (ids.length === 0) return;
@@ -171,7 +182,7 @@ export default function AdminAlbumEditorPage() {
         }
       }
       const deleted = ids.length - failed;
-      setSelectedIds(new Set());
+      clearSelection();
       if (editingImage && ids.includes(editingImage.id)) {
         setEditingImage(null);
       }
@@ -626,14 +637,15 @@ export default function AdminAlbumEditorPage() {
           <div>
             <h2 className="text-chestnut dark:text-dark-text">Gallery Arrangement ({images.length})</h2>
             <p className="text-chestnut-dark dark:text-dark-muted">
-              Click a photo to edit. Checkbox or Ctrl/Cmd+click / Shift+click to multi-select. Drag to reorder.
+              Click a photo to edit. Shift+click once to start a range, again to end it (Start/End badges).
+              Ctrl/Cmd+click adds or removes. Use Clear to drop the selection. Drag to reorder.
             </p>
           </div>
           {images.length > 0 && (
             <div className="flex flex-wrap items-center gap-2">
               <button
                 type="button"
-                onClick={() => setSelectedIds(new Set(images.map((img) => img.id)))}
+                onClick={selectAllImages}
                 className="rounded-lg border border-desert-tan-dark px-3 py-1.5 text-sm text-chestnut transition hover:bg-surface-hover dark:border-dark-muted dark:text-dark-text dark:hover:bg-dark-bg"
               >
                 Select all
@@ -641,7 +653,7 @@ export default function AdminAlbumEditorPage() {
               {selectedIds.size > 0 && (
                 <button
                   type="button"
-                  onClick={() => setSelectedIds(new Set())}
+                  onClick={clearSelection}
                   className="rounded-lg border border-desert-tan-dark px-3 py-1.5 text-sm text-chestnut transition hover:bg-surface-hover dark:border-dark-muted dark:text-dark-text dark:hover:bg-dark-bg"
                 >
                   Clear
@@ -656,14 +668,23 @@ export default function AdminAlbumEditorPage() {
             <p className="m-0 text-sm font-medium text-chestnut dark:text-dark-text">
               {selectedIds.size} selected
             </p>
-            <button
-              type="button"
-              disabled={bulkDeleting}
-              onClick={handleBulkDelete}
-              className="rounded-lg border border-copper bg-copper/10 px-4 py-2 text-sm font-semibold text-copper transition hover:bg-copper/20 disabled:opacity-60 dark:border-copper dark:text-copper-light"
-            >
-              {bulkDeleting ? "Deleting…" : `Delete ${selectedIds.size}`}
-            </button>
+            <div className="flex flex-wrap items-center gap-2">
+              <button
+                type="button"
+                onClick={clearSelection}
+                className="rounded-lg border border-desert-tan-dark px-4 py-2 text-sm font-semibold text-chestnut transition hover:bg-surface-hover dark:border-dark-muted dark:text-dark-text dark:hover:bg-dark-bg"
+              >
+                Clear selection
+              </button>
+              <button
+                type="button"
+                disabled={bulkDeleting}
+                onClick={handleBulkDelete}
+                className="rounded-lg border border-copper bg-copper/10 px-4 py-2 text-sm font-semibold text-copper transition hover:bg-copper/20 disabled:opacity-60 dark:border-copper dark:text-copper-light"
+              >
+                {bulkDeleting ? "Deleting…" : `Delete ${selectedIds.size}`}
+              </button>
+            </div>
           </div>
         )}
 
@@ -685,6 +706,7 @@ export default function AdminAlbumEditorPage() {
             onEdit={setEditingImage}
             selectedIds={selectedIds}
             onSelectionChange={setSelectedIds}
+            selectionEpoch={selectionEpoch}
           />
         )}
       </section>
