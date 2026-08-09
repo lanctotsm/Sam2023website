@@ -22,11 +22,14 @@ import {
 } from "@dnd-kit/sortable";
 import type { Image as ImageType } from "@/lib/api";
 import { buildImageUrl } from "@/lib/images";
+import { applyImageSelection } from "@/lib/imageSelection";
 import { useCallback, useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import { Pencil } from "lucide-react";
 
 export type SortableImage = ImageType;
+
+const CLICK_DRAG_THRESHOLD_PX = 8;
 
 interface Props {
   images: SortableImage[];
@@ -41,16 +44,26 @@ interface ItemProps {
   image: SortableImage;
   onEdit: (img: SortableImage) => void;
   selected: boolean;
-  onToggleSelect: (id: number, event: React.MouseEvent | React.ChangeEvent) => void;
+  onSelect: (id: number, event: React.MouseEvent) => void;
   isOverlay?: boolean;
   cardClass?: string;
+}
+
+function selectionModifiersFromEvent(event: React.MouseEvent): {
+  shiftKey: boolean;
+  ctrlOrMeta: boolean;
+} {
+  return {
+    shiftKey: event.shiftKey,
+    ctrlOrMeta: event.ctrlKey || event.metaKey
+  };
 }
 
 function SortableItem({
   image,
   onEdit,
   selected,
-  onToggleSelect,
+  onSelect,
   isOverlay,
   cardClass = ""
 }: ItemProps) {
@@ -63,12 +76,24 @@ function SortableItem({
     isDragging
   } = useSortable({ id: image.id });
 
+  const pointerStartRef = useRef<{ x: number; y: number } | null>(null);
+
   const style = {
     transform: CSS.Transform.toString(transform),
     transition
   };
 
   const label = image.name || image.caption || null;
+
+  const handleThumbnailClick = (event: React.MouseEvent) => {
+    const start = pointerStartRef.current;
+    pointerStartRef.current = null;
+    if (start) {
+      const distance = Math.hypot(event.clientX - start.x, event.clientY - start.y);
+      if (distance > CLICK_DRAG_THRESHOLD_PX) return;
+    }
+    onSelect(image.id, event);
+  };
 
   return (
     <div
@@ -86,6 +111,10 @@ function SortableItem({
           {...listeners}
           className="cursor-grab touch-none active:cursor-grabbing"
           aria-label="Drag to reorder"
+          onPointerDown={(event) => {
+            pointerStartRef.current = { x: event.clientX, y: event.clientY };
+          }}
+          onClick={handleThumbnailClick}
         >
           <Image
             src={buildImageUrl(image.s3_key)}
@@ -103,13 +132,19 @@ function SortableItem({
               ? "border-chestnut bg-chestnut text-desert-tan opacity-100"
               : "border-white/80 bg-white/90 text-transparent opacity-0 group-hover:opacity-100 focus-within:opacity-100 dark:border-dark-muted dark:bg-dark-surface/90"
           }`}
-          onClick={(e) => e.stopPropagation()}
           onPointerDown={(e) => e.stopPropagation()}
         >
           <input
             type="checkbox"
             checked={selected}
-            onChange={(e) => onToggleSelect(image.id, e)}
+            onChange={() => {
+              /* selection handled in onClick so modifiers are available */
+            }}
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              onSelect(image.id, e);
+            }}
             className="sr-only"
             aria-label={`Select image ${label || image.id}`}
           />
@@ -161,7 +196,7 @@ export default function SortableImageGrid({
   const sensors = useSensors(
     useSensor(PointerSensor, {
       activationConstraint: {
-        distance: 8
+        distance: CLICK_DRAG_THRESHOLD_PX
       }
     }),
     useSensor(KeyboardSensor, {
@@ -169,34 +204,17 @@ export default function SortableImageGrid({
     })
   );
 
-  const handleToggleSelect = useCallback(
-    (id: number, event: React.MouseEvent | React.ChangeEvent) => {
-      const native = "nativeEvent" in event ? event.nativeEvent : event;
-      const shiftKey = "shiftKey" in native && Boolean(native.shiftKey);
-      const next = new Set(selectedIds);
-
-      if (shiftKey && lastClickedIdRef.current != null) {
-        const ids = items.map((img) => img.id);
-        const start = ids.indexOf(lastClickedIdRef.current);
-        const end = ids.indexOf(id);
-        if (start !== -1 && end !== -1) {
-          const [from, to] = start < end ? [start, end] : [end, start];
-          for (let i = from; i <= to; i++) {
-            next.add(ids[i]);
-          }
-          onSelectionChange(next);
-          lastClickedIdRef.current = id;
-          return;
-        }
-      }
-
-      if (next.has(id)) {
-        next.delete(id);
-      } else {
-        next.add(id);
-      }
-      onSelectionChange(next);
-      lastClickedIdRef.current = id;
+  const handleSelect = useCallback(
+    (id: number, event: React.MouseEvent) => {
+      const result = applyImageSelection({
+        orderedIds: items.map((img) => img.id),
+        selectedIds,
+        targetId: id,
+        anchorId: lastClickedIdRef.current,
+        modifiers: selectionModifiersFromEvent(event)
+      });
+      onSelectionChange(result.selectedIds);
+      lastClickedIdRef.current = result.anchorId;
     },
     [items, onSelectionChange, selectedIds]
   );
@@ -237,7 +255,7 @@ export default function SortableImageGrid({
               image={image}
               onEdit={onEdit}
               selected={selectedIds.has(image.id)}
-              onToggleSelect={handleToggleSelect}
+              onSelect={handleSelect}
               cardClass={cardClass}
             />
           ))}

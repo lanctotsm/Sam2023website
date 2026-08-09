@@ -626,7 +626,7 @@ export default function AdminAlbumEditorPage() {
           <div>
             <h2 className="text-chestnut dark:text-dark-text">Gallery Arrangement ({images.length})</h2>
             <p className="text-chestnut-dark dark:text-dark-muted">
-              Drag to reorder. Hover for edit. Select photos to delete.
+              Click to select, Ctrl/Cmd+click to add or remove, Shift+click for a range. Drag to reorder. Hover for edit.
             </p>
           </div>
           {images.length > 0 && (
