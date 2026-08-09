@@ -5,6 +5,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { useParams } from "next/navigation";
 import { toast } from "sonner";
+import { useDialog } from "@/components/ui/DialogProvider";
 import type { Album, Image as ImageMeta } from "@/lib/api";
 import type { SortableImage } from "@/components/SortableImageGrid";
 import SortableImageGrid from "@/components/SortableImageGrid";
@@ -29,6 +30,7 @@ const cardClass =
   "rounded-xl border border-desert-tan-dark bg-surface p-4 shadow-[0_2px_8px_rgba(72,9,3,0.08)] dark:border-dark-muted dark:bg-dark-surface";
 
 export default function AdminAlbumEditorPage() {
+  const { confirm } = useDialog();
   const params = useParams();
   const id = typeof params.albumID === "string" ? parseInt(params.albumID, 10) : NaN;
   const [album, setAlbum] = useState<Album | null>(null);
@@ -164,13 +166,14 @@ export default function AdminAlbumEditorPage() {
   const handleBulkDelete = async () => {
     const ids = Array.from(selectedIds);
     if (ids.length === 0) return;
-    if (
-      !confirm(
-        `Delete ${ids.length} selected image${ids.length === 1 ? "" : "s"} from the album and remove from storage?`
-      )
-    ) {
-      return;
-    }
+    const confirmed = await confirm({
+      title: "Delete selected images",
+      message: `Delete ${ids.length} selected image${ids.length === 1 ? "" : "s"} from the album and remove from storage?`,
+      confirmLabel: "Delete",
+      cancelLabel: "Cancel",
+      variant: "danger"
+    });
+    if (!confirmed) return;
     setBulkDeleting(true);
     let failed = 0;
     try {

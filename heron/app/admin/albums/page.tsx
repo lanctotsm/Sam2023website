@@ -3,6 +3,7 @@
 import { useEffect, useState, useRef } from "react";
 import Link from "next/link";
 import { toast } from "sonner";
+import { useDialog } from "@/components/ui/DialogProvider";
 import type { Album } from "@/lib/api";
 import { apiFetch, createAlbum } from "@/lib/api";
 import { slugify } from "@/lib/slug";
@@ -14,6 +15,7 @@ const emptyAlbum = {
 };
 
 export default function AdminAlbumsPage() {
+  const { confirm } = useDialog();
   const [albums, setAlbums] = useState<Album[]>([]);
   const [form, setForm] = useState(emptyAlbum);
   const [loading, setLoading] = useState(false);
@@ -53,7 +55,14 @@ export default function AdminAlbumsPage() {
   };
 
   const handleDelete = async (albumId: number) => {
-    if (!confirm("Are you sure you want to delete this album?")) return;
+    const confirmed = await confirm({
+      title: "Delete album",
+      message: "Are you sure you want to delete this album?",
+      confirmLabel: "Delete",
+      cancelLabel: "Cancel",
+      variant: "danger"
+    });
+    if (!confirmed) return;
 
     try {
       await apiFetch(`/albums/${albumId}`, { method: "DELETE" });
