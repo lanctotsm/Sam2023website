@@ -295,6 +295,7 @@ export default function AdminSettingsPage() {
                 <HomePageSettingsTab
                     config={config}
                     setConfig={setConfig}
+                    homePageStyle={pageStyles.home.style}
                     showToast={showToast}
                     uploadBackgroundImage={uploadBackgroundImage}
                     sectionClass={sectionClass}
