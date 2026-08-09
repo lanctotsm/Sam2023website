@@ -56,8 +56,8 @@ interface ItemProps {
   image: SortableImage;
   onEdit: (img: SortableImage) => void;
   selected: boolean;
-  /** Shift-range endpoint marker: start, end, or neither. */
-  rangeRole: "start" | "end" | "start-pending" | null;
+  /** Shift-range endpoint marker: start, end, both (single-item range), or neither. */
+  rangeRole: "start" | "end" | "start-end" | "start-pending" | null;
   onSelect: (id: number, modifiers: SelectionModifiers) => void;
   isOverlay?: boolean;
   cardClass?: string;
@@ -137,7 +137,9 @@ function SortableItem({
       ? { text: "Start", pending: rangeRole === "start-pending" }
       : rangeRole === "end"
         ? { text: "End", pending: false }
-        : null;
+        : rangeRole === "start-end"
+          ? { text: "Start/End", pending: false }
+          : null;
 
   return (
     <div
@@ -318,6 +320,9 @@ export default function SortableImageGrid({
 
   function rangeRoleFor(id: number): ItemProps["rangeRole"] {
     if (pendingShiftStartId === id) return "start-pending";
+    if (rangeStartId != null && rangeEndId != null && rangeStartId === rangeEndId) {
+      return rangeStartId === id ? "start-end" : null;
+    }
     if (rangeStartId === id && rangeEndId != null) return "start";
     if (rangeEndId === id) return "end";
     return null;
