@@ -89,7 +89,7 @@ export async function renderAndPublishResumePdf(doc: ResumeDocument): Promise<Re
         ]);
 
         const pdf = await readFile(outputPath);
-        const hash = createHash("sha256").update(doc.meta.lastModified).digest("hex").slice(0, 8);
+        const hash = createHash("sha256").update(pdf).digest("hex").slice(0, 8);
         const slug = slugify(doc.basics.name) || "resume";
         const key = `resume/${slug}-resume-${hash}.pdf`;
 
