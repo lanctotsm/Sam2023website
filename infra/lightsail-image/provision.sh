@@ -48,6 +48,7 @@ apt-get install -y \
   jq \
   rsync \
   unzip \
+  xz-utils \
   git \
   openssl \
   apache2 \
@@ -82,6 +83,18 @@ fi
 
 node -v
 npm -v
+
+# Typst renders the resume PDF (spawned by the app on save). Pinned so dev and
+# production lay out documents identically; keep in sync with the version noted
+# in the root README.
+TYPST_VERSION="${TYPST_VERSION:-0.15.1}"
+if ! command -v typst >/dev/null 2>&1 || ! typst --version | grep -q "typst ${TYPST_VERSION}"; then
+  echo "[provision] Installing Typst ${TYPST_VERSION}..."
+  curl -fsSL "https://github.com/typst/typst/releases/download/v${TYPST_VERSION}/typst-x86_64-unknown-linux-musl.tar.xz" \
+    | tar -xJ -C /usr/local/bin --strip-components=1 "typst-x86_64-unknown-linux-musl/typst"
+  chmod +x /usr/local/bin/typst
+fi
+typst --version
 
 echo "[provision] Installing pm2 for ${RUNTIME_USER}..."
 sudo -u "$RUNTIME_USER" bash -c '

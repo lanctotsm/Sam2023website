@@ -37,7 +37,7 @@ function templateDir(): string {
     );
 }
 
-type ExecError = Error & { code?: string | number; stderr?: string };
+type ExecError = Error & { code?: string | number | null; stderr?: string };
 
 /** execFile with a callback wrapped by hand (rather than promisify) so the
  * failure path reliably carries stderr, which holds Typst's diagnostics. */
@@ -112,7 +112,11 @@ export async function renderAndPublishResumePdf(doc: ResumeDocument): Promise<Re
                 error: `Typst binary not found (looked for "${typstBinary()}"). Install Typst or set TYPST_PATH.`
             };
         }
-        const detail = error?.stderr?.trim() || error?.message || "Unknown error";
+        const detail =
+            error?.stderr?.trim() ||
+            error?.message ||
+            (error?.code ? String(error.code) : "") ||
+            "Unknown error";
         console.error("Resume PDF render failed:", detail);
         return { status: "failed", error: detail };
     } finally {

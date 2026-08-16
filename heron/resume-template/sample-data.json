@@ -1,0 +1,90 @@
+{
+  "basics": {
+    "name": "Samuel Lanctot",
+    "label": "Senior Software Engineer",
+    "email": "lanctotsm@gmail.com",
+    "url": "https://samlanctot.com",
+    "summary": "Full-stack engineer with nine years across insurance and banking, currently building commercial insurance software at GEICO. I automate the work nobody should be doing by hand — issue pipelines, deployment flows, underwriting operations — and the systems I build have removed hundreds of thousands of dollars in annual manual-processing cost while the business grew past $1B in premium.",
+    "location": { "city": "Silver Spring", "region": "MD" },
+    "profiles": [
+      { "id": "p1", "network": "LinkedIn", "username": "samuel-lanctot", "url": "https://www.linkedin.com/in/samuel-lanctot/" },
+      { "id": "p2", "network": "GitHub", "username": "samlanctot", "url": "https://github.com/samlanctot" }
+    ]
+  },
+  "work": [
+    {
+      "id": "w1",
+      "name": "GEICO",
+      "position": "Senior Software Engineer",
+      "location": "Chevy Chase, MD",
+      "startDate": "2022-04",
+      "endDate": "",
+      "summary": "Commercial insurance platform — DuckCreek policy administration and Next.js service applications.",
+      "highlights": [
+        "Automated issue-intake and triage processes across the commercial division, eliminating manual routing work and saving hundreds of thousands of dollars in annual operating cost.",
+        "Built and maintained Next.js service applications integrating with DuckCreek policy administration during a period in which GEICO Commercial grew past $1B in written premium.",
+        "Led reliability work on policy-issuance pipelines, cutting failed-issuance escalations and keeping underwriters out of ticket queues.",
+        "Mentored engineers joining the commercial platform teams as headcount scaled with the business."
+      ]
+    },
+    {
+      "id": "w2",
+      "name": "Capital One",
+      "position": "Software Engineer",
+      "location": "McLean, VA",
+      "startDate": "2019-08",
+      "endDate": "2022-04",
+      "summary": "Full-stack development on cloud-native money-movement services.",
+      "highlights": [
+        "Built and operated microservices in Node.js, Python, and Scala on AWS, serving customer money-movement flows.",
+        "Owned service reliability for a distributed transaction pipeline, including on-call, observability, and incident response.",
+        "Drove AWS well-architected reviews and cost tuning across the team's services."
+      ]
+    },
+    {
+      "id": "w3",
+      "name": "InfoSonics",
+      "position": "Software Engineer",
+      "startDate": "2017-05",
+      "endDate": "2019-08",
+      "summary": ".NET services and internal tooling for device provisioning and logistics."
+    },
+    {
+      "id": "w4",
+      "name": "Verizon",
+      "position": "Associate Engineer",
+      "startDate": "2015-06",
+      "endDate": "2017-05",
+      "summary": "Internal .NET line-of-business applications and reporting."
+    }
+  ],
+  "skills": [
+    { "id": "s1", "name": "Primary", "keywords": ["C# / .NET", "TypeScript", "Node.js", "Next.js", "React", "SQL"] },
+    { "id": "s2", "name": "Also at home in", "keywords": ["Python", "Scala", "DuckCreek", "Drizzle ORM"] },
+    { "id": "s3", "name": "Cloud & platforms", "keywords": ["AWS (Lightsail, S3, CloudFront, Lambda)", "Docker", "GitHub Actions", "CI/CD", "Observability"] }
+  ],
+  "education": [
+    {
+      "id": "e1",
+      "institution": "University of Maryland",
+      "area": "Computer Engineering",
+      "studyType": "B.S.",
+      "startDate": "2011-08",
+      "endDate": "2015-05"
+    }
+  ],
+  "certificates": [
+    { "id": "c1", "name": "AWS Certified Solutions Architect — Associate", "issuer": "Amazon Web Services", "date": "2021-03" }
+  ],
+  "meta": {
+    "canonical": "https://samlanctot.com/resume",
+    "version": "v1.0.0",
+    "lastModified": "2026-08-15T00:00:00.000Z",
+    "heron": {
+      "sectionOrder": ["work", "skills", "education", "certificates", "projects"],
+      "hiddenSections": [],
+      "condensedWorkIds": ["w3", "w4"],
+      "customSections": []
+    }
+  }
+}

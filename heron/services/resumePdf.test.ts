@@ -52,6 +52,7 @@ describe("services/resumePdf", () => {
         vi.mocked(updateSetting).mockResolvedValue(undefined);
         vi.mocked(getSetting).mockResolvedValue(null);
         process.env.S3_PUBLIC_BASE_URL = "https://cdn.example.com/cms";
+        delete process.env.TYPST_PATH;
         execSucceeds();
     });
 
