@@ -46,7 +46,7 @@ export function toJsonResume(
 
     const out: Record<string, unknown> = { basics };
 
-    const work = doc.work.map((entry) => prune({ ...entry }, ["endDate"]));
+    const work = doc.work.map((entry) => prune({ ...entry }));
     if (work.length > 0) out.work = work;
 
     const projects = doc.projects.map((entry) => prune({ ...entry }));
