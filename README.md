@@ -103,6 +103,13 @@ graph TD
    npm run dev
    ```
 
+### Resume builder
+
+The resume is edited at `/admin/resume`, stored as a JSON Resume v1.0.0 document in SQLite, and served at `/resume` (with Schema.org JSON-LD). `GET /api/resume/export` downloads the portable `resume.json`; `GET /api/resume/pdf` redirects to a PDF typeset by [Typst](https://typst.app) (`heron/resume-template/`), rendered on save and published to S3.
+
+- **Typst is pinned to v0.15.1** — the same version `infra/lightsail-image/provision.sh` installs — so local and production output match. For local PDF rendering, install it from [typst/typst releases](https://github.com/typst/typst/releases) and set `TYPST_PATH` in `.env.local` if it is not on PATH. Without the binary, saves still work and the PDF reports as unavailable.
+- Production requires the runtime image rebuilt (via `build-lightsail-runtime.yml`) after the Typst provisioning change, or the PDF will fail to render until it is.
+
 ## 🚢 Deployment
 
 Deployments are automated via GitHub Actions to AWS Lightsail. The pipeline builds the Next.js app as a standalone output, rsyncs artifacts to the instance, and runs the app with pm2. The database lives in `/var/lib/heron-cms/data` on the server so it is not overwritten on deploy.

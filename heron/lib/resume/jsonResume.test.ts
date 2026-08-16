@@ -1,0 +1,124 @@
+import { describe, it, expect } from "vitest";
+import { toJsonResume } from "./jsonResume";
+import { sanitizeResumeDocument } from "./parse";
+import { createDefaultResume } from "./defaults";
+
+function sampleDoc() {
+    return sanitizeResumeDocument({
+        basics: {
+            name: "Sam Lanctot",
+            label: "Senior Software Engineer",
+            email: "sam@example.com",
+            phone: "",
+            url: "https://samlanctot.com",
+            summary: "Builds things.",
+            location: { city: "Chevy Chase", region: "MD" },
+            profiles: [{ id: "p1", network: "GitHub", username: "sam", url: "https://github.com/sam" }]
+        },
+        work: [
+            {
+                id: "w1",
+                name: "GEICO",
+                position: "Senior Engineer",
+                location: "",
+                url: "",
+                startDate: "2021-06",
+                endDate: "",
+                summary: "Commercial insurance platform.",
+                highlights: ["Automated issue processes"]
+            }
+        ],
+        skills: [{ id: "s1", name: "Primary", keywords: ["TypeScript"] }],
+        meta: { heron: { condensedWorkIds: ["w1"] } }
+    });
+}
+
+describe("lib/resume/jsonResume", () => {
+    it("drops empty optional fields, including blank phone", () => {
+        const out = toJsonResume(sampleDoc()) as { basics: Record<string, unknown>; work: Array<Record<string, unknown>> };
+        expect(out.basics.phone).toBeUndefined();
+        expect(out.work[0].location).toBeUndefined();
+        expect(out.work[0].url).toBeUndefined();
+        expect(out.basics.name).toBe("Sam Lanctot");
+    });
+
+    it("omits an empty endDate so the export stays JSON Resume date-format valid", () => {
+        const out = toJsonResume(sampleDoc()) as { work: Array<Record<string, unknown>> };
+        expect(out.work[0]).not.toHaveProperty("endDate");
+    });
+
+    it("keeps hidden section entries in the export so hiding is reversible", () => {
+        const doc = sampleDoc();
+        doc.meta.heron.hiddenSections = ["work", "skills"];
+        const out = toJsonResume(doc) as {
+            work: Array<Record<string, unknown>>;
+            skills: Array<Record<string, unknown>>;
+            meta: { heron: { hiddenSections: string[] } };
+        };
+        expect(out.work).toHaveLength(1);
+        expect(out.work[0].name).toBe("GEICO");
+        expect(out.skills).toHaveLength(1);
+        expect(out.meta.heron.hiddenSections).toEqual(["work", "skills"]);
+    });
+
+    it("retains meta.heron and entry ids so references round-trip", () => {
+        const out = toJsonResume(sampleDoc()) as {
+            work: Array<Record<string, unknown>>;
+            meta: { heron: { condensedWorkIds: string[] } };
+        };
+        expect(out.work[0].id).toBe("w1");
+        expect(out.meta.heron.condensedWorkIds).toEqual(["w1"]);
+    });
+
+    it("stamps meta.canonical when provided and keeps schema version", () => {
+        const out = toJsonResume(sampleDoc(), { canonical: "https://samlanctot.com/resume" }) as {
+            meta: Record<string, unknown>;
+        };
+        expect(out.meta.canonical).toBe("https://samlanctot.com/resume");
+        expect(out.meta.version).toBe("v1.0.0");
+    });
+
+    it("omits empty top-level sections on an empty document but keeps basics name and meta", () => {
+        const out = toJsonResume(createDefaultResume()) as Record<string, unknown>;
+        expect(out.work).toBeUndefined();
+        expect(out.certificates).toBeUndefined();
+        expect(out.meta).toBeDefined();
+    });
+
+    it("expands YYYY-MM certificate dates to YYYY-MM-DD for JSON Resume v1.0.0 compliance", () => {
+        const doc = sanitizeResumeDocument({
+            ...sampleDoc(),
+            certificates: [
+                { id: "c1", name: "AWS SA", issuer: "Amazon", date: "2023-01", url: "" },
+                { id: "c2", name: "GCP Pro", issuer: "Google", date: "2022-09-15", url: "" }
+            ]
+        });
+        const out = toJsonResume(doc) as { certificates: Array<Record<string, unknown>> };
+        expect(out.certificates[0].date).toBe("2023-01-01");
+        expect(out.certificates[1].date).toBe("2022-09-15");
+    });
+
+    it("exports volunteer.organization and interests, omitting empty endDate", () => {
+        const doc = sanitizeResumeDocument({
+            ...sampleDoc(),
+            volunteer: [
+                {
+                    id: "v1",
+                    organization: "Red Cross",
+                    position: "Volunteer",
+                    startDate: "2020-01",
+                    endDate: "",
+                    highlights: ["blood drives"]
+                }
+            ],
+            interests: [{ id: "i1", name: "Music", keywords: ["piano"] }]
+        });
+        const out = toJsonResume(doc) as {
+            volunteer: Array<Record<string, unknown>>;
+            interests: Array<Record<string, unknown>>;
+        };
+        expect(out.volunteer[0].organization).toBe("Red Cross");
+        expect(out.volunteer[0]).not.toHaveProperty("endDate");
+        expect(out.interests[0]).toMatchObject({ name: "Music", keywords: ["piano"] });
+    });
+});

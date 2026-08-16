@@ -48,6 +48,7 @@ apt-get install -y \
   jq \
   rsync \
   unzip \
+  xz-utils \
   git \
   openssl \
   apache2 \
@@ -82,6 +83,26 @@ fi
 
 node -v
 npm -v
+
+# Typst renders the resume PDF (spawned by the app on save). Pinned so dev and
+# production lay out documents identically; keep in sync with the version noted
+# in the root README.
+TYPST_VERSION="${TYPST_VERSION:-0.15.1}"
+if ! command -v typst >/dev/null 2>&1 || ! typst --version | grep -q "typst ${TYPST_VERSION}"; then
+  echo "[provision] Installing Typst ${TYPST_VERSION}..."
+  TYPST_ARCHIVE="$(mktemp /tmp/typst-XXXXXX.tar.xz)"
+  # SHA-256 digest for typst-x86_64-unknown-linux-musl.tar.xz at each pinned version.
+  # Update this value whenever TYPST_VERSION is bumped.
+  TYPST_SHA256="a6d077d0a95eed5a2eba715b2dae06be954f624ccbf85758a03f389ded33118c"
+  curl -fsSL -o "$TYPST_ARCHIVE" \
+    "https://github.com/typst/typst/releases/download/v${TYPST_VERSION}/typst-x86_64-unknown-linux-musl.tar.xz"
+  echo "${TYPST_SHA256}  ${TYPST_ARCHIVE}" | sha256sum --check --status \
+    || { echo "[provision] ERROR: Typst archive checksum mismatch — aborting." >&2; rm -f "$TYPST_ARCHIVE"; exit 1; }
+  tar -xJ -C /usr/local/bin --strip-components=1 -f "$TYPST_ARCHIVE" "typst-x86_64-unknown-linux-musl/typst"
+  rm -f "$TYPST_ARCHIVE"
+  chmod +x /usr/local/bin/typst
+fi
+typst --version
 
 echo "[provision] Installing pm2 for ${RUNTIME_USER}..."
 sudo -u "$RUNTIME_USER" bash -c '
