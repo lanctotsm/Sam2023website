@@ -19,7 +19,7 @@ export default function BulletListEditor({ label, bullets, onChange, ui }: Props
             <div className="grid gap-2">
                 {bullets.map((bullet, index) => (
                     <div key={index} className="flex items-start gap-2">
-                        <textarea
+                        <textarea aria-label={`${label} ${index + 1}`}
                             className={`${ui.textareaClass} min-h-[48px] flex-1`}
                             value={bullet}
                             onChange={(e) => {
