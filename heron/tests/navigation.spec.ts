@@ -15,9 +15,9 @@ test.describe("Public pages", () => {
     await expect(page.locator("h1")).toBeVisible();
   });
 
-  test("resume page loads", async ({ page }) => {
+  test("resume page shows the empty-state placeholder", async ({ page }) => {
     await page.goto("/resume");
     await expect(page).toHaveURL(/\/resume/);
-    await expect(page.getByRole("heading", { name: /Samuel Lanctot/i })).toBeVisible();
+    await expect(page.getByRole("heading", { name: /Resume coming soon/i })).toBeVisible();
   });
 });

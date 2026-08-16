@@ -18,11 +18,10 @@ test.describe('Comprehensive Routing', () => {
         await expect(page.locator('h1').first()).toContainText(/albums/i);
     });
 
-    test('should load Resume page', async ({ page }) => {
+    test('should load Resume page with the empty-state placeholder', async ({ page }) => {
         await page.goto('/resume');
-        await expect(page.locator('body')).toBeVisible();
-        // Just verify there is no Next.js standard 404 text
-        await expect(page.locator('text="This page could not be found"')).toHaveCount(0);
+        await expect(page).toHaveURL(/\/resume/);
+        await expect(page.getByRole("heading", { name: /Resume coming soon/i })).toBeVisible();
     });
 
     test('api health or basic functionality', async ({ request }) => {
