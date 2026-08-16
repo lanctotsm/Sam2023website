@@ -377,3 +377,48 @@
     background: var(--color-dark-muted);
   }
 }
+
+/* Print hygiene: the PDF is produced by Typst, not by printing this page,
+   but Ctrl+P should still yield something reasonable. */
+@media print {
+  @page {
+    margin: 0.75in;
+  }
+
+  nav,
+  footer,
+  [data-sonner-toaster] {
+    display: none !important;
+  }
+
+  body {
+    background: #fff !important;
+    color: #000 !important;
+  }
+
+  main {
+    max-width: none !important;
+    padding: 0 !important;
+  }
+
+  .surface-card {
+    background: transparent !important;
+    border: 0 !important;
+    box-shadow: none !important;
+    padding: 0 0 1rem !important;
+  }
+
+  .resume-entry {
+    break-inside: avoid;
+  }
+
+  .resume-section h2 {
+    break-after: avoid;
+  }
+
+  .resume-section a[href^="http"]::after {
+    content: " (" attr(href) ")";
+    font-size: 0.8em;
+    color: #555;
+  }
+}

@@ -57,6 +57,12 @@ export default async function AdminLayout({ children }: { children: ReactNode })
             Media Library
           </Link>
           <Link
+            href="/admin/resume"
+            className="rounded-lg border border-desert-tan-dark bg-white px-4 py-2 text-chestnut transition-colors hover:border-caramel hover:bg-desert-tan dark:border-dark-muted dark:bg-dark-bg dark:text-dark-text dark:hover:bg-dark-surface"
+          >
+            Resume
+          </Link>
+          <Link
             href="/admin/users"
             className="rounded-lg border border-desert-tan-dark bg-white px-4 py-2 text-chestnut transition-colors hover:border-caramel hover:bg-desert-tan dark:border-dark-muted dark:bg-dark-bg dark:text-dark-text dark:hover:bg-dark-surface"
           >
