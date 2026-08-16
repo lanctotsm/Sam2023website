@@ -255,8 +255,6 @@ export default function ResumeEditor() {
             <ResumeSectionOrderPanel doc={doc} setDoc={setDoc} sectionClass={sectionClass} ui={ui} />
 
             {doc.meta.heron.sectionOrder.map((id) => {
-                if (hidden.has(id)) return null;
-
                 if (isStandardSectionId(id)) {
                     const def = RESUME_SECTION_REGISTRY[id];
                     const Editor = def.Editor;
