@@ -30,7 +30,7 @@ export default async function ResumePage() {
         <PageStyleProvider page="resume">
             <script
                 type="application/ld+json"
-                dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+                dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd).replace(/</g, "\\u003c") }}
             />
             {isResumeEmpty(doc) ? (
                 <div className="mx-auto max-w-[900px]">
