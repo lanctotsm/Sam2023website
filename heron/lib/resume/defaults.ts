@@ -2,8 +2,10 @@ import type { ResumeDocument } from "./types";
 
 export const STANDARD_SECTION_IDS = [
     "work",
+    "volunteer",
     "projects",
     "skills",
+    "interests",
     "education",
     "certificates"
 ] as const;
@@ -12,8 +14,10 @@ export type StandardSectionId = (typeof STANDARD_SECTION_IDS)[number];
 
 export const SECTION_LABELS: Record<StandardSectionId, string> = {
     work: "Experience",
+    volunteer: "Volunteer",
     projects: "Projects",
     skills: "Skills",
+    interests: "Interests",
     education: "Education",
     certificates: "Certifications"
 };
@@ -40,6 +44,8 @@ export function createDefaultResume(): ResumeDocument {
         skills: [],
         education: [],
         certificates: [],
+        volunteer: [],
+        interests: [],
         meta: {
             canonical: "",
             version: "v1.0.0",

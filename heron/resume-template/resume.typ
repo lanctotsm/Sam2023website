@@ -22,7 +22,7 @@
 #let full-name = get(basics, "name", "")
 #let meta = get(data, "meta", (:))
 #let heron = get(meta, "heron", (:))
-#let section-order = get(heron, "sectionOrder", ("work", "projects", "skills", "education", "certificates"))
+#let section-order = get(heron, "sectionOrder", ("work", "volunteer", "projects", "skills", "interests", "education", "certificates"))
 #let hidden-sections = get(heron, "hiddenSections", ())
 #let condensed-ids = get(heron, "condensedWorkIds", ())
 #let custom-sections = get(heron, "customSections", ())
@@ -277,6 +277,26 @@
   }
 }
 
+#let render-volunteer(entries) = {
+  for (index, entry) in entries.enumerate() {
+    let position = get(entry, "position", "")
+    let organization = get(entry, "organization", "")
+    let url = get(entry, "url", "")
+    let range-text = fmt-range(get(entry, "startDate", ""), get(entry, "endDate", ""))
+    entry-block(index == 0, {
+      title-row({
+        text(font: "Fraunces", weight: 600, size: 11.5pt, if position != "" { position } else { organization })
+        if position != "" and organization != "" {
+          v(2.5pt)
+          text(font: "Inter", weight: 600, size: 10pt, if url != "" { link(url, organization) } else { organization })
+        }
+      }, range-text)
+      role-summary(get(entry, "summary", ""))
+      bullet-list(get(entry, "highlights", ()))
+    })
+  }
+}
+
 #let render-custom(section) = {
   for (index, entry) in get(section, "entries", ()).enumerate() {
     let title = get(entry, "title", "")
@@ -353,8 +373,10 @@
 // ── Sections in stored order ─────────────────────────────────────────────────
 #let standard-labels = (
   work: "Experience",
+  volunteer: "Volunteer",
   projects: "Projects",
   skills: "Skills",
+  interests: "Interests",
   education: "Education",
   certificates: "Certifications",
 )
@@ -367,6 +389,12 @@
       section-heading(standard-labels.work)
       render-work(entries)
     }
+  } else if section-id == "volunteer" {
+    let entries = get(data, "volunteer", ())
+    if entries.len() > 0 {
+      section-heading(standard-labels.volunteer)
+      render-volunteer(entries)
+    }
   } else if section-id == "projects" {
     let entries = get(data, "projects", ())
     if entries.len() > 0 {
@@ -377,6 +405,12 @@
     let groups = get(data, "skills", ())
     if groups.len() > 0 {
       section-heading(standard-labels.skills)
+      render-skills(groups)
+    }
+  } else if section-id == "interests" {
+    let groups = get(data, "interests", ())
+    if groups.len() > 0 {
+      section-heading(standard-labels.interests)
       render-skills(groups)
     }
   } else if section-id == "education" {

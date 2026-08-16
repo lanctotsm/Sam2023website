@@ -10,6 +10,8 @@ import {
     CertificatesSectionView,
     CertificatesSectionEditor
 } from "./sections/CertificatesSection";
+import { VolunteerSectionView, VolunteerSectionEditor } from "./sections/VolunteerSection";
+import { InterestsSectionView, InterestsSectionEditor } from "./sections/InterestsSection";
 
 export type ResumeSectionDef = {
     label: string;
@@ -26,6 +28,12 @@ export const RESUME_SECTION_REGISTRY: Record<StandardSectionId, ResumeSectionDef
         Editor: WorkSectionEditor,
         isEmpty: (doc) => doc.work.length === 0
     },
+    volunteer: {
+        label: SECTION_LABELS.volunteer,
+        View: VolunteerSectionView,
+        Editor: VolunteerSectionEditor,
+        isEmpty: (doc) => doc.volunteer.length === 0
+    },
     projects: {
         label: SECTION_LABELS.projects,
         View: ProjectsSectionView,
@@ -37,6 +45,12 @@ export const RESUME_SECTION_REGISTRY: Record<StandardSectionId, ResumeSectionDef
         View: SkillsSectionView,
         Editor: SkillsSectionEditor,
         isEmpty: (doc) => doc.skills.length === 0
+    },
+    interests: {
+        label: SECTION_LABELS.interests,
+        View: InterestsSectionView,
+        Editor: InterestsSectionEditor,
+        isEmpty: (doc) => doc.interests.length === 0
     },
     education: {
         label: SECTION_LABELS.education,

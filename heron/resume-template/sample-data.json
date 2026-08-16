@@ -76,12 +76,24 @@
   "certificates": [
     { "id": "c1", "name": "AWS Certified Solutions Architect — Associate", "issuer": "Amazon Web Services", "date": "2021-03-01" }
   ],
+  "volunteer": [
+    {
+      "id": "v1",
+      "organization": "Local food bank",
+      "position": "Volunteer",
+      "startDate": "2023-01",
+      "highlights": ["Packed weekend meal kits"]
+    }
+  ],
+  "interests": [
+    { "id": "i1", "name": "Music", "keywords": ["piano"] }
+  ],
   "meta": {
     "canonical": "https://samlanctot.com/resume",
     "version": "v1.0.0",
     "lastModified": "2026-08-15T00:00:00.000Z",
     "heron": {
-      "sectionOrder": ["work", "skills", "education", "certificates", "projects"],
+      "sectionOrder": ["work", "volunteer", "projects", "skills", "interests", "education", "certificates"],
       "hiddenSections": [],
       "condensedWorkIds": ["w3", "w4"],
       "customSections": []

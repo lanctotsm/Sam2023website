@@ -59,8 +59,11 @@ export function toPersonJsonLd(
         if (alumniOf.length > 0) person.alumniOf = alumniOf;
     }
 
-    if (!hidden.has("skills")) {
-        const knowsAbout = doc.skills.flatMap((group) => group.keywords);
+    if (!hidden.has("skills") || !hidden.has("interests")) {
+        const knowsAbout = [
+            ...(!hidden.has("skills") ? doc.skills.flatMap((group) => group.keywords) : []),
+            ...(!hidden.has("interests") ? doc.interests.flatMap((group) => group.keywords) : [])
+        ];
         if (knowsAbout.length > 0) person.knowsAbout = knowsAbout;
     }
 

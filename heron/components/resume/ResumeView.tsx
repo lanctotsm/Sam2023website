@@ -19,6 +19,8 @@ export function isResumeEmpty(doc: ResumeDocument): boolean {
         doc.skills.length === 0 &&
         doc.education.length === 0 &&
         doc.certificates.length === 0 &&
+        doc.volunteer.length === 0 &&
+        doc.interests.length === 0 &&
         doc.meta.heron.customSections.every((section) => section.entries.length === 0)
     );
 }

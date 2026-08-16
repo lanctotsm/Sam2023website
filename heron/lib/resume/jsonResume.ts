@@ -60,6 +60,12 @@ export function toJsonResume(
     const education = doc.education.map((entry) => prune({ ...entry }));
     if (education.length > 0) out.education = education;
 
+    const volunteer = doc.volunteer.map((entry) => prune({ ...entry }));
+    if (volunteer.length > 0) out.volunteer = volunteer;
+
+    const interests = doc.interests.map((entry) => prune({ ...entry }));
+    if (interests.length > 0) out.interests = interests;
+
     const certificates = doc.certificates.map((entry) =>
         prune({ ...entry, date: normalizeCertDate(entry.date) })
     );

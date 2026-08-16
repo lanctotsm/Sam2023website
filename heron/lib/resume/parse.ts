@@ -9,11 +9,13 @@ import type {
     CustomSection,
     CustomSectionEntry,
     EducationEntry,
+    InterestGroup,
     Profile,
     ProjectEntry,
     ResumeDocument,
     ResumeMeta,
     SkillGroup,
+    VolunteerEntry,
     WorkEntry
 } from "./types";
 
@@ -146,6 +148,27 @@ function sanitizeCertificateEntry(raw: Record<string, unknown>, seen: Set<string
     };
 }
 
+function sanitizeVolunteerEntry(raw: Record<string, unknown>, seen: Set<string>): VolunteerEntry {
+    return {
+        id: entryId(raw, seen),
+        organization: str(raw.organization),
+        position: str(raw.position),
+        url: str(raw.url),
+        startDate: str(raw.startDate),
+        endDate: str(raw.endDate),
+        summary: str(raw.summary),
+        highlights: strArray(raw.highlights)
+    };
+}
+
+function sanitizeInterestGroup(raw: Record<string, unknown>, seen: Set<string>): InterestGroup {
+    return {
+        id: entryId(raw, seen),
+        name: str(raw.name),
+        keywords: strArray(raw.keywords)
+    };
+}
+
 function sanitizeCustomEntry(raw: Record<string, unknown>, seen: Set<string>): CustomSectionEntry {
     return {
         id: entryId(raw, seen),
@@ -224,6 +247,8 @@ export function sanitizeResumeDocument(raw: unknown): ResumeDocument {
         skills: sanitizeEntries(root.skills, sanitizeSkillGroup),
         education: sanitizeEntries(root.education, sanitizeEducationEntry),
         certificates: sanitizeEntries(root.certificates, sanitizeCertificateEntry),
+        volunteer: sanitizeEntries(root.volunteer, sanitizeVolunteerEntry),
+        interests: sanitizeEntries(root.interests, sanitizeInterestGroup),
         meta: sanitizeMeta(root.meta, { workIds: new Set(work.map((entry) => entry.id)) })
     };
 }

@@ -8,6 +8,8 @@ export type ResumeDocument = {
     skills: SkillGroup[];
     education: EducationEntry[];
     certificates: CertificateEntry[];
+    volunteer: VolunteerEntry[];
+    interests: InterestGroup[];
     meta: ResumeMeta;
 };
 
@@ -78,6 +80,24 @@ export type CertificateEntry = {
     date: string;
     issuer: string;
     url: string;
+};
+
+export type VolunteerEntry = {
+    id: string;
+    /** Organization name (JSON Resume field). */
+    organization: string;
+    position: string;
+    url: string;
+    startDate: string;
+    endDate: string;
+    summary: string;
+    highlights: string[];
+};
+
+export type InterestGroup = {
+    id: string;
+    name: string;
+    keywords: string[];
 };
 
 export type CustomSectionEntry = {

@@ -67,9 +67,16 @@ describe("lib/resume/jsonLd", () => {
         });
     });
 
+    it("adds interest keywords to knowsAbout when the interests section is visible", () => {
+        const doc = sampleDoc();
+        doc.interests = [{ id: "i1", name: "Music", keywords: ["piano"] }];
+        const ld = toPersonJsonLd(doc, BASE) as { knowsAbout: string[] };
+        expect(ld.knowsAbout).toEqual(["TypeScript", "C#", "AWS", "piano"]);
+    });
+
     it("omits sections listed in meta.heron.hiddenSections from JSON-LD", () => {
         const doc = sampleDoc();
-        doc.meta.heron.hiddenSections = ["work", "education", "skills", "certificates"];
+        doc.meta.heron.hiddenSections = ["work", "education", "skills", "interests", "certificates"];
         const ld = toPersonJsonLd(doc, BASE);
         expect(ld).not.toHaveProperty("worksFor");
         expect(ld).not.toHaveProperty("alumniOf");

@@ -97,4 +97,28 @@ describe("lib/resume/jsonResume", () => {
         expect(out.certificates[0].date).toBe("2023-01-01");
         expect(out.certificates[1].date).toBe("2022-09-15");
     });
+
+    it("exports volunteer.organization and interests, omitting empty endDate", () => {
+        const doc = sanitizeResumeDocument({
+            ...sampleDoc(),
+            volunteer: [
+                {
+                    id: "v1",
+                    organization: "Red Cross",
+                    position: "Volunteer",
+                    startDate: "2020-01",
+                    endDate: "",
+                    highlights: ["blood drives"]
+                }
+            ],
+            interests: [{ id: "i1", name: "Music", keywords: ["piano"] }]
+        });
+        const out = toJsonResume(doc) as {
+            volunteer: Array<Record<string, unknown>>;
+            interests: Array<Record<string, unknown>>;
+        };
+        expect(out.volunteer[0].organization).toBe("Red Cross");
+        expect(out.volunteer[0]).not.toHaveProperty("endDate");
+        expect(out.interests[0]).toMatchObject({ name: "Music", keywords: ["piano"] });
+    });
 });

@@ -1,11 +1,12 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { apiFetch } from "@/lib/api";
 import type { ResumeDocument, Profile } from "@/lib/resume/types";
 import type { ResumePdfResult } from "@/services/resumePdf";
 import { createDefaultResume, isStandardSectionId } from "@/lib/resume/defaults";
+import { importResumeJson } from "@/lib/resume/import";
 import { RESUME_SECTION_REGISTRY } from "@/components/resume/resumeSectionRegistry";
 import { CustomSectionEditor } from "@/components/resume/sections/CustomSection";
 import ResumeSectionOrderPanel from "@/components/admin/ResumeSectionOrderPanel";
@@ -148,6 +149,7 @@ export default function ResumeEditor() {
     const [saving, setSaving] = useState(false);
     const [regenerating, setRegenerating] = useState(false);
     const [pdfStatus, setPdfStatus] = useState<PdfStatusLine | null>(null);
+    const importInputRef = useRef<HTMLInputElement>(null);
 
     useEffect(() => {
         (async () => {
@@ -208,6 +210,20 @@ export default function ResumeEditor() {
         }
     };
 
+    const handleImportFile = async (event: React.ChangeEvent<HTMLInputElement>) => {
+        const file = event.target.files?.[0];
+        event.target.value = "";
+        if (!file) return;
+        const text = await file.text();
+        const result = importResumeJson(text);
+        if (!result.ok) {
+            toast.error(result.error);
+            return;
+        }
+        setDoc(result.document);
+        toast.success("Imported into the editor. Save to publish.");
+    };
+
     if (loading) {
         return <p className="text-olive-dark dark:text-dark-muted">Loading resume…</p>;
     }
@@ -221,6 +237,20 @@ export default function ResumeEditor() {
                     <h1 className="m-0 mr-auto text-xl font-semibold text-chestnut dark:text-dark-text">
                         Resume
                     </h1>
+                    <input
+                        ref={importInputRef}
+                        type="file"
+                        accept="application/json,.json"
+                        className="hidden"
+                        onChange={handleImportFile}
+                    />
+                    <button
+                        type="button"
+                        className={btnAdd}
+                        onClick={() => importInputRef.current?.click()}
+                    >
+                        Import JSON
+                    </button>
                     <a href="/api/resume/export" className={btnAdd} download>
                         Export JSON
                     </a>

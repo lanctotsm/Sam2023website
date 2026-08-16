@@ -14,6 +14,7 @@ also the most likely page on the site to be shared directly, so it needs to be e
 - Edit resume content through the admin UI, persisted to SQLite.
 - Serve `/resume` from that stored data — one source of truth.
 - Export a standards-compliant `resume.json` ([JSON Resume](https://jsonresume.org) v1.0.0).
+- Import a JSON Resume (or a previous Heron export) into the admin editor.
 - Produce a PDF.
 - Emit Schema.org `Person` JSON-LD on `/resume` for search engines and crawlers.
 - Support content that the JSON Resume standard does not model, without breaking the standard export.
@@ -35,7 +36,7 @@ should not be designed as though something will.
 ## Non-goals
 
 - Multiple resume variants or per-application tailoring. One canonical resume.
-- Importing an existing `resume.json`. Export only.
+- Importing awards, publications, languages, or references. Those JSON Resume sections are dropped.
 - Server-side PDF rendering. See the PDF decision below.
 - Any change to the existing homepage section builder.
 
@@ -47,7 +48,7 @@ should not be designed as though something will.
 | Extension mechanism | `meta.heron` namespace | The spec leaves `meta` open for tool data, so the export stays strictly valid while nothing entered is lost |
 | Storage | JSON blob in `settings`, key `resume` | The canonical form is already a document; follows the existing `front_page` pattern; no migration, no new tables |
 | PDF | Typst binary, rendered on save, served from S3/CloudFront | Real typesetting engine, and permanently decoupled from React/Next/Node so a future upgrade cannot break it |
-| Reordering | Up/down buttons | Matches `HomePageSectionOrderPanel`; keyboard accessible; no new dependency |
+| Import | File picker in the admin editor; replace in-memory document; Save persists | Inverse of Export JSON. `sanitizeResumeDocument` already defends the write path |
 | Validation | Hand-written `sanitize*` functions | The codebase has no Zod; `parseFrontPageConfig` is the established pattern |
 
 ### Rejected alternatives
@@ -97,6 +98,8 @@ export type ResumeDocument = {
   skills: SkillGroup[];
   education: EducationEntry[];
   certificates: CertificateEntry[];
+  volunteer: VolunteerEntry[];
+  interests: InterestGroup[];
   meta: ResumeMeta;
 };
 
@@ -165,6 +168,23 @@ export type CertificateEntry = {
   url: string;
 };
 
+export type VolunteerEntry = {
+  id: string;
+  organization: string;       // JSON Resume field name (not `name`)
+  position: string;
+  url: string;
+  startDate: string;
+  endDate: string;
+  summary: string;
+  highlights: string[];
+};
+
+export type InterestGroup = {
+  id: string;
+  name: string;
+  keywords: string[];
+};
+
 export type CustomSectionEntry = {
   id: string;
   title: string;
@@ -194,9 +214,10 @@ export type ResumeMeta = {
 
 ### Section identifiers
 
-The five standard sections use fixed ids: `work`, `projects`, `skills`, `education`,
-`certificates`. Custom sections use generated UUIDs. `sectionOrder` contains both, which is what
-lets a custom section sit between two standard ones.
+The seven standard sections use fixed ids: `work`, `volunteer`, `projects`, `skills`, `interests`,
+`education`, `certificates`. Custom sections use generated UUIDs. `sectionOrder` contains both, which is what
+lets a custom section sit between two standard ones. Existing stored documents that lack the newer
+ids get them appended by `reconcileSectionOrder`.
 
 ### Two modelling notes
 
@@ -220,7 +241,7 @@ protects nothing.
 lib/resume/types.ts                          type definitions above
 lib/resume/defaults.ts                       createDefaultResume() — empty placeholder
 lib/resume/parse.ts                          parseResumeDocument() + sanitize* helpers
-lib/resume/jsonResume.ts                     toJsonResume() — export shaping
+lib/resume/import.ts                         importResumeJson() — file-text → document or error
 lib/resume/jsonLd.ts                         toPersonJsonLd() — Schema.org mapping
 services/resumePdf.ts                        spawn Typst, upload to S3, record URL
 app/api/resume/pdf/route.ts                  GET — 302 to current object, 404 if missing or stale
@@ -284,9 +305,15 @@ Skills groups are a name plus a keyword list. Custom sections are a heading plus
 A single Save button `PUT`s the document; `sonner` toasts report success and failure. Styling reuses
 the existing `inputClass` / `labelClass` / `cardClass` / `btnAdd` / `btnDanger` string constants.
 
-The editor header carries, alongside Save: an "Export JSON" link, a "Download PDF" link to
-`/api/resume/pdf`, and a "Regenerate PDF" button. A status line shows when the current PDF was
-generated, or surfaces the Typst error when the last render failed.
+The editor header carries, alongside Save: an "Import JSON" file picker, an "Export JSON" link, a
+"Download PDF" link to `/api/resume/pdf`, and a "Regenerate PDF" button. A status line shows when
+the current PDF was generated, or surfaces the Typst error when the last render failed.
+
+**Import** replaces the in-editor document with `sanitizeResumeDocument` of the chosen file. It
+does not persist until Save. Invalid JSON (or a non-object) toasts an error and leaves the current
+editor state untouched. JSON Resume `volunteer` and `interests` map into the first-class sections;
+`references`, `awards`, `publications`, and `languages` are ignored. A previous Heron export
+round-trips `meta.heron` (hidden sections, condensed roles, custom sections).
 
 ## Rendering
 
@@ -324,7 +351,7 @@ The mapping from `ResumeDocument` to Schema.org `Person`:
 | `basics.profiles[].url` | `sameAs[]` |
 | the `work` entry with an empty `endDate` | `worksFor` as `Organization` |
 | `education[]` | `alumniOf[]` as `EducationalOrganization` |
-| `skills[].keywords` flattened | `knowsAbout[]` |
+| `skills[].keywords` flattened | `knowsAbout[]` (plus `interests[].keywords` when that section is visible) |
 | `certificates[]` | `hasCredential[]` as `EducationalOccupationalCredential` |
 
 ### Print CSS
@@ -357,6 +384,10 @@ in the file; only public renderers consult the flag.
 An empty name falls back to the filename `resume.json` (not `resume-resume.json`).
 
 The route is public and unauthenticated, so the file can be linked directly from the resume page.
+
+**Import.** There is no dedicated import API. The admin editor reads a `.json` file in the browser,
+runs `importResumeJson()` (`lib/resume/import.ts`), and replaces React state. Persistence is the
+existing authenticated `PUT /api/resume`.
 
 **PDF.** `GET /api/resume/pdf` returns a server-rendered PDF as an attachment. See the PDF section
 below.
@@ -518,8 +549,8 @@ return a structurally valid `ResumeDocument`.
 
 Vitest, mocking the DB, per the existing convention.
 
-- `lib/resume/parse.test.ts` — malformed JSON, null, wrong types, missing ids, `sectionOrder`
-  reconciliation in both directions, idempotency of parse.
+- `lib/resume/import.test.ts` — invalid JSON errors without clobbering; a JSON Resume volunteer
+  `organization` and interests group import; references/awards are dropped; `meta.heron` round-trips.
 - `lib/resume/jsonResume.test.ts` — an exported document conforms to the JSON Resume v1.0.0 shape;
   empty optional fields are dropped, including `basics.phone` when blank and `endDate: ""` (present
   = omitted); `meta.heron` survives a round trip; hidden section entries remain in the export.
@@ -553,9 +584,9 @@ and the one thing mocks structurally cannot see.
 `createDefaultResume()` returns an empty skeleton — no seeded content. Sam will enter the real
 resume through the admin UI.
 
-The skeleton has empty strings for all `basics` fields, empty arrays for all five standard section
+The skeleton has empty strings for all `basics` fields, empty arrays for all standard section
 collections, and `meta.heron.sectionOrder` pre-populated with
-`["work", "projects", "skills", "education", "certificates"]` so the editor presents all sections
+`["work", "volunteer", "projects", "skills", "interests", "education", "certificates"]` so the editor presents all sections
 with empty states from the start. No changes to `scripts/seed.ts` are needed; `getResume()` returns
 the default when the settings row is absent.
 
@@ -586,7 +617,6 @@ final implementation step.
 
 ## Follow-on work, explicitly out of scope
 
-- Importing an existing `resume.json`.
 - Resume variants for per-application tailoring.
 - Running the print output through `@resume/ats-validator` (new in the JSON Resume monorepo) to
   check applicant-tracking-system compatibility.
