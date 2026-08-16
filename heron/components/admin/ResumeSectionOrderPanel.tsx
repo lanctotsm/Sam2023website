@@ -56,8 +56,9 @@ export default function ResumeSectionOrderPanel({ doc, setDoc, sectionClass, ui 
         <section className={sectionClass}>
             <h2 className="mb-2 text-lg font-semibold text-chestnut dark:text-dark-text">Sections</h2>
             <p className="mb-4 text-sm text-olive-dark dark:text-dark-muted">
-                Reorder or hide sections without losing their content. Hidden sections stay editable
-                below but are excluded from the page, the PDF, and print.
+                Reorder or hide sections without losing their content. Hidden sections stay in the
+                document and remain editable below; they are omitted from the public page, JSON-LD,
+                PDF, and print until shown again.
             </p>
             <ul className="mb-4 space-y-2">
                 {sectionOrder.map((id, index) => {

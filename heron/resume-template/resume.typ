@@ -30,18 +30,30 @@
 // ── Dates ────────────────────────────────────────────────────────────────────
 #let month-names = ("Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec")
 
+#let is-digit-str(s) = {
+  if type(s) != str or s.len() == 0 { return false }
+  let i = 0
+  while i < s.len() {
+    let c = s.at(i)
+    if c < "0" or c > "9" { return false }
+    i += 1
+  }
+  true
+}
+
 #let fmt-partial(s) = {
-  if s.len() >= 7 {
-    let m = int(s.slice(5, 7))
+  let t = if type(s) == str { s } else { str(s) }
+  if t.len() == 7 and t.at(4) == "-" and is-digit-str(t.slice(0, 4)) and is-digit-str(t.slice(5, 7)) {
+    let m = int(t.slice(5, 7))
     if m >= 1 and m <= 12 {
-      month-names.at(m - 1) + " " + s.slice(0, 4)
+      month-names.at(m - 1) + " " + t.slice(0, 4)
     } else {
-      s
+      t
     }
-  } else if s.len() >= 4 {
-    s.slice(0, 4)
+  } else if t.len() == 4 and is-digit-str(t) {
+    t
   } else {
-    s
+    t
   }
 }
 
@@ -154,7 +166,8 @@
       text(font: "Fraunces", weight: 600, size: 11.5pt, if position != "" { position } else { company })
       if position != "" and company != "" {
         v(2.5pt)
-        text(font: "Inter", weight: 600, size: 10pt, company)
+        let url = get(entry, "url", "")
+        text(font: "Inter", weight: 600, size: 10pt, if url != "" { link(url, company) } else { company })
         if location != "" {
           text(font: "Inter", weight: 400, size: 9pt, fill: warm, "   " + location)
         }

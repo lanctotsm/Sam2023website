@@ -185,7 +185,7 @@ export type ResumeMeta = {
   lastModified: string;       // ISO8601 timestamp, set on save
   heron: {
     sectionOrder: string[];   // section ids, standard and custom interleaved
-    hiddenSections: string[]; // section ids excluded from rendering
+    hiddenSections: string[]; // section ids excluded from public/PDF/JSON-LD render; entries stay in the document
     condensedWorkIds: string[];
     customSections: CustomSection[];
   };
@@ -223,7 +223,7 @@ lib/resume/parse.ts                          parseResumeDocument() + sanitize* h
 lib/resume/jsonResume.ts                     toJsonResume() — export shaping
 lib/resume/jsonLd.ts                         toPersonJsonLd() — Schema.org mapping
 services/resumePdf.ts                        spawn Typst, upload to S3, record URL
-app/api/resume/pdf/route.ts                  GET — 302 to the current CloudFront object
+app/api/resume/pdf/route.ts                  GET — 302 to current object, 404 if missing or stale
 app/api/resume/pdf/regenerate/route.ts       POST — re-render without editing content
 resume-template/resume.typ                   the Typst document
 resume-template/fonts/*.ttf                  Fraunces and Inter
@@ -272,8 +272,10 @@ attract spam calls. The warning uses the same muted helper-text treatment as oth
 rather than an alarming red banner — it is a note, not an error.
 
 Below Basics, a section order panel lists every remaining section with up/down buttons and a
-visibility toggle, mirroring `HomePageSectionOrderPanel`. Each visible section renders the `Editor`
-from the registry.
+visibility toggle, mirroring `HomePageSectionOrderPanel`. Hide is a render flag, not a delete:
+the section's entries stay in the stored document so showing it later restores the same content.
+Hidden sections remain fully editable in the admin editor; `hiddenSections` is consulted only by
+the public page, JSON-LD, PDF, and print.
 
 Within a section, entries can be added, removed, and reordered with the same up/down control. Each
 work entry exposes its fields plus a `BulletListEditor` for highlights and a "condensed" checkbox.
@@ -288,7 +290,8 @@ generated, or surfaces the Typst error when the last render failed.
 
 ## Rendering
 
-`ResumeView` accepts a `ResumeDocument` and renders the web page. `/resume` wraps it in
+`ResumeView` accepts a `ResumeDocument` and renders the web page, skipping any id in
+`meta.heron.hiddenSections` and any section with zero entries. `/resume` wraps it in
 `PageStyleProvider`, preserving today's theming, and adds page-specific `metadata` (title,
 description, OG) which the current page lacks.
 
@@ -299,7 +302,13 @@ document. The shared thing is the data, not the layout.
 ### Structured data
 
 `/resume` embeds a `<script type="application/ld+json">` produced by `toPersonJsonLd()`. This is the
-output that crawlers actually consume — they read the page, not `resume.json`.
+output that crawlers actually consume — they read the page, not `resume.json`. `JSON.stringify`
+output has `<` escaped to `\u003c` before it is assigned to `dangerouslySetInnerHTML`, so an
+admin-authored field cannot break out of the script element.
+
+Sections listed in `meta.heron.hiddenSections` are omitted from this mapping the same way they are
+omitted from the visible page, so hiding a section also hides it from crawlers. The stored document
+is unchanged.
 
 The mapping from `ResumeDocument` to Schema.org `Person`:
 
@@ -338,10 +347,14 @@ their empty states and "+ Add" buttons regardless.
 it with `Content-Disposition: attachment; filename="samuel-lanctot-resume.json"`, following the
 `feed.xml` precedent for non-HTML responses.
 
-`toJsonResume()` does two things: it drops empty optional fields so the output is clean rather than
-littered with `""`, and it stamps `meta.lastModified` and `meta.canonical`. `meta.heron` is
-retained, since it is valid under the spec and keeps the export a faithful round trip for everything
-Heron-specific.
+`toJsonResume()` drops empty optional fields so the output is clean rather than littered with `""`.
+That includes a blank `endDate`: JSON Resume v1.0.0 `format: date` rejects `""`, and a missing
+`endDate` is the schema's "present" signal. The stored document still uses `endDate: ""`
+internally. `meta.lastModified` and `meta.canonical` are stamped. `meta.heron` is retained,
+including `hiddenSections`, so the export is a faithful round trip — hidden section *entries* stay
+in the file; only public renderers consult the flag.
+
+An empty name falls back to the filename `resume.json` (not `resume-resume.json`).
 
 The route is public and unauthenticated, so the file can be linked directly from the resume page.
 
@@ -411,7 +424,9 @@ find its template in production while working perfectly in dev.
 ### When rendering happens
 
 On save, not on request. `PUT /api/resume` persists the document, then renders and uploads the PDF
-to S3 under a key containing a short hash of `meta.lastModified`. CloudFront serves it from there.
+to S3 under a key containing a short hash of the **rendered PDF bytes**. CloudFront serves it from
+there. Hashing the artifact (not `lastModified`) means a template- or font-only regenerate also
+gets a new immutable key instead of overwriting a cached object.
 
 This means the instance renders a handful of times ever, never serves PDF bytes, and has no
 per-request memory exposure — which is a better outcome than the caching scheme a request-path
@@ -419,9 +434,9 @@ renderer would have needed.
 
 - **Save never fails because of the PDF.** The document is persisted first. The render result is
   reported separately in the response as `pdf: { status, url, error }`, and the admin surfaces it
-  as its own toast.
-- **Content-addressed keys mean no CloudFront invalidation.** A new `lastModified` produces a new
-  key, so the CDN never serves a stale file.
+  as its own toast. A failed render does **not** update `resume_pdf`.
+- **Content-addressed keys mean no CloudFront invalidation.** A new PDF body produces a new key, so
+  the CDN never serves a stale file.
 - The resulting URL is recorded under a separate settings key, `resume_pdf`, holding
   `{ url, generatedAt, sourceLastModified }`. It is deliberately *not* stored inside the resume
   document, which stays a pure JSON Resume artifact.
@@ -429,10 +444,13 @@ renderer would have needed.
   succeeds and the status reports the PDF as unavailable. Nothing crashes.
 - A **Regenerate PDF** button in the admin editor re-runs the render without editing content, for
   recovering from a failure or picking up a template change.
+- **Invalid dates do not crash Typst.** `fmt-partial` only formats exact `YYYY` or `YYYY-MM` with
+  month 01–12; anything else (including `"Present"` typed into a start date) is passed through.
 
-`GET /api/resume/pdf` is a stable public URL that 302-redirects to the current CloudFront object,
-so the resume page and editor can link to one address that never changes. It returns 404 with a
-clear message when no PDF has been generated yet.
+`GET /api/resume/pdf` is a stable public URL that 302-redirects to the current CloudFront object
+when `resume_pdf.sourceLastModified` matches the stored document's `meta.lastModified`. It returns
+404 with a clear message when no PDF has been generated yet, **or** when those timestamps differ —
+so a successful save whose render then failed cannot keep serving the previous resume as a PDF.
 
 ### Typographic system
 
@@ -503,11 +521,11 @@ Vitest, mocking the DB, per the existing convention.
 - `lib/resume/parse.test.ts` — malformed JSON, null, wrong types, missing ids, `sectionOrder`
   reconciliation in both directions, idempotency of parse.
 - `lib/resume/jsonResume.test.ts` — an exported document conforms to the JSON Resume v1.0.0 shape;
-  empty optional fields are dropped, including `basics.phone` when blank; `meta.heron` survives a
-  round trip; `endDate: ""` is preserved as the "present" signal.
+  empty optional fields are dropped, including `basics.phone` when blank and `endDate: ""` (present
+  = omitted); `meta.heron` survives a round trip; hidden section entries remain in the export.
 - `lib/resume/jsonLd.test.ts` — `@context` and `@type` are correct; `worksFor` resolves to the
-  entry with an empty `endDate`; `telephone` is absent when the phone is blank; an empty document
-  produces valid JSON-LD rather than throwing.
+  entry with an empty `endDate`; `telephone` is absent when the phone is blank; hidden sections are
+  omitted from the mapping; an empty document produces valid JSON-LD rather than throwing.
 - `services/resume.test.ts` — `getResume` on an absent row returns the default; `saveResume`
   upserts; mocked `getDb` following `services/settings.test.ts`.
 - `app/api/resume/route.test.ts` — unauthenticated `PUT` returns 401; authenticated `PUT`
@@ -515,11 +533,11 @@ Vitest, mocking the DB, per the existing convention.
 - `app/api/resume/export/route.test.ts` — `Content-Disposition` header present and correct; body
   parses as JSON.
 - `services/resumePdf.test.ts` — with `execFile` mocked: the binary is invoked **without a shell**,
-  `--ignore-system-fonts` is present, the S3 key contains the `lastModified` hash, a non-zero exit
+  `--ignore-system-fonts` is present, the S3 key contains a hash of the PDF bytes, a non-zero exit
   surfaces `stderr` as the error, and a missing binary degrades to "unavailable" rather than
   throwing.
-- `app/api/resume/pdf/route.test.ts` — 302 to the recorded URL; 404 with a clear message when no
-  PDF has been generated.
+- `app/api/resume/pdf/route.test.ts` — 302 to the recorded URL when `sourceLastModified` matches;
+  404 when no PDF has been generated; 404 when the recorded PDF is stale relative to the document.
 - `app/api/resume/route.test.ts` also asserts that a **failing render still returns a successful
   save** with `pdf.status: "failed"`. That invariant is the whole reason the render is decoupled
   from persistence, so it deserves an explicit test.

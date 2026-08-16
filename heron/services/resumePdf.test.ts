@@ -74,9 +74,9 @@ describe("services/resumePdf", () => {
         expect(String(args[inputIndex + 1]).startsWith("data={")).toBe(true);
     });
 
-    it("uploads under a key containing the lastModified hash and records the URL", async () => {
+    it("uploads under a key containing a hash of the PDF bytes and records the URL", async () => {
         const doc = sampleDoc();
-        const hash = createHash("sha256").update(doc.meta.lastModified).digest("hex").slice(0, 8);
+        const hash = createHash("sha256").update(Buffer.from("%PDF-fake")).digest("hex").slice(0, 8);
         const result = await renderAndPublishResumePdf(doc);
 
         expect(putObject).toHaveBeenCalledWith(

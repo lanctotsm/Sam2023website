@@ -42,9 +42,23 @@ describe("lib/resume/jsonResume", () => {
         expect(out.basics.name).toBe("Sam Lanctot");
     });
 
-    it("preserves an empty endDate as the present signal", () => {
+    it("omits an empty endDate so the export stays JSON Resume date-format valid", () => {
         const out = toJsonResume(sampleDoc()) as { work: Array<Record<string, unknown>> };
-        expect(out.work[0]).toHaveProperty("endDate", "");
+        expect(out.work[0]).not.toHaveProperty("endDate");
+    });
+
+    it("keeps hidden section entries in the export so hiding is reversible", () => {
+        const doc = sampleDoc();
+        doc.meta.heron.hiddenSections = ["work", "skills"];
+        const out = toJsonResume(doc) as {
+            work: Array<Record<string, unknown>>;
+            skills: Array<Record<string, unknown>>;
+            meta: { heron: { hiddenSections: string[] } };
+        };
+        expect(out.work).toHaveLength(1);
+        expect(out.work[0].name).toBe("GEICO");
+        expect(out.skills).toHaveLength(1);
+        expect(out.meta.heron.hiddenSections).toEqual(["work", "skills"]);
     });
 
     it("retains meta.heron and entry ids so references round-trip", () => {

@@ -76,12 +76,14 @@ export function TextAreaField({
 }) {
     return (
         <div>
-            <label className={ui.labelClass}>{label}</label>
-            <textarea
-                className={ui.textareaClass}
-                value={value}
-                onChange={(e) => onChange(e.target.value)}
-            />
+            <label className={ui.labelClass}>
+                {label}
+                <textarea
+                    className={ui.textareaClass}
+                    value={value}
+                    onChange={(e) => onChange(e.target.value)}
+                />
+            </label>
             {hint && <p className="mb-0 mt-1 text-xs text-olive dark:text-dark-muted">{hint}</p>}
         </div>
     );

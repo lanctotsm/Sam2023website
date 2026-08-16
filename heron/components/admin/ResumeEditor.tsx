@@ -213,7 +213,6 @@ export default function ResumeEditor() {
     }
 
     const customById = new Map(doc.meta.heron.customSections.map((s) => [s.id, s]));
-    const hidden = new Set(doc.meta.heron.hiddenSections);
 
     return (
         <div className="grid gap-4">

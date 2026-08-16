@@ -4,18 +4,13 @@
 
 import type { ResumeDocument } from "./types";
 
-/** Removes keys whose value is an empty string or empty array, except keys
- * listed in `keep` (e.g. `endDate`, whose empty string means "present"). */
-function prune(
-    entry: Record<string, unknown>,
-    keep: readonly string[] = []
-): Record<string, unknown> {
+/** Removes keys whose value is an empty string or empty array. An omitted
+ * `endDate` is the JSON Resume v1.0.0 signal for a current role; the stored
+ * document still uses `""` internally, and Typst treats a missing value as
+ * "Present". */
+function prune(entry: Record<string, unknown>): Record<string, unknown> {
     const out: Record<string, unknown> = {};
     for (const [key, value] of Object.entries(entry)) {
-        if (keep.includes(key)) {
-            out[key] = value;
-            continue;
-        }
         if (typeof value === "string" && value === "") continue;
         if (Array.isArray(value) && value.length === 0) continue;
         out[key] = value;

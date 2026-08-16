@@ -79,6 +79,19 @@ describe("lib/resume/parse", () => {
         expect(doc.meta.heron.sectionOrder).toContain("education");
     });
 
+    it("keeps section entries when the section is hidden — hide is a flag, not a delete", () => {
+        const doc = sanitizeResumeDocument({
+            work: [{ id: "w1", name: "GEICO", position: "Engineer" }],
+            skills: [{ id: "s1", name: "Primary", keywords: ["TypeScript"] }],
+            meta: { heron: { hiddenSections: ["work"] } }
+        });
+        expect(doc.meta.heron.hiddenSections).toEqual(["work"]);
+        expect(doc.work).toEqual([
+            expect.objectContaining({ id: "w1", name: "GEICO", position: "Engineer" })
+        ]);
+        expect(doc.skills[0].keywords).toEqual(["TypeScript"]);
+    });
+
     it("filters condensedWorkIds and hiddenSections to ids that resolve", () => {
         const doc = sanitizeResumeDocument({
             work: [{ id: "w1", name: "Acme" }],

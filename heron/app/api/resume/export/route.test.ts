@@ -30,7 +30,7 @@ describe("RESUME /api/resume/export", () => {
         vi.mocked(getResume).mockResolvedValue(createDefaultResume());
         const res = await GET();
         expect(res.headers.get("Content-Disposition")).toBe(
-            'attachment; filename="resume-resume.json"'
+            'attachment; filename="resume.json"'
         );
     });
 

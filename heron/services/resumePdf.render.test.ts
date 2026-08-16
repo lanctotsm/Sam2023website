@@ -51,4 +51,49 @@ describe.skipIf(!typst)("resume-template real render", () => {
             rmSync(workDir, { recursive: true, force: true });
         }
     });
+
+    it("compiles when a date field is not a valid YYYY-MM value", () => {
+        const payload = JSON.stringify({
+            basics: { name: "Date Guard" },
+            work: [
+                {
+                    id: "w1",
+                    name: "Acme",
+                    position: "Engineer",
+                    startDate: "Present",
+                    highlights: ["did things"]
+                }
+            ],
+            meta: {
+                heron: {
+                    sectionOrder: ["work"],
+                    hiddenSections: [],
+                    condensedWorkIds: [],
+                    customSections: []
+                }
+            }
+        });
+        const workDir = mkdtempSync(path.join(tmpdir(), "resume-render-bad-date-"));
+        const outputPath = path.join(workDir, "resume.pdf");
+        try {
+            execFileSync(
+                typst!,
+                [
+                    "compile",
+                    "--input",
+                    `data=${payload}`,
+                    "--font-path",
+                    path.join(templateDir, "fonts"),
+                    "--ignore-system-fonts",
+                    path.join(templateDir, "resume.typ"),
+                    outputPath
+                ],
+                { timeout: 30_000, windowsHide: true }
+            );
+            const pdf = readFileSync(outputPath);
+            expect(pdf.subarray(0, 5).toString("ascii")).toBe("%PDF-");
+        } finally {
+            rmSync(workDir, { recursive: true, force: true });
+        }
+    });
 });
