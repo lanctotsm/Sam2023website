@@ -5,7 +5,7 @@ const MONTHS = [
 
 /** "2021-06" -> "Jun 2021"; "2021" -> "2021"; anything else passes through. */
 export function formatPartialDate(value: string): string {
-    const match = /^(\d{4})(?:-(\d{2}))?/.exec(value.trim());
+    const match = /^(\d{4})(?:-(0[1-9]|1[0-2]))?$/.exec(value.trim());
     if (!match) return value;
     const year = match[1];
     const month = match[2] ? MONTHS[Number(match[2]) - 1] : undefined;
