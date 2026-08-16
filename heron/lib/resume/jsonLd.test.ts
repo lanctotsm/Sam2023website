@@ -67,6 +67,31 @@ describe("lib/resume/jsonLd", () => {
         });
     });
 
+    it("omits sections listed in meta.heron.hiddenSections from JSON-LD", () => {
+        const doc = sampleDoc();
+        doc.meta.heron.hiddenSections = ["work", "education", "skills", "certificates"];
+        const ld = toPersonJsonLd(doc, BASE);
+        expect(ld).not.toHaveProperty("worksFor");
+        expect(ld).not.toHaveProperty("alumniOf");
+        expect(ld).not.toHaveProperty("knowsAbout");
+        expect(ld).not.toHaveProperty("hasCredential");
+    });
+
+    it("omits only the hidden sections, leaving visible sections in JSON-LD", () => {
+        const doc = sampleDoc();
+        doc.meta.heron.hiddenSections = ["skills", "certificates"];
+        const ld = toPersonJsonLd(doc, BASE) as {
+            worksFor?: unknown;
+            alumniOf?: unknown;
+            knowsAbout?: unknown;
+            hasCredential?: unknown;
+        };
+        expect(ld.worksFor).toBeDefined();
+        expect(ld.alumniOf).toBeDefined();
+        expect(ld).not.toHaveProperty("knowsAbout");
+        expect(ld).not.toHaveProperty("hasCredential");
+    });
+
     it("produces minimal valid JSON-LD for an empty document without throwing", () => {
         const ld = toPersonJsonLd(createDefaultResume(), BASE);
         expect(ld["@type"]).toBe("Person");
