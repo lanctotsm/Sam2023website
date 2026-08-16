@@ -47,13 +47,15 @@ export function TextField({
 }) {
     return (
         <div>
-            <label className={ui.labelClass}>{label}</label>
-            <input
-                className={ui.inputClass}
-                value={value}
-                placeholder={placeholder}
-                onChange={(e) => onChange(e.target.value)}
-            />
+            <label className={ui.labelClass}>
+                {label}
+                <input
+                    className={ui.inputClass}
+                    value={value}
+                    placeholder={placeholder}
+                    onChange={(e) => onChange(e.target.value)}
+                />
+            </label>
             {hint && <p className="mb-0 mt-1 text-xs text-olive dark:text-dark-muted">{hint}</p>}
         </div>
     );
