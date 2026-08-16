@@ -32,7 +32,12 @@
 
 #let fmt-partial(s) = {
   if s.len() >= 7 {
-    month-names.at(int(s.slice(5, 7)) - 1) + " " + s.slice(0, 4)
+    let m = int(s.slice(5, 7))
+    if m >= 1 and m <= 12 {
+      month-names.at(m - 1) + " " + s.slice(0, 4)
+    } else {
+      s
+    }
   } else if s.len() >= 4 {
     s.slice(0, 4)
   } else {
