@@ -23,6 +23,13 @@ function prune(
     return out;
 }
 
+/** Expands a partial `YYYY-MM` date to the full `YYYY-MM-DD` format required by
+ * JSON Resume v1.0.0.  Already-complete dates and blank values pass through. */
+function normalizeCertDate(value: string): string {
+    if (/^\d{4}-\d{2}$/.test(value)) return `${value}-01`;
+    return value;
+}
+
 export function toJsonResume(
     doc: ResumeDocument,
     options: { canonical?: string } = {}
@@ -58,7 +65,9 @@ export function toJsonResume(
     const education = doc.education.map((entry) => prune({ ...entry }));
     if (education.length > 0) out.education = education;
 
-    const certificates = doc.certificates.map((entry) => prune({ ...entry }));
+    const certificates = doc.certificates.map((entry) =>
+        prune({ ...entry, date: normalizeCertDate(entry.date) })
+    );
     if (certificates.length > 0) out.certificates = certificates;
 
     out.meta = prune({

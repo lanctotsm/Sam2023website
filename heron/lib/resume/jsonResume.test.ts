@@ -70,4 +70,17 @@ describe("lib/resume/jsonResume", () => {
         expect(out.certificates).toBeUndefined();
         expect(out.meta).toBeDefined();
     });
+
+    it("expands YYYY-MM certificate dates to YYYY-MM-DD for JSON Resume v1.0.0 compliance", () => {
+        const doc = sanitizeResumeDocument({
+            ...sampleDoc(),
+            certificates: [
+                { id: "c1", name: "AWS SA", issuer: "Amazon", date: "2023-01", url: "" },
+                { id: "c2", name: "GCP Pro", issuer: "Google", date: "2022-09-15", url: "" }
+            ]
+        });
+        const out = toJsonResume(doc) as { certificates: Array<Record<string, unknown>> };
+        expect(out.certificates[0].date).toBe("2023-01-01");
+        expect(out.certificates[1].date).toBe("2022-09-15");
+    });
 });

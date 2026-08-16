@@ -29,7 +29,7 @@ function sampleDoc() {
             { id: "s1", name: "Primary", keywords: ["TypeScript", "C#"] },
             { id: "s2", name: "Cloud", keywords: ["AWS"] }
         ],
-        certificates: [{ id: "c1", name: "AWS SA", issuer: "Amazon", date: "2023-01" }]
+        certificates: [{ id: "c1", name: "AWS SA", issuer: "Amazon", date: "2023-01-01" }]
     });
 }
 

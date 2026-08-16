@@ -74,7 +74,7 @@
     }
   ],
   "certificates": [
-    { "id": "c1", "name": "AWS Certified Solutions Architect — Associate", "issuer": "Amazon Web Services", "date": "2021-03" }
+    { "id": "c1", "name": "AWS Certified Solutions Architect — Associate", "issuer": "Amazon Web Services", "date": "2021-03-01" }
   ],
   "meta": {
     "canonical": "https://samlanctot.com/resume",

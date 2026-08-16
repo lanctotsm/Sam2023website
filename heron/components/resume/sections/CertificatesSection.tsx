@@ -71,7 +71,7 @@ export function CertificatesSectionEditor({ doc, setDoc, ui }: SectionEditorProp
                     <div className="grid gap-3 sm:grid-cols-2">
                         <TextField label="Name" value={entry.name} ui={ui} onChange={(v) => updateEntry(index, { name: v })} />
                         <TextField label="Issuer" value={entry.issuer} ui={ui} onChange={(v) => updateEntry(index, { issuer: v })} />
-                        <TextField label="Date" value={entry.date} ui={ui} placeholder="2023-01" hint="YYYY-MM" onChange={(v) => updateEntry(index, { date: v })} />
+                        <TextField label="Date" value={entry.date} ui={ui} placeholder="2023-01-15" hint="YYYY-MM-DD" onChange={(v) => updateEntry(index, { date: v })} />
                         <TextField label="URL" value={entry.url} ui={ui} placeholder="https://" onChange={(v) => updateEntry(index, { url: v })} />
                     </div>
                     <div className="mt-3 flex justify-end">
