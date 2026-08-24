@@ -5,7 +5,7 @@ function createMockXhr(overrides?: {
   status?: number;
   responseText?: string;
   trigger?: "load" | "error";
-      progress?: { loaded: number; total: number; lengthComputable?: boolean };
+  progress?: { loaded: number; total: number; lengthComputable?: boolean };
 }) {
   const status = overrides?.status ?? 200;
   const responseText = overrides?.responseText ?? JSON.stringify({ ok: true });
@@ -77,5 +77,27 @@ describe("postFormDataWithProgress", () => {
       createXhr: () => xhr
     });
     expect(onProgress).toHaveBeenCalledWith(50);
+  });
+
+  it("rejects when the request errors", async () => {
+    const xhr = createMockXhr({ trigger: "error" });
+    await expect(
+      postFormDataWithProgress({
+        url: "/api/images/upload",
+        formData: new FormData(),
+        createXhr: () => xhr
+      })
+    ).rejects.toThrow("Upload failed");
+  });
+
+  it("rejects when a 2xx response is not JSON", async () => {
+    const xhr = createMockXhr({ responseText: "<html>nope</html>" });
+    await expect(
+      postFormDataWithProgress({
+        url: "/api/images/upload",
+        formData: new FormData(),
+        createXhr: () => xhr
+      })
+    ).rejects.toThrow("Invalid response");
   });
 });
