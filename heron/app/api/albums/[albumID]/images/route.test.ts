@@ -142,6 +142,7 @@ describe("ALBUMS /api/albums/[albumID]/images", () => {
       );
       expect(res.status).toBe(201);
       expect(addAlbumImage).toHaveBeenCalledWith(1, 9, 2);
+      expect(await res.json()).toEqual({ ok: true });
     });
   });
 });

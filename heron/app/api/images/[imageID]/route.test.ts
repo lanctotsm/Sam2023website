@@ -137,6 +137,7 @@ describe("IMAGES /api/images/[imageID]", () => {
         { params: getParams({ imageID: "1" }) }
       );
       expect(res.status).toBe(404);
+      expect(updateImage).not.toHaveBeenCalled();
     });
 
     it("returns 200 and updates caption and alt text", async () => {
