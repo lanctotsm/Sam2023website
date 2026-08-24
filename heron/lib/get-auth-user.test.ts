@@ -8,9 +8,13 @@ vi.mock("@/lib/auth", () => ({
   authOptions: {}
 }));
 
-vi.mock("@/lib/admin-allowlist", () => ({
-  isAllowedUserEmail: vi.fn()
-}));
+vi.mock("@/lib/admin-allowlist", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/lib/admin-allowlist")>();
+  return {
+    ...actual,
+    isAllowedUserEmail: vi.fn()
+  };
+});
 
 import { getServerSession } from "next-auth";
 import { isAllowedUserEmail } from "@/lib/admin-allowlist";
@@ -39,6 +43,19 @@ describe("getAuthUser", () => {
 
     await expect(getAuthUser()).resolves.toEqual({
       id: 2,
+      email: "admin@example.com",
+      role: "admin"
+    });
+  });
+
+  it("returns a normalized email when the session email is mixed case", async () => {
+    vi.mocked(getServerSession).mockResolvedValue({
+      user: { id: 3, email: "Admin@Example.COM", role: "admin" }
+    } as never);
+    vi.mocked(isAllowedUserEmail).mockResolvedValue(true);
+
+    await expect(getAuthUser()).resolves.toEqual({
+      id: 3,
       email: "admin@example.com",
       role: "admin"
     });

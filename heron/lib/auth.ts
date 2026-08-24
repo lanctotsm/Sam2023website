@@ -95,17 +95,16 @@ export const authOptions: NextAuthOptions = {
     async jwt({ token, user, account }) {
       if (user?.email) {
         const email = normalizeEmail(user.email);
-        if (!email) {
-          return token;
-        }
-        const googleId = account?.providerAccountId || `local:${email}`;
-        const userId = await ensureUserRecord({ email, googleId });
-        const adminInvite = await getAllowedAdminUser(email);
-        if (userId) {
-          token.userId = userId;
-          token.email = email;
-          token.role = "admin";
-          token.name = adminInvite?.name || user.name || token.name;
+        if (email) {
+          const googleId = account?.providerAccountId || `local:${email}`;
+          const userId = await ensureUserRecord({ email, googleId });
+          const adminInvite = await getAllowedAdminUser(email);
+          if (userId) {
+            token.userId = userId;
+            token.email = email;
+            token.role = "admin";
+            token.name = adminInvite?.name || user.name || token.name;
+          }
         }
       }
       return jwtIfStillAllowed(token);
