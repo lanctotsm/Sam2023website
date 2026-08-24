@@ -70,19 +70,19 @@ describe("POST /api/images/upload", () => {
       createdBy: 1,
       createdAt: "2024-01-01T00:00:00Z"
     } as never);
-    vi.mocked(updateImage).mockResolvedValue({
-      id: 42,
-      s3Key: "uploads/42-large.jpg",
-      s3KeyThumb: "uploads/42-thumb.jpg",
-      s3KeyLarge: "uploads/42-large.jpg",
-      s3KeyOriginal: "uploads/42-original.jpg",
+    vi.mocked(updateImage).mockImplementation(async (id, data) => ({
+      id,
+      s3Key: data.s3Key ?? "pending/uuid/placeholder.jpg",
+      s3KeyThumb: data.s3KeyThumb ?? null,
+      s3KeyLarge: data.s3KeyLarge ?? null,
+      s3KeyOriginal: data.s3KeyOriginal ?? null,
       width: 800,
       height: 600,
       caption: null,
       altText: null,
       createdBy: 1,
       createdAt: "2024-01-01T00:00:00Z"
-    } as never);
+    } as never));
     vi.mocked(addAlbumImage).mockResolvedValue(undefined);
   });
 
@@ -133,15 +133,22 @@ describe("POST /api/images/upload", () => {
         createdBy: 1
       })
     );
-    expect(updateImage).toHaveBeenCalledWith(
-      42,
-      expect.objectContaining({
-        s3Key: expect.stringMatching(/^uploads\/[0-9a-f-]{36}\/large\.jpg$/),
-        s3KeyThumb: expect.stringMatching(/^uploads\/[0-9a-f-]{36}\/thumb\.jpg$/),
-        s3KeyLarge: expect.stringMatching(/^uploads\/[0-9a-f-]{36}\/large\.jpg$/),
-        s3KeyOriginal: expect.stringMatching(/^uploads\/[0-9a-f-]{36}\/original\.jpg$/)
-      })
-    );
+    const updateArg = vi.mocked(updateImage).mock.calls[0][1] as {
+      s3Key: string;
+      s3KeyThumb: string;
+      s3KeyLarge: string;
+      s3KeyOriginal: string;
+    };
+    const uuidMatch = updateArg.s3Key.match(/^uploads\/([0-9a-f-]{36})\/large\.jpg$/);
+    expect(uuidMatch).not.toBeNull();
+    const uuid = uuidMatch![1];
+    expect(updateArg.s3KeyThumb).toBe(`uploads/${uuid}/thumb.jpg`);
+    expect(updateArg.s3KeyLarge).toBe(`uploads/${uuid}/large.jpg`);
+    expect(updateArg.s3KeyOriginal).toBe(`uploads/${uuid}/original.jpg`);
+    expect(putObject).toHaveBeenCalledWith(expect.objectContaining({ key: `uploads/${uuid}/thumb.jpg` }));
+    expect(putObject).toHaveBeenCalledWith(expect.objectContaining({ key: `uploads/${uuid}/large.jpg` }));
+    expect(putObject).toHaveBeenCalledWith(expect.objectContaining({ key: `uploads/${uuid}/original.jpg` }));
+    expect(data.images[0].s3Key).toBe(`uploads/${uuid}/large.jpg`);
     expect(addAlbumImage).not.toHaveBeenCalled();
   });
 
