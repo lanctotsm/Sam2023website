@@ -111,5 +111,38 @@ describe("POSTS /api/posts", () => {
       );
       expect(replacePostInlineImages).toHaveBeenCalledWith(1, [101, 102]);
     });
+
+    it("passes published status and published_at through to createPost", async () => {
+      vi.mocked(getAuthUser).mockResolvedValue(MOCK_AUTH_USER as never);
+      vi.mocked(createPost).mockResolvedValue({
+        id: 2,
+        title: "Scheduled",
+        slug: "scheduled",
+        summary: "",
+        markdown: "M",
+        status: "published",
+        publishedAt: "2099-01-01T00:00:00.000Z",
+        createdBy: 1,
+        createdAt: "",
+        updatedAt: ""
+      } as never);
+
+      const res = await POST(
+        jsonRequest("POST", "http://localhost:3000/api/posts", {
+          title: "Scheduled",
+          slug: "scheduled",
+          markdown: "M",
+          status: "published",
+          published_at: "2099-01-01T00:00:00.000Z"
+        })
+      );
+      expect(res.status).toBe(201);
+      expect(createPost).toHaveBeenCalledWith(
+        expect.objectContaining({
+          status: "published",
+          publishedAt: "2099-01-01T00:00:00.000Z"
+        })
+      );
+    });
   });
 });

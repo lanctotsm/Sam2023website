@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { GET, PUT, DELETE } from "./route";
+import { GET, PUT, DELETE, PATCH } from "./route";
 import { jsonRequest, getRequest, getParams, MOCK_AUTH_USER } from "../../__tests__/helpers";
 
 vi.mock("@/lib/api-utils", () => ({
@@ -45,6 +45,7 @@ describe("IMAGES /api/images/[imageID]", () => {
   };
 
   beforeEach(() => {
+    vi.clearAllMocks();
     vi.mocked(getAuthUser).mockResolvedValue(null);
     vi.mocked(getImageById).mockResolvedValue(null);
   });
@@ -106,6 +107,48 @@ describe("IMAGES /api/images/[imageID]", () => {
       );
       expect(res.status).toBe(200);
       expect(updateImage).toHaveBeenCalledWith(1, expect.any(Object));
+    });
+  });
+
+  describe("PATCH (Metadata)", () => {
+    it("returns 401 when unauthenticated", async () => {
+      const res = await PATCH(
+        jsonRequest("PATCH", "http://x", { caption: "Hi" }),
+        { params: getParams({ imageID: "1" }) }
+      );
+      expect(res.status).toBe(401);
+      expect(updateImage).not.toHaveBeenCalled();
+    });
+
+    it("returns 400 when no metadata fields are provided", async () => {
+      vi.mocked(getAuthUser).mockResolvedValue(MOCK_AUTH_USER as never);
+      const res = await PATCH(
+        jsonRequest("PATCH", "http://x", {}),
+        { params: getParams({ imageID: "1" }) }
+      );
+      expect(res.status).toBe(400);
+    });
+
+    it("returns 404 when the image does not exist", async () => {
+      vi.mocked(getAuthUser).mockResolvedValue(MOCK_AUTH_USER as never);
+      vi.mocked(getImageById).mockResolvedValue(null);
+      const res = await PATCH(
+        jsonRequest("PATCH", "http://x", { caption: "Hi" }),
+        { params: getParams({ imageID: "1" }) }
+      );
+      expect(res.status).toBe(404);
+    });
+
+    it("returns 200 and updates caption and alt text", async () => {
+      vi.mocked(getAuthUser).mockResolvedValue(MOCK_AUTH_USER as never);
+      vi.mocked(getImageById).mockResolvedValue(image as never);
+      vi.mocked(updateImage).mockResolvedValue({ ...image, caption: "Hi", altText: "Alt" } as never);
+      const res = await PATCH(
+        jsonRequest("PATCH", "http://x", { caption: "Hi", alt_text: "Alt" }),
+        { params: getParams({ imageID: "1" }) }
+      );
+      expect(res.status).toBe(200);
+      expect(updateImage).toHaveBeenCalledWith(1, { caption: "Hi", altText: "Alt" });
     });
   });
 

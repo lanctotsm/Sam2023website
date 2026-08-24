@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { GET, PUT } from "./route";
+import { GET, PUT, POST } from "./route";
 import { jsonRequest, getRequest, getParams, MOCK_AUTH_USER } from "@/app/api/__tests__/helpers";
 
 vi.mock("@/lib/api-utils", () => ({
@@ -14,7 +14,8 @@ vi.mock("@/services/albums", () => ({
 
 vi.mock("@/services/albumImages", () => ({
   getAlbumImages: vi.fn(),
-  updateAlbumImagesOrder: vi.fn()
+  updateAlbumImagesOrder: vi.fn(),
+  addAlbumImage: vi.fn()
 }));
 
 vi.mock("@/lib/serializers", () => ({
@@ -23,7 +24,7 @@ vi.mock("@/lib/serializers", () => ({
 
 const { getAuthUser } = await import("@/lib/api-utils");
 const { getAlbumById } = await import("@/services/albums");
-const { getAlbumImages, updateAlbumImagesOrder } = await import("@/services/albumImages");
+const { getAlbumImages, updateAlbumImagesOrder, addAlbumImage } = await import("@/services/albumImages");
 
 describe("ALBUMS /api/albums/[albumID]/images", () => {
   const album = { id: 1, title: "A", slug: "a", description: "", createdBy: 1, createdAt: "", updatedAt: "" };
@@ -32,6 +33,7 @@ describe("ALBUMS /api/albums/[albumID]/images", () => {
     vi.mocked(getAuthUser).mockResolvedValue(null);
     vi.mocked(getAlbumById).mockResolvedValue(null);
     vi.mocked(getAlbumImages).mockResolvedValue([]);
+    vi.mocked(addAlbumImage).mockResolvedValue(undefined);
   });
 
   describe("GET (Read)", () => {
@@ -108,6 +110,38 @@ describe("ALBUMS /api/albums/[albumID]/images", () => {
       expect(updateAlbumImagesOrder).toHaveBeenCalledWith(1, [2, 1]);
       const data = await res.json();
       expect(data.ok).toBe(true);
+    });
+  });
+
+  describe("POST (Link image)", () => {
+    it("returns 401 when unauthenticated", async () => {
+      const res = await POST(
+        jsonRequest("POST", "http://x", { image_id: 2, sort_order: 0 }),
+        { params: getParams({ albumID: "1" }) }
+      );
+      expect(res.status).toBe(401);
+      expect(addAlbumImage).not.toHaveBeenCalled();
+    });
+
+    it("returns 400 when image_id is invalid", async () => {
+      vi.mocked(getAuthUser).mockResolvedValue(MOCK_AUTH_USER as never);
+      vi.mocked(getAlbumById).mockResolvedValue(album as never);
+      const res = await POST(
+        jsonRequest("POST", "http://x", { image_id: 0, sort_order: 0 }),
+        { params: getParams({ albumID: "1" }) }
+      );
+      expect(res.status).toBe(400);
+    });
+
+    it("returns 201 and links the image", async () => {
+      vi.mocked(getAuthUser).mockResolvedValue(MOCK_AUTH_USER as never);
+      vi.mocked(getAlbumById).mockResolvedValue(album as never);
+      const res = await POST(
+        jsonRequest("POST", "http://x", { image_id: 9, sort_order: 2 }),
+        { params: getParams({ albumID: "1" }) }
+      );
+      expect(res.status).toBe(201);
+      expect(addAlbumImage).toHaveBeenCalledWith(1, 9, 2);
     });
   });
 });

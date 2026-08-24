@@ -141,6 +141,33 @@ describe("POSTS /api/posts/[postID]", () => {
       expect(updatePost).toHaveBeenCalledWith(1, expect.any(Object));
       expect(replacePostInlineImages).toHaveBeenCalledWith(1, [5, 6]);
     });
+
+    it("passes published status and published_at through to updatePost", async () => {
+      vi.mocked(getAuthUser).mockResolvedValue(MOCK_AUTH_USER as never);
+      vi.mocked(updatePost).mockResolvedValue({
+        ...post,
+        status: "published",
+        publishedAt: "2099-01-01T00:00:00.000Z"
+      } as never);
+      const res = await PUT(
+        jsonRequest("PUT", "http://x", {
+          title: "Post",
+          slug: "post",
+          markdown: "x",
+          status: "published",
+          published_at: "2099-01-01T00:00:00.000Z"
+        }),
+        { params: getParams({ postID: "1" }) }
+      );
+      expect(res.status).toBe(200);
+      expect(updatePost).toHaveBeenCalledWith(
+        1,
+        expect.objectContaining({
+          status: "published",
+          publishedAt: "2099-01-01T00:00:00.000Z"
+        })
+      );
+    });
   });
 
   describe("DELETE", () => {
