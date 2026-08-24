@@ -2,7 +2,7 @@ import path from "path";
 import { randomUUID } from "crypto";
 import { NextResponse } from "next/server";
 
-import { errorResponse, getAuthUser } from "@/lib/api-utils";
+import { errorResponse, getAuthUser, parseId } from "@/lib/api-utils";
 import { serializeImage } from "@/lib/serializers";
 import { createImage, updateImage, deleteImage } from "@/services/images";
 import { addAlbumImage } from "@/services/albumImages";
@@ -59,7 +59,7 @@ export async function POST(request: Request) {
   try {
     const formData = await request.formData();
     const albumIdRaw = formData.get("album_id");
-    const albumId = albumIdRaw != null ? parseInt(String(albumIdRaw), 10) : null;
+    const albumId = albumIdRaw != null ? parseId(String(albumIdRaw)) : null;
     const caption = (formData.get("caption") as string)?.trim() ?? "";
     const altTextProvided = (formData.get("alt_text") as string)?.trim() ?? "";
 
@@ -172,7 +172,7 @@ export async function POST(request: Request) {
       }
     }
 
-    if (albumId != null && Number.isInteger(albumId) && albumId > 0) {
+    if (albumId) {
       for (let index = 0; index < createdImages.length; index++) {
         await addAlbumImage(albumId, createdImages[index].id, index);
       }

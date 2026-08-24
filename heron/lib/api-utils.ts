@@ -3,6 +3,8 @@ import { getServerSession } from "next-auth";
 
 import { authOptions } from "@/lib/auth";
 
+export { parseId } from "@/lib/parse-id";
+
 export type AuthUser = {
   id: number;
   email: string;
@@ -36,10 +38,3 @@ export function normalizeStatus(status?: string | null) {
   }
 }
 
-export function parseId(value: string) {
-  const parsed = Number(value);
-  if (!Number.isInteger(parsed) || parsed <= 0) {
-    return null;
-  }
-  return parsed;
-}

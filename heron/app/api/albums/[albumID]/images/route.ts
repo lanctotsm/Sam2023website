@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { errorResponse, getAuthUser } from "@/lib/api-utils";
+import { errorResponse, getAuthUser, parseId } from "@/lib/api-utils";
 import { serializeImage } from "@/lib/serializers";
 import { getAlbumById } from "@/services/albums";
 import { addAlbumImage, getAlbumImages, updateAlbumImagesOrder } from "@/services/albumImages";
@@ -8,8 +8,8 @@ type Params = { params: Promise<{ albumID: string }> };
 
 export async function GET(_: Request, { params }: Params) {
   const { albumID } = await params;
-  const albumId = parseInt(albumID, 10);
-  if (Number.isNaN(albumId)) {
+  const albumId = parseId(albumID);
+  if (!albumId) {
     return errorResponse("invalid album id", 400);
   }
 
@@ -33,8 +33,8 @@ export async function POST(request: Request, { params }: Params) {
   }
 
   const { albumID } = await params;
-  const albumId = parseInt(albumID, 10);
-  if (Number.isNaN(albumId)) {
+  const albumId = parseId(albumID);
+  if (!albumId) {
     return errorResponse("invalid album id", 400);
   }
 
@@ -61,8 +61,8 @@ export async function PUT(request: Request, { params }: Params) {
   }
 
   const { albumID } = await params;
-  const albumId = parseInt(albumID, 10);
-  if (Number.isNaN(albumId)) {
+  const albumId = parseId(albumID);
+  if (!albumId) {
     return errorResponse("invalid album id", 400);
   }
 

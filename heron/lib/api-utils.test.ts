@@ -59,6 +59,7 @@ describe("lib/api-utils", () => {
       expect(parseId("abc")).toBeNull();
       expect(parseId("1.5")).toBeNull();
       expect(parseId("")).toBeNull();
+      expect(parseId("1abc")).toBeNull();
     });
   });
 });
