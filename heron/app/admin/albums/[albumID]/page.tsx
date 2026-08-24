@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useRef, useState, useCallback } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { useParams } from "next/navigation";
@@ -53,6 +53,8 @@ export default function AdminAlbumEditorPage() {
   const [selectedImage, setSelectedImage] = useState<number | null>(null);
   const [sortOrder, setSortOrder] = useState(0);
   const [linkSectionOpen, setLinkSectionOpen] = useState(false);
+  const [linking, setLinking] = useState(false);
+  const linkingRef = useRef(false);
 
   const fetchData = useCallback(async () => {
     if (Number.isNaN(id)) return;
@@ -332,7 +334,9 @@ export default function AdminAlbumEditorPage() {
   };
 
   const linkImage = async () => {
-    if (!selectedImage) return;
+    if (!selectedImage || linkingRef.current) return;
+    linkingRef.current = true;
+    setLinking(true);
 
     try {
       await linkAlbumImage(id, selectedImage, sortOrder);
@@ -343,6 +347,9 @@ export default function AdminAlbumEditorPage() {
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Failed to link image";
       toast.error(msg);
+    } finally {
+      linkingRef.current = false;
+      setLinking(false);
     }
   };
 
@@ -607,9 +614,9 @@ export default function AdminAlbumEditorPage() {
                 type="button"
                 className="rounded-lg bg-chestnut px-4 py-2.5 font-semibold text-desert-tan transition hover:bg-chestnut-dark disabled:opacity-60 dark:text-dark-text"
                 onClick={linkImage}
-                disabled={!selectedImage}
+                disabled={!selectedImage || linking}
               >
-                Link Image to Album
+                {linking ? "Linking..." : "Link Image to Album"}
               </button>
             </div>
           </div>
