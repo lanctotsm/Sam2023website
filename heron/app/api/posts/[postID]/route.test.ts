@@ -96,6 +96,15 @@ describe("POSTS /api/posts/[postID]", () => {
       const data = await res.json();
       expect(data.id).toBe(1);
     });
+
+    it("returns 404 for a published post scheduled in the future when unauthenticated", async () => {
+      vi.mocked(getPostById).mockResolvedValue({
+        ...post,
+        publishedAt: "2099-01-01T00:00:00.000Z"
+      } as never);
+      const res = await GET(getRequest("http://x"), { params: getParams({ postID: "1" }) });
+      expect(res.status).toBe(404);
+    });
   });
 
   describe("PUT (Update)", () => {

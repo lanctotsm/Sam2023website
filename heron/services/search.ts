@@ -1,4 +1,5 @@
 import { getRawDb } from "@/lib/db";
+import { isPubliclyVisible } from "@/lib/posts-visibility";
 import { getPostById } from "@/services/posts";
 import { getAlbumById } from "@/services/albums";
 import { serializePost } from "@/lib/serializers";
@@ -39,7 +40,7 @@ export async function searchFts(query: string) {
   ]);
 
   const posts = postRows
-    .filter((p): p is NonNullable<typeof p> => p != null && p.status === "published")
+    .filter((p): p is NonNullable<typeof p> => p != null && isPubliclyVisible(p))
     .map((row) => serializePost(row));
   const albums = albumRows.filter((a): a is NonNullable<typeof a> => a != null).map(serializeAlbum);
 

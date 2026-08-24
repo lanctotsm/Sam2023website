@@ -4,11 +4,13 @@ import CredentialsProvider from "next-auth/providers/credentials";
 import { eq } from "drizzle-orm";
 
 import { getDb } from "@/lib/db";
-import { adminUsers, users } from "@/lib/db/schema";
-
-function normalizeEmail(email?: string | null) {
-  return email?.trim().toLowerCase() || "";
-}
+import { users } from "@/lib/db/schema";
+import {
+  getAllowedAdminUser,
+  isAllowedUserEmail,
+  jwtIfStillAllowed,
+  normalizeEmail
+} from "@/lib/admin-allowlist";
 
 async function ensureUserRecord(params: { email: string; googleId: string }) {
   const db = getDb();
@@ -36,34 +38,6 @@ async function ensureUserRecord(params: { email: string; googleId: string }) {
     .returning({ id: users.id });
 
   return inserted[0]?.id ?? null;
-}
-
-async function getAllowedAdminUser(email: string) {
-  const baseAdmin = normalizeEmail(process.env.BASE_ADMIN_EMAIL);
-  if (baseAdmin && baseAdmin === email) {
-    const db = getDb();
-    await db
-      .insert(adminUsers)
-      .values({ email, isBaseAdmin: true, name: "Base Admin" })
-      .onConflictDoUpdate({
-        target: adminUsers.email,
-        set: { isBaseAdmin: true }
-      });
-    return { name: "Base Admin" };
-  }
-
-  const db = getDb();
-  const [allowed] = await db
-    .select({ id: adminUsers.id, name: adminUsers.name })
-    .from(adminUsers)
-    .where(eq(adminUsers.email, email))
-    .limit(1);
-  return allowed || null;
-}
-
-async function isAllowedUserEmail(email: string) {
-  const allowed = await getAllowedAdminUser(email);
-  return Boolean(allowed);
 }
 
 const isDevAuthEnabled =
@@ -134,7 +108,7 @@ export const authOptions: NextAuthOptions = {
           token.name = adminInvite?.name || user.name || token.name;
         }
       }
-      return token;
+      return jwtIfStillAllowed(token);
     },
     async session({ session, token }) {
       if (session.user) {
