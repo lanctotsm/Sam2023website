@@ -5,24 +5,25 @@ import {
   isImageReferencedByAnyPost
 } from "./postInlineImages";
 
-function createDbMock(overrides?: {
-  selectRows?: { imageId: number }[];
-  deleteWhere?: ReturnType<typeof vi.fn>;
-  insertValues?: ReturnType<typeof vi.fn>;
-}) {
-  const selectRows = overrides?.selectRows ?? [];
-  const deleteWhere = overrides?.deleteWhere ?? vi.fn().mockResolvedValue(undefined);
-  const insertValues = overrides?.insertValues ?? vi.fn().mockResolvedValue(undefined);
-
+function createSelectDbMock(selectRows: { imageId: number }[] = []) {
   return {
     select: vi.fn().mockReturnValue({
       from: vi.fn().mockReturnValue({
         where: vi.fn().mockResolvedValue(selectRows)
       })
-    }),
-    delete: vi.fn().mockReturnValue({ where: deleteWhere }),
-    insert: vi.fn().mockReturnValue({ values: insertValues })
+    })
   };
+}
+
+function createReplaceDbMock() {
+  const run = vi.fn();
+  const values = vi.fn(() => ({ run }));
+  const insert = vi.fn(() => ({ values }));
+  const where = vi.fn(() => ({ run }));
+  const del = vi.fn(() => ({ where }));
+  const tx = { insert, delete: del };
+  const transaction = vi.fn((callback: (tx: typeof tx) => void) => callback(tx));
+  return { db: { transaction }, mocks: { run, values, insert, del, transaction } };
 }
 
 const { mockGetDb } = vi.hoisted(() => ({ mockGetDb: vi.fn() }));
@@ -34,7 +35,7 @@ vi.mock("@/lib/db", () => ({
 describe("services/postInlineImages", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mockGetDb.mockReturnValue(createDbMock());
+    mockGetDb.mockReturnValue(createSelectDbMock());
   });
 
   describe("getPostInlineImageIds", () => {
@@ -44,7 +45,7 @@ describe("services/postInlineImages", () => {
     });
 
     it("returns image ids when rows exist", async () => {
-      mockGetDb.mockReturnValue(createDbMock({ selectRows: [{ imageId: 10 }, { imageId: 20 }] }));
+      mockGetDb.mockReturnValue(createSelectDbMock([{ imageId: 10 }, { imageId: 20 }]));
 
       const ids = await getPostInlineImageIds(5);
       expect(ids).toEqual([10, 20]);
@@ -53,14 +54,12 @@ describe("services/postInlineImages", () => {
 
   describe("replacePostInlineImages", () => {
     it("deletes existing and inserts new ids", async () => {
-      const deleteWhere = vi.fn().mockResolvedValue(undefined);
-      const insertValues = vi.fn().mockResolvedValue(undefined);
-      mockGetDb.mockReturnValue(createDbMock({ deleteWhere, insertValues }));
+      const { db, mocks } = createReplaceDbMock();
+      mockGetDb.mockReturnValue(db);
 
       await replacePostInlineImages(1, [10, 20, 30]);
 
-      expect(deleteWhere).toHaveBeenCalled();
-      expect(insertValues).toHaveBeenCalledWith(
+      expect(mocks.values).toHaveBeenCalledWith(
         expect.arrayContaining([
           { postId: 1, imageId: 10, source: "upload_insert" },
           { postId: 1, imageId: 20, source: "upload_insert" },
@@ -70,24 +69,34 @@ describe("services/postInlineImages", () => {
     });
 
     it("deduplicates and filters invalid ids", async () => {
-      const insertValues = vi.fn().mockResolvedValue(undefined);
-      mockGetDb.mockReturnValue(createDbMock({ insertValues }));
+      const { db, mocks } = createReplaceDbMock();
+      mockGetDb.mockReturnValue(db);
 
       await replacePostInlineImages(2, [5, 5, 0, -1, 3.14, 7]);
 
-      expect(insertValues).toHaveBeenCalledWith([
+      expect(mocks.values).toHaveBeenCalledWith([
         { postId: 2, imageId: 5, source: "upload_insert" },
         { postId: 2, imageId: 7, source: "upload_insert" }
       ]);
     });
 
     it("does not insert when ids array is empty after filtering", async () => {
-      const insertValues = vi.fn().mockResolvedValue(undefined);
-      mockGetDb.mockReturnValue(createDbMock({ insertValues }));
+      const { db, mocks } = createReplaceDbMock();
+      mockGetDb.mockReturnValue(db);
 
       await replacePostInlineImages(3, [0, -1]);
 
-      expect(insertValues).not.toHaveBeenCalled();
+      expect(mocks.insert).not.toHaveBeenCalled();
+    });
+
+    it("runs delete and insert inside a single transaction", async () => {
+      const { db, mocks } = createReplaceDbMock();
+      mockGetDb.mockReturnValue(db);
+
+      await replacePostInlineImages(1, [10, 20]);
+
+      expect(mocks.transaction).toHaveBeenCalledOnce();
+      expect(mocks.run).toHaveBeenCalledTimes(2);
     });
   });
 
@@ -98,7 +107,7 @@ describe("services/postInlineImages", () => {
     });
 
     it("returns true when referenced", async () => {
-      mockGetDb.mockReturnValue(createDbMock({ selectRows: [{ imageId: 99 }] }));
+      mockGetDb.mockReturnValue(createSelectDbMock([{ imageId: 99 }]));
 
       const result = await isImageReferencedByAnyPost(99);
       expect(result).toBe(true);

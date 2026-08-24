@@ -136,10 +136,10 @@ describe("POST /api/images/upload", () => {
     expect(updateImage).toHaveBeenCalledWith(
       42,
       expect.objectContaining({
-        s3Key: "uploads/42-large.jpg",
-        s3KeyThumb: "uploads/42-thumb.jpg",
-        s3KeyLarge: "uploads/42-large.jpg",
-        s3KeyOriginal: "uploads/42-original.jpg"
+        s3Key: expect.stringMatching(/^uploads\/[0-9a-f-]{36}\/large\.jpg$/),
+        s3KeyThumb: expect.stringMatching(/^uploads\/[0-9a-f-]{36}\/thumb\.jpg$/),
+        s3KeyLarge: expect.stringMatching(/^uploads\/[0-9a-f-]{36}\/large\.jpg$/),
+        s3KeyOriginal: expect.stringMatching(/^uploads\/[0-9a-f-]{36}\/original\.jpg$/)
       })
     );
     expect(addAlbumImage).not.toHaveBeenCalled();
