@@ -11,6 +11,7 @@ import type { SortableImage } from "@/components/SortableImageGrid";
 import SortableImageGrid from "@/components/SortableImageGrid";
 import ImageEditModal, { type ImageEditMetadata } from "@/components/ImageEditModal";
 import { apiFetch, getImages, linkAlbumImage } from "@/lib/api";
+import { postFormDataWithProgress } from "@/lib/upload-with-progress";
 import {
   extractImagesFromZip,
   isZipFile,
@@ -36,7 +37,7 @@ export default function AdminAlbumEditorPage() {
   const [album, setAlbum] = useState<Album | null>(null);
   const [images, setImages] = useState<SortableImage[]>([]);
   const [form, setForm] = useState({ title: "", slug: "", description: "" });
-  const [loading, setLoading] = useState(true);
+  const [initialLoading, setInitialLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [pendingFiles, setPendingFiles] = useState<PendingFile[]>([]);
@@ -76,7 +77,7 @@ export default function AdminAlbumEditorPage() {
       setAlbum(null);
       setImages([]);
     } finally {
-      setLoading(false);
+      setInitialLoading(false);
     }
   }, [id]);
 
@@ -303,34 +304,17 @@ export default function AdminAlbumEditorPage() {
       const uploadingId = `${pendingId}-uploading`;
       setUploadingFiles((prev) => [...prev, { id: uploadingId, file, progress: 0 }]);
       try {
-        const result = await new Promise<{ images: ImageMeta[] }>((resolve, reject) => {
-          const formData = new FormData();
-          formData.append("album_id", String(id));
-          formData.append("files", file);
-          const xhr = new XMLHttpRequest();
-          xhr.upload.addEventListener("progress", (e) => {
-            if (e.lengthComputable) {
-              const pct = Math.round((e.loaded / e.total) * 100);
-              setUploadingFiles((prev) =>
-                prev.map((u) => (u.id === uploadingId ? { ...u, progress: pct } : u))
-              );
-            }
-          });
-          xhr.addEventListener("load", () => {
-            if (xhr.status >= 200 && xhr.status < 300) {
-              try {
-                resolve(JSON.parse(xhr.responseText));
-              } catch {
-                reject(new Error("Invalid response"));
-              }
-            } else {
-              reject(new Error(xhr.responseText || `Upload failed (${xhr.status})`));
-            }
-          });
-          xhr.addEventListener("error", () => reject(new Error("Upload failed")));
-          xhr.open("POST", `${API_BASE}/images/upload`);
-          xhr.withCredentials = true;
-          xhr.send(formData);
+        const formData = new FormData();
+        formData.append("album_id", String(id));
+        formData.append("files", file);
+        const result = await postFormDataWithProgress<{ images: ImageMeta[] }>({
+          url: `${API_BASE}/images/upload`,
+          formData,
+          onProgress: (pct) => {
+            setUploadingFiles((prev) =>
+              prev.map((u) => (u.id === uploadingId ? { ...u, progress: pct } : u))
+            );
+          }
         });
         setUploadingFiles((prev) => prev.filter((u) => u.id !== uploadingId));
         URL.revokeObjectURL(toUpload.find((x) => x.id === pendingId)?.preview ?? "");
@@ -350,7 +334,6 @@ export default function AdminAlbumEditorPage() {
   const linkImage = async () => {
     if (!selectedImage) return;
 
-    setLoading(true);
     try {
       await linkAlbumImage(id, selectedImage, sortOrder);
       setSelectedImage(null);
@@ -360,8 +343,6 @@ export default function AdminAlbumEditorPage() {
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Failed to link image";
       toast.error(msg);
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -399,7 +380,7 @@ export default function AdminAlbumEditorPage() {
     );
   }
 
-  if (loading) {
+  if (initialLoading) {
     return (
       <article className={cardClass}>
         <p className="text-olive dark:text-dark-muted">Loading...</p>
@@ -626,7 +607,7 @@ export default function AdminAlbumEditorPage() {
                 type="button"
                 className="rounded-lg bg-chestnut px-4 py-2.5 font-semibold text-desert-tan transition hover:bg-chestnut-dark disabled:opacity-60 dark:text-dark-text"
                 onClick={linkImage}
-                disabled={!selectedImage || loading}
+                disabled={!selectedImage}
               >
                 Link Image to Album
               </button>
