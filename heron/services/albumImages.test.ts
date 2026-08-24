@@ -8,6 +8,7 @@ vi.mock("@/lib/db", () => ({
   getDb: () => mockGetDb()
 }));
 
+import { albumImages } from "@/lib/db/schema";
 import { addAlbumImage } from "./albumImages";
 
 describe("addAlbumImage", () => {
@@ -26,6 +27,7 @@ describe("addAlbumImage", () => {
     expect(values).toHaveBeenCalledWith({ albumId: 1, imageId: 2, sortOrder: 3 });
     expect(onConflictDoUpdate).toHaveBeenCalledWith(
       expect.objectContaining({
+        target: [albumImages.albumId, albumImages.imageId],
         set: { sortOrder: 3 }
       })
     );
