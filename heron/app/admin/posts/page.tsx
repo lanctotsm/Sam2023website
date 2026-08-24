@@ -10,6 +10,7 @@ import type { Post } from "@/lib/api";
 import { apiFetch, createPost, uploadImages } from "@/lib/api";
 import { slugify } from "@/lib/slug";
 import { POST_SEO_META_KEYS } from "@/lib/post-seo";
+import { parseId } from "@/lib/parse-id";
 import {
   adminCardClass as cardClass,
   adminInputClass as inputClass,
@@ -79,8 +80,9 @@ export default function AdminPostsPage() {
   useEffect(() => {
     const editId = searchParams.get("edit");
     if (editId && posts.length > 0 && appliedEditRef.current !== editId) {
+      const id = parseId(editId);
+      if (!id) return;
       appliedEditRef.current = editId;
-      const id = parseInt(editId, 10);
       const post = posts.find((p) => p.id === id);
       if (post) {
         handleEdit(post);
