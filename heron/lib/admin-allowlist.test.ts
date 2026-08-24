@@ -12,6 +12,7 @@ import {
   getAllowedAdminUser,
   isAllowedUserEmail,
   jwtIfStillAllowed,
+  sessionUserFromToken,
   normalizeEmail
 } from "./admin-allowlist";
 
@@ -52,6 +53,24 @@ describe("jwtIfStillAllowed", () => {
   it("clears the token when email is missing", async () => {
     const token = await jwtIfStillAllowed({ userId: 1 }, async () => true);
     expect(token).toEqual({});
+  });
+});
+
+describe("sessionUserFromToken", () => {
+  it("returns null when the jwt was cleared", () => {
+    expect(sessionUserFromToken({})).toBeNull();
+    expect(sessionUserFromToken({ email: "gone@example.com" })).toBeNull();
+  });
+
+  it("returns the user when userId and email are present", () => {
+    expect(
+      sessionUserFromToken({ email: "admin@example.com", userId: 2, role: "admin", name: "Pat" })
+    ).toEqual({
+      id: 2,
+      email: "admin@example.com",
+      role: "admin",
+      name: "Pat"
+    });
   });
 });
 

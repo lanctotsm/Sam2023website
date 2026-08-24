@@ -105,6 +105,16 @@ describe("POSTS /api/posts/[postID]", () => {
       const res = await GET(getRequest("http://x"), { params: getParams({ postID: "1" }) });
       expect(res.status).toBe(404);
     });
+
+    it("returns 200 for a published post scheduled in the future when authenticated", async () => {
+      vi.mocked(getAuthUser).mockResolvedValue(MOCK_AUTH_USER as never);
+      vi.mocked(getPostById).mockResolvedValue({
+        ...post,
+        publishedAt: "2099-01-01T00:00:00.000Z"
+      } as never);
+      const res = await GET(getRequest("http://x"), { params: getParams({ postID: "1" }) });
+      expect(res.status).toBe(200);
+    });
   });
 
   describe("PUT (Update)", () => {

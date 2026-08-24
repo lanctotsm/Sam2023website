@@ -27,4 +27,10 @@ describe("isPubliclyVisible", () => {
       isPubliclyVisible({ status: "published", publishedAt: "2026-12-01T00:00:00.000Z" }, now)
     ).toBe(false);
   });
+
+  it("shows a published post when publishedAt is ISO without milliseconds", () => {
+    expect(
+      isPubliclyVisible({ status: "published", publishedAt: "2026-08-23T20:00:00Z" }, now)
+    ).toBe(true);
+  });
 });

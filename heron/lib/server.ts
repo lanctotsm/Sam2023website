@@ -1,6 +1,5 @@
-import { getServerSession } from "next-auth";
 import type { User } from "@/lib/api";
-import { authOptions } from "@/lib/auth";
+import { getAuthUser } from "@/lib/api-utils";
 
 const baseUrl =
   process.env.API_INTERNAL_URL ||
@@ -23,13 +22,5 @@ export async function serverFetch<T>(path: string, options?: RequestInit): Promi
 }
 
 export async function getServerUser(): Promise<User | null> {
-  const session = await getServerSession(authOptions);
-  if (!session?.user?.email) {
-    return null;
-  }
-  return {
-    id: session.user.id || 0,
-    email: session.user.email || "",
-    role: session.user.role || "admin"
-  };
+  return getAuthUser();
 }

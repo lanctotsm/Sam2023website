@@ -64,3 +64,22 @@ export async function jwtIfStillAllowed<T extends { email?: unknown }>(
   }
   return { ...token, email };
 }
+
+export function sessionUserFromToken(token: {
+  email?: unknown;
+  userId?: unknown;
+  role?: unknown;
+  name?: unknown;
+}) {
+  const email = typeof token.email === "string" ? token.email : "";
+  const userId = typeof token.userId === "number" ? token.userId : undefined;
+  if (!email || userId == null) {
+    return null;
+  }
+  return {
+    id: userId,
+    email,
+    role: typeof token.role === "string" ? token.role : "admin",
+    name: typeof token.name === "string" ? token.name : undefined
+  };
+}

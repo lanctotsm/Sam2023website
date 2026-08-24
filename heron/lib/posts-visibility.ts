@@ -13,5 +13,9 @@ export function isPubliclyVisible(
   if (post.publishedAt == null || post.publishedAt === "") {
     return true;
   }
-  return post.publishedAt <= now.toISOString();
+  const publishedMs = Date.parse(post.publishedAt);
+  if (Number.isNaN(publishedMs)) {
+    return false;
+  }
+  return publishedMs <= now.getTime();
 }

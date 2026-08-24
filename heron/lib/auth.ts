@@ -9,6 +9,7 @@ import {
   getAllowedAdminUser,
   isAllowedUserEmail,
   jwtIfStillAllowed,
+  sessionUserFromToken,
   normalizeEmail
 } from "@/lib/admin-allowlist";
 
@@ -110,12 +111,21 @@ export const authOptions: NextAuthOptions = {
       return jwtIfStillAllowed(token);
     },
     async session({ session, token }) {
-      if (session.user) {
-        session.user.id = token.userId as number | undefined;
-        session.user.email = (token.email as string) || session.user.email;
-        session.user.role = (token.role as string) || "admin";
-        session.user.name = (token.name as string) || session.user.name;
+      if (!session.user) {
+        return session;
       }
+      const user = sessionUserFromToken(token);
+      if (!user) {
+        session.user.id = undefined;
+        session.user.email = undefined;
+        session.user.role = undefined;
+        session.user.name = undefined;
+        return session;
+      }
+      session.user.id = user.id;
+      session.user.email = user.email;
+      session.user.role = user.role;
+      session.user.name = user.name ?? session.user.name;
       return session;
     }
   }
