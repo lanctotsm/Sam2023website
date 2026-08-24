@@ -11,10 +11,10 @@ vi.mock("@/lib/api-utils", () => ({
   errorResponse: (msg: string, status: number) =>
     new Response(JSON.stringify({ error: msg }), { status })
 }));
-vi.mock("@/actions/admin-users", () => ({ removeUser: vi.fn() }));
+vi.mock("@/services/admin-users", () => ({ removeUser: vi.fn() }));
 
 const { getAuthUser } = await import("@/lib/api-utils");
-const { removeUser } = await import("@/actions/admin-users");
+const { removeUser } = await import("@/services/admin-users");
 
 describe("DELETE /api/admin/users/[userID]", () => {
   beforeEach(() => {

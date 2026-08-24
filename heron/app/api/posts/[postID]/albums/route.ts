@@ -1,8 +1,7 @@
 import { NextResponse } from "next/server";
 import { errorResponse, getAuthUser, parseId } from "@/lib/api-utils";
 import { serializeAlbum } from "@/lib/serializers";
-import { getAlbumsForPost } from "@/services/post-albums";
-import { linkAlbumToPost } from "@/actions/posts";
+import { getAlbumsForPost, linkAlbumToPost } from "@/services/post-albums";
 
 export async function GET(_: Request, { params }: { params: Promise<{ postID: string }> }) {
   const { postID } = await params;
@@ -34,9 +33,10 @@ export async function POST(request: Request, { params }: { params: Promise<{ pos
   }
 
   try {
-    await linkAlbumToPost({ postId: id, albumId });
+    await linkAlbumToPost(id, albumId);
     return NextResponse.json({ status: "linked" });
-  } catch (error: any) {
-    return errorResponse(error.message || "failed to link album", 400);
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : "failed to link album";
+    return errorResponse(message, 400);
   }
 }

@@ -12,12 +12,10 @@ vi.mock("@/lib/api-utils", () => ({
     new Response(JSON.stringify({ error: msg }), { status })
 }));
 vi.mock("@/lib/serializers", () => ({ serializeAlbum: (a: unknown) => a }));
-vi.mock("@/services/post-albums", () => ({ getAlbumsForPost: vi.fn() }));
-vi.mock("@/actions/posts", () => ({ linkAlbumToPost: vi.fn() }));
+vi.mock("@/services/post-albums", () => ({ getAlbumsForPost: vi.fn(), linkAlbumToPost: vi.fn() }));
 
 const { getAuthUser } = await import("@/lib/api-utils");
-const { getAlbumsForPost } = await import("@/services/post-albums");
-const { linkAlbumToPost } = await import("@/actions/posts");
+const { getAlbumsForPost, linkAlbumToPost } = await import("@/services/post-albums");
 
 describe("GET /api/posts/[postID]/albums", () => {
   beforeEach(() => {
@@ -91,7 +89,7 @@ describe("POST /api/posts/[postID]/albums", () => {
     expect(res.status).toBe(200);
     const data = await res.json();
     expect(data.status).toBe("linked");
-    expect(linkAlbumToPost).toHaveBeenCalledWith({ postId: 2, albumId: 3 });
+    expect(linkAlbumToPost).toHaveBeenCalledWith(2, 3);
   });
 
   it("returns 400 when linkAlbumToPost throws", async () => {
