@@ -40,4 +40,18 @@ describe("migrateIfNeeded", () => {
     expect(firstCount).toBeGreaterThan(0);
     expect(secondCount).toBe(firstCount);
   });
+
+  it("drops the unused post_album_links table", () => {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), "heron-migrate-"));
+    tempDirs.push(dir);
+    const sqlite = new Database(path.join(dir, "cms.db"), { timeout: 8000 });
+    migrateIfNeeded(sqlite);
+
+    const table = sqlite
+      .prepare("SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'post_album_links'")
+      .get();
+    sqlite.close();
+
+    expect(table).toBeUndefined();
+  });
 });
