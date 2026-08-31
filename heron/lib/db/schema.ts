@@ -116,21 +116,6 @@ export const albumImages = sqliteTable(
   })
 );
 
-export const postAlbumLinks = sqliteTable(
-  "post_album_links",
-  {
-    postId: integer("post_id")
-      .notNull()
-      .references(() => posts.id, { onDelete: "cascade" }),
-    albumId: integer("album_id")
-      .notNull()
-      .references(() => albums.id, { onDelete: "cascade" })
-  },
-  (table) => ({
-    pk: primaryKey({ columns: [table.postId, table.albumId] })
-  })
-);
-
 export const postInlineImages = sqliteTable(
   "post_inline_images",
   {
