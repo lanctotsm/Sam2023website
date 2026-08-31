@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { toast } from "sonner";
@@ -9,6 +9,7 @@ import { apiFetch } from "@/lib/api";
 import { buildThumbUrl } from "@/lib/images";
 import { MediaItemSkeleton } from "@/components/Skeleton";
 import { extractImagesFromZip, isZipFile, isFileWithinSizeLimit, MAX_UPLOAD_BYTES } from "@/lib/upload-utils";
+import { postFormDataWithProgress } from "@/lib/upload-with-progress";
 import {
   adminCardClass as cardClass,
   adminInputClass as inputClass,
@@ -41,6 +42,7 @@ export default function AdminMediaPage() {
   const [error, setError] = useState("");
   const [uploadProgress, setUploadProgress] = useState(0);
   const [isDragging, setIsDragging] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const fetchImages = async () => {
     setLoadingImages(true);
@@ -130,7 +132,7 @@ export default function AdminMediaPage() {
     if (!e.currentTarget.contains(e.relatedTarget as Node)) setIsDragging(false);
   };
 
-  const upload = () => {
+  const upload = async () => {
     if (files.length === 0) return;
 
     const oversized = files.filter((f) => !isFileWithinSizeLimit(f));
@@ -153,43 +155,26 @@ export default function AdminMediaPage() {
       formData.append("files", file);
     }
 
-    const xhr = new XMLHttpRequest();
-    xhr.upload.addEventListener("progress", (event) => {
-      if (event.lengthComputable) {
-        setUploadProgress(Math.round((event.loaded / event.total) * 100));
-      }
-    });
-    xhr.addEventListener("load", () => {
-      setLoading(false);
-      setStatus("");
-      if (xhr.status >= 200 && xhr.status < 300) {
-        try {
-          const data = JSON.parse(xhr.responseText) as { images: ImageMeta[] };
-          setImages((prev) => [...data.images, ...prev]);
-          setFiles([]);
-          setCaption("");
-          setAltText("");
-          toast.success(`${data.images.length} image(s) uploaded.`);
-          const fileInput = document.querySelector('input[type="file"]') as HTMLInputElement;
-          if (fileInput) fileInput.value = "";
-        } catch {
-          setError("Invalid response");
-          toast.error("Upload failed.");
-        }
-      } else {
-        setError(xhr.responseText || `Upload failed (${xhr.status})`);
-        toast.error("Upload failed.");
-      }
-    });
-    xhr.addEventListener("error", () => {
-      setLoading(false);
-      setStatus("");
-      setError("Upload failed");
+    try {
+      const data = await postFormDataWithProgress<{ images: ImageMeta[] }>({
+        url: `${API_BASE}/images/upload`,
+        formData,
+        onProgress: setUploadProgress
+      });
+      setImages((prev) => [...data.images, ...prev]);
+      setFiles([]);
+      setCaption("");
+      setAltText("");
+      toast.success(`${data.images.length} image(s) uploaded.`);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Upload failed";
+      setError(msg);
       toast.error("Upload failed.");
-    });
-    xhr.open("POST", `${API_BASE}/images/upload`);
-    xhr.withCredentials = true;
-    xhr.send(formData);
+    } finally {
+      setLoading(false);
+      setStatus("");
+    }
   };
 
   const handleDelete = async (imageId: number) => {
@@ -236,6 +221,7 @@ export default function AdminMediaPage() {
           }}
         >
           <input
+            ref={fileInputRef}
             className="absolute inset-0 w-full cursor-pointer opacity-0"
             type="file"
             accept="image/*,.zip"

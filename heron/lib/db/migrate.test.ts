@@ -40,4 +40,20 @@ describe("migrateIfNeeded", () => {
     expect(firstCount).toBeGreaterThan(0);
     expect(secondCount).toBe(firstCount);
   });
+
+  it("drops unused leftover tables", () => {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), "heron-migrate-"));
+    tempDirs.push(dir);
+    const sqlite = new Database(path.join(dir, "cms.db"), { timeout: 8000 });
+    migrateIfNeeded(sqlite);
+
+    const leftover = sqlite
+      .prepare(
+        "SELECT name FROM sqlite_master WHERE type = 'table' AND name IN ('post_album_links', 'sessions', 'oauth_states')"
+      )
+      .all();
+    sqlite.close();
+
+    expect(leftover).toEqual([]);
+  });
 });

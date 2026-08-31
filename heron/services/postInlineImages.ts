@@ -12,16 +12,19 @@ export async function getPostInlineImageIds(postId: number): Promise<number[]> {
 
 export async function replacePostInlineImages(postId: number, imageIds: number[]) {
   const db = getDb();
-  await db.delete(postInlineImages).where(eq(postInlineImages.postId, postId));
   const uniqueIds = Array.from(new Set(imageIds.filter((x) => Number.isInteger(x) && x > 0)));
-  if (uniqueIds.length === 0) return;
-  await db.insert(postInlineImages).values(
-    uniqueIds.map((imageId) => ({
-      postId,
-      imageId,
-      source: "upload_insert"
-    }))
-  );
+  // better-sqlite3: transaction callback must be synchronous (see updateSettings).
+  db.transaction((tx) => {
+    tx.delete(postInlineImages).where(eq(postInlineImages.postId, postId)).run();
+    if (uniqueIds.length === 0) return;
+    tx.insert(postInlineImages).values(
+      uniqueIds.map((imageId) => ({
+        postId,
+        imageId,
+        source: "upload_insert"
+      }))
+    ).run();
+  });
 }
 
 export async function isImageReferencedByAnyPost(imageId: number) {

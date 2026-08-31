@@ -3,7 +3,13 @@ import { getDb } from "@/lib/db";
 import { albumImages, images } from "@/lib/db/schema";
 
 export async function addAlbumImage(albumId: number, imageId: number, sortOrder: number) {
-  await getDb().insert(albumImages).values({ albumId, imageId, sortOrder });
+  await getDb()
+    .insert(albumImages)
+    .values({ albumId, imageId, sortOrder })
+    .onConflictDoUpdate({
+      target: [albumImages.albumId, albumImages.imageId],
+      set: { sortOrder }
+    });
 }
 
 export async function getAlbumImages(albumId: number) {
@@ -36,12 +42,16 @@ export async function getAlbumImages(albumId: number) {
 
 export async function updateAlbumImagesOrder(albumId: number, imageIdsInOrder: number[]) {
   const db = getDb();
-  for (let i = 0; i < imageIdsInOrder.length; i++) {
-    await db
-      .update(albumImages)
-      .set({ sortOrder: i })
-      .where(and(eq(albumImages.albumId, albumId), eq(albumImages.imageId, imageIdsInOrder[i])));
-  }
+  // better-sqlite3: transaction callback must be synchronous (see updateSettings).
+  db.transaction((tx) => {
+    for (let i = 0; i < imageIdsInOrder.length; i++) {
+      tx
+        .update(albumImages)
+        .set({ sortOrder: i })
+        .where(and(eq(albumImages.albumId, albumId), eq(albumImages.imageId, imageIdsInOrder[i])))
+        .run();
+    }
+  });
 }
 
 export async function isImageLinkedToAnyAlbum(imageId: number) {

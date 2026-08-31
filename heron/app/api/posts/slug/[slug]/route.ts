@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { errorResponse, getAuthUser } from "@/lib/api-utils";
+import { isPubliclyVisible } from "@/lib/posts-visibility";
 import { serializePost } from "@/lib/serializers";
 import { getPostBySlug } from "@/services/posts";
 
@@ -16,7 +17,7 @@ export async function GET(_: Request, { params }: { params: Promise<{ slug: stri
   }
 
   const user = await getAuthUser();
-  if (!user && row.status !== "published") {
+  if (!user && !isPubliclyVisible(row)) {
     return errorResponse("post not found", 404);
   }
 

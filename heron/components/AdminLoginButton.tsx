@@ -50,7 +50,7 @@ export default function AdminLoginButton() {
     return <span className="text-olive dark:text-dark-muted">...</span>;
   }
 
-  if (session?.user) {
+  if (session?.user?.email && session.user.id != null) {
     return (
       <span className="text-sm text-olive-dark dark:text-dark-muted" title={userEmail}>
         {userEmail}

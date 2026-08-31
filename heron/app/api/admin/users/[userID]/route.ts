@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { errorResponse, getAuthUser, parseId } from "@/lib/api-utils";
-import { removeUser } from "@/actions/admin-users";
+import { removeUser } from "@/services/admin-users";
 
 export async function DELETE(_: Request, { params }: { params: Promise<{ userID: string }> }) {
   const { userID } = await params;
@@ -17,8 +17,8 @@ export async function DELETE(_: Request, { params }: { params: Promise<{ userID:
   try {
     await removeUser(id);
     return NextResponse.json({ status: "removed" });
-  } catch (error: any) {
-    const message = error?.message || "failed to remove user";
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : "failed to remove user";
     const status = message.includes("cannot remove") ? 403 : message.includes("not found") ? 404 : 400;
     return errorResponse(message, status);
   }

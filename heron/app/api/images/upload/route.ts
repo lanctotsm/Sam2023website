@@ -124,11 +124,11 @@ export async function POST(request: Request) {
         throw new Error("failed to create db record");
       }
 
-      // 2. Generate ID-based keys
+      // 2. Generate unguessable keys (same scheme as image replace)
       const id = row.id;
-      const keyThumb = `uploads/${id}-thumb.jpg`;
-      const keyLarge = `uploads/${id}-large.jpg`;
-      const keyOriginal = `uploads/${id}-original${ext}`;
+      const keyThumb = `uploads/${placeholderUuid}/thumb.jpg`;
+      const keyLarge = `uploads/${placeholderUuid}/large.jpg`;
+      const keyOriginal = `uploads/${placeholderUuid}/original${ext}`;
 
       // 3. Upload to S3
       try {

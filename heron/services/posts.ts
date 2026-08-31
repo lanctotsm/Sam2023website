@@ -3,7 +3,7 @@ import { getDb } from "@/lib/db";
 import { posts } from "@/lib/db/schema";
 import { normalizeStatus } from "@/lib/api-utils";
 
-export async function getAllPosts(options: { user?: any; status?: string } = {}) {
+export async function getAllPosts(options: { user?: { id: number } | null; status?: string } = {}) {
   const db = getDb();
   const { user, status } = options;
 
