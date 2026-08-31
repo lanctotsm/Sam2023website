@@ -27,3 +27,15 @@ export async function createUser(email: string, name?: string) {
 export async function deleteUser(id: number) {
   await getDb().delete(adminUsers).where(eq(adminUsers.id, id));
 }
+
+export async function removeUser(id: number) {
+  const row = await getUserById(id);
+  if (!row) {
+    throw new Error("user not found");
+  }
+  if (row.isBaseAdmin) {
+    throw new Error("cannot remove base user");
+  }
+
+  await deleteUser(id);
+}

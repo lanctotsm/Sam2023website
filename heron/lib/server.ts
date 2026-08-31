@@ -1,7 +1,3 @@
-import { getServerSession } from "next-auth";
-import type { User } from "@/lib/api";
-import { authOptions } from "@/lib/auth";
-
 const baseUrl =
   process.env.API_INTERNAL_URL ||
   process.env.NEXTAUTH_URL ||
@@ -20,16 +16,4 @@ export async function serverFetch<T>(path: string, options?: RequestInit): Promi
     throw new Error(`Request failed: ${response.status}`);
   }
   return response.json() as Promise<T>;
-}
-
-export async function getServerUser(): Promise<User | null> {
-  const session = await getServerSession(authOptions);
-  if (!session?.user?.email) {
-    return null;
-  }
-  return {
-    id: session.user.id || 0,
-    email: session.user.email || "",
-    role: session.user.role || "admin"
-  };
 }
