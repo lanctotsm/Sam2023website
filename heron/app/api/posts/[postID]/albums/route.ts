@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { errorResponse, getAuthUser, parseId } from "@/lib/api-utils";
+import { isPubliclyVisible } from "@/lib/posts-visibility";
 import { serializeAlbum } from "@/lib/serializers";
+import { getPostById } from "@/services/posts";
 import { getAlbumsForPost, linkAlbumToPost } from "@/services/post-albums";
 
 export async function GET(_: Request, { params }: { params: Promise<{ postID: string }> }) {
@@ -8,6 +10,12 @@ export async function GET(_: Request, { params }: { params: Promise<{ postID: st
   const id = parseId(postID);
   if (!id) {
     return errorResponse("invalid post id", 400);
+  }
+
+  const row = await getPostById(id);
+  const user = await getAuthUser();
+  if (!row || (!user && !isPubliclyVisible(row))) {
+    return errorResponse("post not found", 404);
   }
 
   const rows = await getAlbumsForPost(id);
