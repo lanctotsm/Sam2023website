@@ -3,7 +3,13 @@ import { getDb } from "@/lib/db";
 import { albumImages, images } from "@/lib/db/schema";
 
 export async function addAlbumImage(albumId: number, imageId: number, sortOrder: number) {
-  await getDb().insert(albumImages).values({ albumId, imageId, sortOrder });
+  await getDb()
+    .insert(albumImages)
+    .values({ albumId, imageId, sortOrder })
+    .onConflictDoUpdate({
+      target: [albumImages.albumId, albumImages.imageId],
+      set: { sortOrder }
+    });
 }
 
 export async function getAlbumImages(albumId: number) {

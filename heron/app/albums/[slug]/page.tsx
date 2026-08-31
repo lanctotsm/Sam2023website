@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { serverFetch, getServerUser } from "@/lib/server";
+import { serverFetch } from "@/lib/server";
+import { getAuthUser } from "@/lib/api-utils";
 import type { Album, Image as AlbumImage } from "@/lib/api";
 import AlbumViewer from "@/components/AlbumViewer";
 
@@ -14,12 +15,12 @@ export default async function AlbumDetailPage({ params }: PageProps) {
   const { slug } = await params;
   let album: Album;
   let images: AlbumImage[];
-  let user: Awaited<ReturnType<typeof getServerUser>>;
+  let user: Awaited<ReturnType<typeof getAuthUser>>;
   try {
     album = await serverFetch<Album>(`/albums/slug/${slug}`);
     const imagesData = await serverFetch<AlbumImage[]>(`/albums/${album.id}/images`);
     images = imagesData || [];
-    user = await getServerUser();
+    user = await getAuthUser();
   } catch {
     notFound();
   }

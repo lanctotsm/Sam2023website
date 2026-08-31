@@ -1,6 +1,3 @@
-import type { User } from "@/lib/api";
-import { getAuthUser } from "@/lib/api-utils";
-
 const baseUrl =
   process.env.API_INTERNAL_URL ||
   process.env.NEXTAUTH_URL ||
@@ -19,8 +16,4 @@ export async function serverFetch<T>(path: string, options?: RequestInit): Promi
     throw new Error(`Request failed: ${response.status}`);
   }
   return response.json() as Promise<T>;
-}
-
-export async function getServerUser(): Promise<User | null> {
-  return getAuthUser();
 }
