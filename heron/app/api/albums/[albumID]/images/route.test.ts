@@ -4,6 +4,10 @@ import { jsonRequest, getRequest, getParams, MOCK_AUTH_USER } from "@/app/api/__
 
 vi.mock("@/lib/api-utils", () => ({
   getAuthUser: vi.fn(),
+  parseId: (v: string) => {
+    const n = Number(v);
+    return Number.isInteger(n) && n > 0 ? n : null;
+  },
   errorResponse: (message: string, status: number) =>
     new Response(JSON.stringify({ error: message }), { status })
 }));
@@ -38,6 +42,18 @@ describe("ALBUMS /api/albums/[albumID]/images", () => {
     it("returns 400 for invalid album id", async () => {
       const res = await GET(getRequest("http://x"), { params: getParams({ albumID: "x" }) });
       expect(res.status).toBe(400);
+    });
+
+    it("returns 400 for prefixed numeric ids that parseInt would accept", async () => {
+      const res = await GET(getRequest("http://x"), { params: getParams({ albumID: "1abc" }) });
+      expect(res.status).toBe(400);
+      expect(getAlbumById).not.toHaveBeenCalled();
+    });
+
+    it("returns 400 for negative album ids", async () => {
+      const res = await GET(getRequest("http://x"), { params: getParams({ albumID: "-1" }) });
+      expect(res.status).toBe(400);
+      expect(getAlbumById).not.toHaveBeenCalled();
     });
 
     it("returns 404 when album not found", async () => {

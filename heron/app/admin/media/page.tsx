@@ -10,6 +10,11 @@ import { buildThumbUrl } from "@/lib/images";
 import { MediaItemSkeleton } from "@/components/Skeleton";
 import { extractImagesFromZip, isZipFile, isFileWithinSizeLimit, MAX_UPLOAD_BYTES } from "@/lib/upload-utils";
 import { postFormDataWithProgress } from "@/lib/upload-with-progress";
+import {
+  adminCardClass as cardClass,
+  adminInputClass as inputClass,
+  adminLabelClass as labelClass
+} from "@/lib/admin-ui";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || "/api";
 
@@ -191,12 +196,6 @@ export default function AdminMediaPage() {
       cancel: { label: "Cancel", onClick: () => {} }
     });
   };
-
-  const inputClass =
-    "w-full rounded-lg border border-desert-tan-dark bg-white px-3 py-2.5 text-chestnut-dark outline-none transition focus:border-chestnut focus:ring-2 focus:ring-chestnut/10 dark:border-dark-muted dark:bg-dark-bg dark:text-dark-text dark:placeholder:text-dark-muted/60";
-  const labelClass = "text-sm font-medium text-chestnut-dark dark:text-dark-text";
-  const cardClass =
-    "rounded-xl border border-desert-tan-dark bg-surface p-4 shadow-[0_2px_8px_rgba(72,9,3,0.08)] dark:border-dark-muted dark:bg-dark-surface";
 
   return (
     <div className="flex flex-col gap-6">

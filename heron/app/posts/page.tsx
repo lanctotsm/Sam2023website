@@ -2,18 +2,9 @@ import Link from "next/link";
 import { serverFetch } from "@/lib/server";
 import type { Post } from "@/lib/api";
 import PageStyleProvider from "@/components/PageStyleProvider";
+import { formatPostDate } from "@/lib/format-post-date";
 
 export const dynamic = "force-dynamic";
-
-function formatPostDate(dateStr: string | null | undefined): string {
-  if (!dateStr) return "";
-  const d = new Date(dateStr);
-  return d.toLocaleDateString("en-US", {
-    year: "numeric",
-    month: "short",
-    day: "numeric"
-  });
-}
 
 export default async function PostsPage() {
   const postsData = await serverFetch<Post[]>("/posts");

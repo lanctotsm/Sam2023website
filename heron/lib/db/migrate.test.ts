@@ -41,17 +41,19 @@ describe("migrateIfNeeded", () => {
     expect(secondCount).toBe(firstCount);
   });
 
-  it("drops the unused post_album_links table", () => {
+  it("drops unused leftover tables", () => {
     const dir = fs.mkdtempSync(path.join(os.tmpdir(), "heron-migrate-"));
     tempDirs.push(dir);
     const sqlite = new Database(path.join(dir, "cms.db"), { timeout: 8000 });
     migrateIfNeeded(sqlite);
 
-    const table = sqlite
-      .prepare("SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'post_album_links'")
-      .get();
+    const leftover = sqlite
+      .prepare(
+        "SELECT name FROM sqlite_master WHERE type = 'table' AND name IN ('post_album_links', 'sessions', 'oauth_states')"
+      )
+      .all();
     sqlite.close();
 
-    expect(table).toBeUndefined();
+    expect(leftover).toEqual([]);
   });
 });

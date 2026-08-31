@@ -18,22 +18,22 @@ import {
   isFileWithinSizeLimit,
   MAX_UPLOAD_BYTES
 } from "@/lib/upload-utils";
+import { parseId } from "@/lib/parse-id";
+import {
+  adminCardClass as cardClass,
+  adminInputClass as inputClass,
+  adminLabelClass as labelClass
+} from "@/lib/admin-ui";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || "/api";
 
 type PendingFile = { id: string; file: File; preview: string };
 type UploadingFile = { id: string; file: File; progress: number };
 
-const inputClass =
-  "w-full rounded-lg border border-desert-tan-dark bg-white px-3 py-2.5 text-chestnut-dark outline-none transition focus:border-chestnut focus:ring-2 focus:ring-chestnut/10 dark:border-dark-muted dark:bg-dark-bg dark:text-dark-text dark:placeholder:text-dark-muted";
-const labelClass = "text-sm font-medium text-chestnut-dark dark:text-dark-text";
-const cardClass =
-  "rounded-xl border border-desert-tan-dark bg-surface p-4 shadow-[0_2px_8px_rgba(72,9,3,0.08)] dark:border-dark-muted dark:bg-dark-surface";
-
 export default function AdminAlbumEditorPage() {
   const { confirm } = useDialog();
   const params = useParams();
-  const id = typeof params.albumID === "string" ? parseInt(params.albumID, 10) : NaN;
+  const id = typeof params.albumID === "string" ? parseId(params.albumID) : null;
   const [album, setAlbum] = useState<Album | null>(null);
   const [images, setImages] = useState<SortableImage[]>([]);
   const [form, setForm] = useState({ title: "", slug: "", description: "" });
@@ -57,7 +57,7 @@ export default function AdminAlbumEditorPage() {
   const linkingRef = useRef(false);
 
   const fetchData = useCallback(async () => {
-    if (Number.isNaN(id)) return;
+    if (!id) return;
     try {
       const [albumList, imagesData, allImagesData] = await Promise.all([
         apiFetch<Album[]>("/albums"),
@@ -334,7 +334,7 @@ export default function AdminAlbumEditorPage() {
   };
 
   const linkImage = async () => {
-    if (!selectedImage || linkingRef.current) return;
+    if (!id || !selectedImage || linkingRef.current) return;
     linkingRef.current = true;
     setLinking(true);
 
@@ -376,7 +376,7 @@ export default function AdminAlbumEditorPage() {
     e.stopPropagation();
   };
 
-  if (Number.isNaN(id)) {
+  if (!id) {
     return (
       <article className={cardClass}>
         <p className="text-copper">Invalid album id.</p>

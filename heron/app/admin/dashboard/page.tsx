@@ -5,6 +5,7 @@ import Link from "next/link";
 import type { Post, Album, Image } from "@/lib/api";
 import { apiFetch } from "@/lib/api";
 import { PostCardSkeleton, StatCardSkeleton } from "@/components/Skeleton";
+import AdminQuickActions from "@/components/admin/AdminQuickActions";
 
 export default function AdminDashboardPage() {
   const [stats, setStats] = useState({ posts: 0, albums: 0, images: 0 });
@@ -129,32 +130,13 @@ export default function AdminDashboardPage() {
         </Link>
       </section>
 
-      <section className="rounded-xl border border-desert-tan-dark bg-surface p-4 shadow-[0_2px_8px_rgba(72,9,3,0.08)] dark:border-dark-muted dark:bg-dark-surface">
-        <h2 className="text-chestnut dark:text-dark-text">Quick Actions</h2>
-        <div className="mt-4 grid grid-cols-[repeat(auto-fit,minmax(150px,1fr))] gap-3">
-          <Link
-            href="/admin/posts"
-            className="flex flex-col items-center gap-2 rounded-xl border border-desert-tan-dark bg-white p-5 text-chestnut transition-all hover:-translate-y-0.5 hover:border-caramel hover:bg-desert-tan dark:border-dark-muted dark:bg-dark-bg dark:text-dark-text dark:hover:border-caramel/50 dark:hover:bg-dark-surface"
-          >
-            <span className="text-3xl">📝</span>
-            <span>Create Post</span>
-          </Link>
-          <Link
-            href="/upload"
-            className="flex flex-col items-center gap-2 rounded-xl border border-desert-tan-dark bg-white p-5 text-chestnut transition-all hover:-translate-y-0.5 hover:border-caramel hover:bg-desert-tan dark:border-dark-muted dark:bg-dark-bg dark:text-dark-text dark:hover:border-caramel/50 dark:hover:bg-dark-surface"
-          >
-            <span className="text-3xl">📷</span>
-            <span>Upload Photos</span>
-          </Link>
-          <Link
-            href="/admin/albums"
-            className="flex flex-col items-center gap-2 rounded-xl border border-desert-tan-dark bg-white p-5 text-chestnut transition-all hover:-translate-y-0.5 hover:border-caramel hover:bg-desert-tan dark:border-dark-muted dark:bg-dark-bg dark:text-dark-text dark:hover:border-caramel/50 dark:hover:bg-dark-surface"
-          >
-            <span className="text-3xl">📁</span>
-            <span>Manage Albums</span>
-          </Link>
-        </div>
-      </section>
+      <AdminQuickActions
+        actions={[
+          { href: "/admin/posts", emoji: "📝", label: "Create Post" },
+          { href: "/upload", emoji: "📷", label: "Upload Photos" },
+          { href: "/admin/albums", emoji: "📁", label: "Manage Albums" }
+        ]}
+      />
     </div>
   );
 }

@@ -4,12 +4,11 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { Album } from "@/lib/api";
 import { apiFetch } from "@/lib/api";
-
-const inputClass =
-  "w-full rounded-lg border border-desert-tan-dark bg-white px-3 py-2.5 text-chestnut-dark outline-none transition focus:border-chestnut focus:ring-2 focus:ring-chestnut/10 dark:border-dark-muted dark:bg-dark-bg dark:text-dark-text dark:placeholder:text-dark-muted/60";
-const labelClass = "text-sm font-medium text-chestnut-dark dark:text-dark-text";
-const cardClass =
-  "rounded-xl border border-desert-tan-dark bg-surface p-4 shadow-[0_2px_8px_rgba(72,9,3,0.08)] dark:border-dark-muted dark:bg-dark-surface";
+import {
+  adminCardClass as cardClass,
+  adminInputClass as inputClass,
+  adminLabelClass as labelClass
+} from "@/lib/admin-ui";
 
 export default function UploadForm() {
   const router = useRouter();

@@ -6,23 +6,17 @@ import { toast } from "sonner";
 import type { Post } from "@/lib/api";
 import { apiFetch, createPost, uploadImages } from "@/lib/api";
 import { slugify } from "@/lib/slug";
+import { POST_SEO_META_KEYS } from "@/lib/post-seo";
+import { parseId } from "@/lib/parse-id";
+import {
+  adminCardClass as cardClass,
+  adminInputClass as inputClass,
+  adminLabelClass as labelClass
+} from "@/lib/admin-ui";
 import { buildImageUrl } from "@/lib/images";
 import AlbumSelectModal from "@/components/AlbumSelectModal";
 import MarkdownPreview from "@/components/MarkdownPreview";
 import AdminPostsList from "@/components/admin/AdminPostsList";
-
-const COMMON_META_KEYS = [
-  "seo_title",
-  "seo_description",
-  "og_image",
-  "og_title",
-  "og_description",
-  "author",
-  "canonical_url",
-  "twitter_card",
-  "keywords",
-  "robots"
-];
 
 const emptyPost = {
   title: "",
@@ -84,8 +78,9 @@ export default function AdminPostsPage() {
   useEffect(() => {
     const editId = searchParams.get("edit");
     if (editId && posts.length > 0 && appliedEditRef.current !== editId) {
+      const id = parseId(editId);
+      if (!id) return;
       appliedEditRef.current = editId;
-      const id = parseInt(editId, 10);
       const post = posts.find((p) => p.id === id);
       if (post) {
         handleEdit(post);
@@ -266,12 +261,6 @@ export default function AdminPostsPage() {
     }
   };
 
-  const inputClass =
-    "w-full rounded-lg border border-desert-tan-dark bg-white px-3 py-2.5 text-chestnut-dark outline-none transition focus:border-chestnut focus:ring-2 focus:ring-chestnut/10 dark:border-dark-muted dark:bg-dark-bg dark:text-dark-text dark:placeholder:text-dark-muted/60";
-  const labelClass = "text-sm font-medium text-chestnut-dark dark:text-dark-text";
-  const cardClass =
-    "rounded-xl border border-desert-tan-dark bg-surface p-4 shadow-[0_2px_8px_rgba(72,9,3,0.08)] dark:border-dark-muted dark:bg-dark-surface";
-
   return (
     <div className="flex flex-col gap-6">
       <section className={`${cardClass} flex flex-col gap-4`}>
@@ -399,7 +388,7 @@ export default function AdminPostsPage() {
             ))}
             <div className="flex items-center gap-2 mt-2">
               <datalist id="meta-key-suggestions">
-                {COMMON_META_KEYS.map((k) => (
+                {POST_SEO_META_KEYS.map((k) => (
                   <option key={k} value={k} />
                 ))}
               </datalist>

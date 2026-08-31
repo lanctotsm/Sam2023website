@@ -59,6 +59,14 @@ describe("lib/api-utils", () => {
       expect(parseId("abc")).toBeNull();
       expect(parseId("1.5")).toBeNull();
       expect(parseId("")).toBeNull();
+      expect(parseId("1abc")).toBeNull();
+    });
+
+    it("returns null for scientific, hex, and signed strings Number would coerce", () => {
+      expect(parseId("1e2")).toBeNull();
+      expect(parseId("0x10")).toBeNull();
+      expect(parseId("+1")).toBeNull();
+      expect(parseId("01")).toBeNull();
     });
   });
 });
