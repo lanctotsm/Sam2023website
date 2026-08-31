@@ -19,6 +19,7 @@ const ALLOWED_SETTING_KEYS = new Set([
     "site_title",
     "footer_text",
     "front_page",
+    "posts_page",
     "page_styles",
     "nav_styles",
     "ai_alt_text_enabled",
