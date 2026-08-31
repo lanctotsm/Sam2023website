@@ -111,21 +111,18 @@ export const authOptions: NextAuthOptions = {
       return jwtIfStillAllowed(token);
     },
     async session({ session, token }) {
-      if (!session.user) {
-        return session;
-      }
       const user = sessionUserFromToken(token);
       if (!user) {
-        session.user.id = undefined;
-        session.user.email = undefined;
-        session.user.role = undefined;
-        session.user.name = undefined;
-        return session;
+        const { user: _cleared, ...unsigned } = session;
+        return unsigned;
       }
-      session.user.id = user.id;
-      session.user.email = user.email;
-      session.user.role = user.role;
-      session.user.name = user.name ?? session.user.name;
+      session.user = {
+        ...session.user,
+        id: user.id,
+        email: user.email,
+        role: user.role,
+        name: user.name ?? session.user?.name
+      };
       return session;
     }
   }

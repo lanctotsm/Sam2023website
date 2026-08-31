@@ -26,6 +26,15 @@ describe("getAuthUser", () => {
     vi.mocked(isAllowedUserEmail).mockReset();
   });
 
+  it("returns null when the session has an email but no user id", async () => {
+    vi.mocked(getServerSession).mockResolvedValue({
+      user: { email: "gone@example.com", role: "admin" }
+    } as never);
+
+    await expect(getAuthUser()).resolves.toBeNull();
+    expect(isAllowedUserEmail).not.toHaveBeenCalled();
+  });
+
   it("returns null when the session email is no longer allowlisted", async () => {
     vi.mocked(getServerSession).mockResolvedValue({
       user: { id: 1, email: "gone@example.com", role: "admin" }
