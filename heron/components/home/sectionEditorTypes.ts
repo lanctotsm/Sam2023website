@@ -9,7 +9,7 @@ export type SectionEditorUi = {
     btnAdd: string;
 };
 
-export type SectionEditorProps<T extends HomeSectionTemplateData> = {
+export type SectionEditorProps<T extends Record<string, unknown> = HomeSectionTemplateData> = {
     sectionId: string;
     data: T;
     onChange: (patch: Partial<T>) => void;

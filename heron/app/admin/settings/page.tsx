@@ -15,12 +15,18 @@ import {
     parseNavStyles,
     defaultNavStyle,
 } from "@/lib/frontPageDefaults";
+import {
+    defaultPostsPage,
+    parsePostsPageConfig,
+    type PostsPageSettings,
+} from "@/lib/postsPage";
 import PageStyleEditor from "@/components/PageStyleEditor";
 import NavStyleEditor from "@/components/NavStyleEditor";
 import HomePageSettingsTab from "@/components/admin/HomePageSettingsTab";
+import PostsPageSettingsTab from "@/components/admin/PostsPageSettingsTab";
 
 type Toast = { message: string; type: "success" | "error" };
-type Tab = "general" | "homepage" | "styles";
+type Tab = "general" | "homepage" | "postspage" | "styles";
 
 // ─── Styles ────────────────────────────────────────────────────────────────────
 const sectionClass =
@@ -56,6 +62,9 @@ export default function AdminSettingsPage() {
     // Home page
     const [config, setConfig] = useState<FrontPageSettings>(defaultFrontPage);
 
+    // Posts page
+    const [postsPageConfig, setPostsPageConfig] = useState<PostsPageSettings>(defaultPostsPage);
+
     // Page styles (backgrounds + typography + colors)
     const [pageStyles, setPageStyles] = useState<PageStyles>(defaultPageStyles);
     
@@ -80,13 +89,14 @@ export default function AdminSettingsPage() {
         (async () => {
             try {
                 const data = await apiFetch<Record<string, string>>(
-                    "/settings?keys=site_title,footer_text,front_page,page_styles,nav_styles,ai_alt_text_enabled",
+                    "/settings?keys=site_title,footer_text,front_page,posts_page,page_styles,nav_styles,ai_alt_text_enabled",
                     { cache: "no-store" }
                 );
                 if (data.site_title) setSiteTitle(data.site_title);
                 if (data.footer_text) setFooterText(data.footer_text);
                 if (data.ai_alt_text_enabled === "true") setAiAltTextEnabled(true);
                 if (data.front_page) setConfig(parseFrontPageConfig(data.front_page));
+                if (data.posts_page) setPostsPageConfig(parsePostsPageConfig(data.posts_page));
 
                 const loadedPageStyles = parsePageStyles(data.page_styles ?? null);
                 const loadedNavStyles = parseNavStyles(data.nav_styles ?? null);
@@ -128,6 +138,7 @@ export default function AdminSettingsPage() {
                         footer_text: footerText,
                         ai_alt_text_enabled: aiAltTextEnabled ? "true" : "false",
                         front_page: JSON.stringify(config),
+                        posts_page: JSON.stringify(postsPageConfig),
                         page_styles: newPageStylesJson,
                         nav_styles: newNavStylesJson,
                     },
@@ -215,6 +226,7 @@ export default function AdminSettingsPage() {
             <div className="flex flex-wrap gap-2">
                 {tabBtn("general", "⚙️ General")}
                 {tabBtn("homepage", "🏠 Home Page")}
+                {tabBtn("postspage", "📝 Posts Page")}
                 {tabBtn("styles", "🎨 Page Styles")}
             </div>
 
@@ -296,6 +308,22 @@ export default function AdminSettingsPage() {
                     config={config}
                     setConfig={setConfig}
                     homePageStyle={pageStyles.home.style}
+                    showToast={showToast}
+                    uploadBackgroundImage={uploadBackgroundImage}
+                    sectionClass={sectionClass}
+                    labelClass={labelClass}
+                    inputClass={inputClass}
+                    textareaClass={textareaClass}
+                    btnDanger={btnDanger}
+                    btnAdd={btnAdd}
+                />
+            )}
+
+            {activeTab === "postspage" && (
+                <PostsPageSettingsTab
+                    config={postsPageConfig}
+                    setConfig={setPostsPageConfig}
+                    postsPageStyle={pageStyles.posts.style}
                     showToast={showToast}
                     uploadBackgroundImage={uploadBackgroundImage}
                     sectionClass={sectionClass}
