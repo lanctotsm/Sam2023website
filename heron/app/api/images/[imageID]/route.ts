@@ -2,9 +2,15 @@ import { NextResponse } from "next/server";
 import { errorResponse, getAuthUser, parseId } from "@/lib/api-utils";
 import { serializeImage } from "@/lib/serializers";
 import { deleteImage, getImageById, updateImage } from "@/services/images";
+import { isAllowedObjectKey } from "@/lib/object-key";
 import { deleteObjects } from "@/lib/s3";
 
 export async function GET(_: Request, { params }: { params: Promise<{ imageID: string }> }) {
+  const user = await getAuthUser();
+  if (!user) {
+    return errorResponse("unauthorized", 401);
+  }
+
   const { imageID } = await params;
   const id = parseId(imageID);
   if (!id) {
@@ -35,6 +41,9 @@ export async function PUT(request: Request, { params }: { params: Promise<{ imag
   const s3Key = (payload.s3_key || "").trim();
   if (!s3Key) {
     return errorResponse("s3_key is required", 400);
+  }
+  if (!isAllowedObjectKey(s3Key)) {
+    return errorResponse("s3_key is not allowed", 400);
   }
 
   const updated = await updateImage(id, {

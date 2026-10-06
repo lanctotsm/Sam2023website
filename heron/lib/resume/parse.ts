@@ -2,6 +2,7 @@
  * `parseFrontPageConfig` contract: never throw, always return a structurally
  * valid `ResumeDocument`. */
 
+import { safeHttpUrl } from "@/lib/safe-url";
 import { createDefaultResume, STANDARD_SECTION_IDS } from "./defaults";
 import type {
     Basics,
@@ -28,6 +29,10 @@ function generateId(): string {
 
 function str(value: unknown): string {
     return typeof value === "string" ? value.trim() : "";
+}
+
+function safeUrl(value: unknown): string {
+    return safeHttpUrl(str(value));
 }
 
 function strArray(value: unknown): string[] {
@@ -72,7 +77,7 @@ function sanitizeProfile(raw: Record<string, unknown>, seen: Set<string>): Profi
         id: entryId(raw, seen),
         network: str(raw.network),
         username: str(raw.username),
-        url: str(raw.url)
+        url: safeUrl(raw.url)
     };
 }
 
@@ -84,7 +89,7 @@ function sanitizeBasics(value: unknown): Basics {
         label: str(raw.label),
         email: str(raw.email),
         phone: str(raw.phone),
-        url: str(raw.url),
+        url: safeUrl(raw.url),
         summary: str(raw.summary),
         location: { city: str(location.city), region: str(location.region) },
         profiles: sanitizeEntries(raw.profiles, sanitizeProfile)
@@ -97,7 +102,7 @@ function sanitizeWorkEntry(raw: Record<string, unknown>, seen: Set<string>): Wor
         name: str(raw.name),
         position: str(raw.position),
         location: str(raw.location),
-        url: str(raw.url),
+        url: safeUrl(raw.url),
         startDate: str(raw.startDate),
         endDate: str(raw.endDate),
         summary: str(raw.summary),
@@ -112,7 +117,7 @@ function sanitizeProjectEntry(raw: Record<string, unknown>, seen: Set<string>): 
         description: str(raw.description),
         highlights: strArray(raw.highlights),
         keywords: strArray(raw.keywords),
-        url: str(raw.url),
+        url: safeUrl(raw.url),
         startDate: str(raw.startDate),
         endDate: str(raw.endDate)
     };
@@ -134,7 +139,7 @@ function sanitizeEducationEntry(raw: Record<string, unknown>, seen: Set<string>)
         studyType: str(raw.studyType),
         startDate: str(raw.startDate),
         endDate: str(raw.endDate),
-        url: str(raw.url)
+        url: safeUrl(raw.url)
     };
 }
 
@@ -144,7 +149,7 @@ function sanitizeCertificateEntry(raw: Record<string, unknown>, seen: Set<string
         name: str(raw.name),
         date: str(raw.date),
         issuer: str(raw.issuer),
-        url: str(raw.url)
+        url: safeUrl(raw.url)
     };
 }
 
@@ -153,7 +158,7 @@ function sanitizeVolunteerEntry(raw: Record<string, unknown>, seen: Set<string>)
         id: entryId(raw, seen),
         organization: str(raw.organization),
         position: str(raw.position),
-        url: str(raw.url),
+        url: safeUrl(raw.url),
         startDate: str(raw.startDate),
         endDate: str(raw.endDate),
         summary: str(raw.summary),
@@ -220,7 +225,7 @@ function sanitizeMeta(
     const sectionOrder = reconcileSectionOrder(heron.sectionOrder, customSections);
     const sectionIds = new Set(sectionOrder);
     return {
-        canonical: str(raw.canonical),
+        canonical: safeUrl(raw.canonical),
         version: str(raw.version) || "v1.0.0",
         lastModified: str(raw.lastModified),
         heron: {
