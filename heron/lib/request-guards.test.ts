@@ -39,7 +39,11 @@ describe("isCrossSiteMutation", () => {
 
   it("allows same-origin mutations and non-browser requests", () => {
     expect(isCrossSiteMutation(request({
-      headers: { origin: "http://localhost:3000" }
+      headers: { origin: "http://localhost:3000", host: "localhost:3000" }
+    }))).toBe(false);
+    expect(isCrossSiteMutation(request({
+      url: "http://0.0.0.0:3000/api/posts",
+      headers: { origin: "http://localhost:3000", host: "localhost:3000" }
     }))).toBe(false);
     expect(isCrossSiteMutation(request({}))).toBe(false);
     expect(isCrossSiteMutation(request({

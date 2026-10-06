@@ -49,9 +49,34 @@ export function isCrossSiteMutation(request: GuardRequest): boolean {
     return false;
   }
 
+  const expected = expectedOrigin(request, requestUrl);
+  if (!expected) {
+    return false;
+  }
+
   try {
-    return new URL(origin).origin !== requestUrl.origin;
+    return new URL(origin).origin !== expected;
   } catch {
     return true;
+  }
+}
+
+/**
+ * The origin the client used. Prefer Host / X-Forwarded-* over request.url,
+ * which can be an internal bind address such as 0.0.0.0.
+ */
+function expectedOrigin(request: GuardRequest, requestUrl: URL): string | null {
+  const forwardedHost = request.headers.get("x-forwarded-host");
+  const host = (forwardedHost ? forwardedHost.split(",")[0] : request.headers.get("host"))?.trim();
+  if (!host) {
+    return requestUrl.origin;
+  }
+
+  const forwardedProto = request.headers.get("x-forwarded-proto")?.split(",")[0]?.trim();
+  const proto = forwardedProto || requestUrl.protocol.replace(":", "") || "http";
+  try {
+    return new URL(`${proto}://${host}`).origin;
+  } catch {
+    return requestUrl.origin;
   }
 }
