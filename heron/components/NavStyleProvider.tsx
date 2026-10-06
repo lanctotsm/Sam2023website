@@ -1,16 +1,7 @@
 import { getSetting } from "@/services/settings";
+import { safeColor } from "@/lib/css-values";
 import { parseNavStyles } from "@/lib/frontPageDefaults";
 import { fontFamilyValue } from "@/lib/fonts";
-
-/**
- * Reject any color value that isn't a plain hex, rgb(), rgba(), hsl(), or hsla()
- * before injecting it into a <style> tag.
- */
-function safeColor(val: string): string | null {
-    return /^#[0-9a-fA-F]{3,8}$|^rgba?\([\d\s,.%/]+\)$|^hsla?\([\d\s,.%/]+\)$/.test(val.trim())
-        ? val.trim()
-        : null;
-}
 
 /**
  * NavStyleProvider injects custom nav CSS variables via a <style> block so that

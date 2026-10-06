@@ -106,6 +106,21 @@ describe("lib/resume/parse", () => {
         expect(doc.meta.heron.hiddenSections).toEqual(["projects"]);
     });
 
+    it("drops javascript URLs from stored link fields", () => {
+        const doc = sanitizeResumeDocument({
+            basics: {
+                url: "javascript:alert(1)",
+                profiles: [{ network: "GitHub", url: "https://github.com/sam" }]
+            },
+            work: [{ id: "w1", name: "Acme", url: "javascript:alert(2)" }],
+            meta: { canonical: "javascript:alert(3)" }
+        });
+        expect(doc.basics.url).toBe("");
+        expect(doc.basics.profiles[0].url).toBe("https://github.com/sam");
+        expect(doc.work[0].url).toBe("");
+        expect(doc.meta.canonical).toBe("");
+    });
+
     it("is idempotent: re-parsing serialized output is a fixed point", () => {
         const doc = sanitizeResumeDocument({
             basics: { name: "Sam", profiles: [{ network: "GitHub", url: "https://g" }] },

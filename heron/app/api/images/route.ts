@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { errorResponse, getAuthUser } from "@/lib/api-utils";
 import { serializeImage } from "@/lib/serializers";
+import { isAllowedObjectKey } from "@/lib/object-key";
 import { createImage, getAllImages } from "@/services/images";
 
 export async function GET() {
@@ -23,6 +24,9 @@ export async function POST(request: Request) {
   const s3Key = (payload.s3_key || "").trim();
   if (!s3Key) {
     return errorResponse("s3_key is required", 400);
+  }
+  if (!isAllowedObjectKey(s3Key)) {
+    return errorResponse("s3_key is not allowed", 400);
   }
 
   try {

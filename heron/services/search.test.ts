@@ -56,6 +56,12 @@ describe("searchFts", () => {
     expect(result.posts).toEqual([]);
   });
 
+  it("caps the bound FTS query at 100 characters", async () => {
+    mockGetPostById.mockResolvedValue(publishedPost);
+    await searchFts(`${"a".repeat(150)}`);
+    expect(mockPrepareAll).toHaveBeenCalledWith("a".repeat(100));
+  });
+
   it("includes a published post whose publishedAt is in the past", async () => {
     mockGetPostById.mockResolvedValue(publishedPost);
 
