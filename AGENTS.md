@@ -11,12 +11,10 @@ setup is documented in the root `README.md`.
 
 ### Node version (important)
 
-- The app requires **Node.js 24.22.2 or newer** (native `better-sqlite3` / `sharp` are built for the
-  active Node ABI, and CI pins 24.22.2). 24.22.1 patched the Brotli decoder (CVE-2026-111497);
-  24.22.2 is the patch CI, `.nvmrc`, and the Lightsail runtime image install. The startup update
-  script installs Node 24 via `nvm`, and `nvm alias default 24` is set so interactive shells
-  (which source `nvm` from `~/.bashrc`) get a Node 24 automatically. Run `nvm use` in the repo
-  so `.nvmrc` selects 24.22.2.
+- The app requires **Node.js 24** (native `better-sqlite3` / `sharp` are built for the active Node
+  ABI, and CI uses Node 24). The startup update script installs and selects Node 24 via `nvm`, and
+  `nvm alias default 24` is set so interactive shells (which source `nvm` from `~/.bashrc`) get
+  Node 24 automatically.
 - Gotcha: a fixed `/exec-daemon/node` (Node 22) can shadow `nvm` in shells that do not source
   `~/.bashrc`. If `node -v` shows v22, run `nvm use 24` (or start a fresh login shell) before
   running `npm`/`node`. If you ever switch Node versions, rebuild the native addons:

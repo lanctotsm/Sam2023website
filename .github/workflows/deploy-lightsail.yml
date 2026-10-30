@@ -24,13 +24,11 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ secrets.AWS_REGION }}
 
-      # Node 24.22.2 must match the Heron runtime image (better-sqlite3 is native).
-      # 24.22.1 patched the Brotli decoder (CVE-2026-111497); 24.22.2 is the
-      # current 24 LTS patch that includes that fix.
+      # Node 24 must match the Heron runtime image (better-sqlite3 is native)
       - name: Set up Node.js
         uses: actions/setup-node@v6
         with:
-          node-version: 24.22.2
+          node-version: 24
           cache: 'npm'
           cache-dependency-path: heron/package-lock.json
 
