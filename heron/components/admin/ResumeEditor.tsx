@@ -19,17 +19,15 @@ import {
     moveItem,
     type AdminUi
 } from "@/components/admin/resumeEditorShared";
+import {
+  adminBtnAdd as btnAdd,
+  adminBtnDanger as btnDanger,
+  adminCompactInputClass as inputClass,
+  adminCompactLabelClass as labelClass,
+  adminSectionClass as sectionClass
+} from "@/lib/admin-ui";
 
-const sectionClass =
-    "rounded-xl border border-desert-tan-dark bg-surface p-5 shadow-[0_2px_8px_rgba(72,9,3,0.08)] dark:border-dark-muted dark:bg-dark-surface";
-const labelClass = "block text-sm font-semibold text-chestnut-dark dark:text-dark-text mb-1";
-const inputClass =
-    "w-full rounded-lg border border-desert-tan-dark bg-white px-3 py-2 text-sm outline-none focus:border-chestnut dark:border-dark-muted dark:bg-dark-bg dark:text-dark-text dark:focus:border-caramel";
 const textareaClass = `${inputClass} min-h-[80px] resize-y`;
-const btnDanger =
-    "rounded-lg border border-red-300 bg-red-50 px-3 py-1.5 text-sm text-red-700 transition-colors hover:bg-red-100 dark:border-red-800 dark:bg-red-900/30 dark:text-red-300 dark:hover:bg-red-900/50";
-const btnAdd =
-    "rounded-lg border border-desert-tan-dark bg-white px-4 py-2 text-sm font-medium text-chestnut transition-colors hover:bg-desert-tan dark:border-dark-muted dark:bg-dark-bg dark:text-dark-text dark:hover:bg-dark-surface";
 const btnPrimary =
     "rounded-lg bg-chestnut px-5 py-2 text-sm font-semibold text-white transition-colors hover:bg-chestnut-dark disabled:cursor-not-allowed disabled:opacity-60 dark:bg-caramel dark:text-dark-bg dark:hover:bg-caramel-light";
 

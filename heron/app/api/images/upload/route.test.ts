@@ -4,6 +4,10 @@ import { MOCK_AUTH_USER } from "../../__tests__/helpers";
 
 vi.mock("@/lib/api-utils", () => ({
   getAuthUser: vi.fn(),
+  parseId: (v: string) => {
+    const n = Number(v);
+    return Number.isInteger(n) && n > 0 ? n : null;
+  },
   errorResponse: (msg: string, status: number) =>
     new Response(JSON.stringify({ error: msg }), { status })
 }));
@@ -158,6 +162,14 @@ describe("POST /api/images/upload", () => {
     const res = await POST(formRequestWithFiles([file], { album_id: "5" }));
     expect(res.status).toBe(201);
     expect(addAlbumImage).toHaveBeenCalledWith(5, 42, 0);
+  });
+
+  it("does not link to an album when album_id is a prefixed numeric string", async () => {
+    vi.mocked(getAuthUser).mockResolvedValue(MOCK_AUTH_USER as never);
+    const file = new File([new Blob(["\xff\xd8\xff"])], "a.jpg", { type: "image/jpeg" });
+    const res = await POST(formRequestWithFiles([file], { album_id: "1abc" }));
+    expect(res.status).toBe(201);
+    expect(addAlbumImage).not.toHaveBeenCalled();
   });
 
   it("passes caption and alt_text to createImage", async () => {

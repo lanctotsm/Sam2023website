@@ -16,27 +16,6 @@ export const users = sqliteTable(
   })
 );
 
-export const oauthStates = sqliteTable("oauth_states", {
-  state: text("state").primaryKey(),
-  createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`)
-});
-
-export const sessions = sqliteTable(
-  "sessions",
-  {
-    id: integer("id").primaryKey({ autoIncrement: true }),
-    userId: integer("user_id")
-      .notNull()
-      .references(() => users.id, { onDelete: "cascade" }),
-    token: text("token").notNull(),
-    expiresAt: text("expires_at").notNull(),
-    createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`)
-  },
-  (table) => ({
-    tokenIdx: uniqueIndex("idx_sessions_token").on(table.token)
-  })
-);
-
 export const posts = sqliteTable(
   "posts",
   {

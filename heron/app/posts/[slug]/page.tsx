@@ -4,25 +4,14 @@ import type { Metadata } from "next";
 import { serverFetch } from "@/lib/server";
 import type { Post } from "@/lib/api";
 import { renderWithShortcodes } from "@/lib/shortcodes";
+import { formatPostDate } from "@/lib/format-post-date";
+import { POST_SEO_META_KEY_SET } from "@/lib/post-seo";
 
 type PageProps = {
   params: Promise<{ slug: string }>;
 };
 
 export const dynamic = "force-dynamic";
-
-const SEO_META_KEYS = new Set([
-  "seo_title",
-  "seo_description",
-  "og_image",
-  "og_title",
-  "og_description",
-  "author",
-  "canonical_url",
-  "twitter_card",
-  "keywords",
-  "robots"
-]);
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { slug } = await params;
@@ -76,16 +65,6 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   return metadata;
 }
 
-function formatPostDate(dateStr: string | null | undefined): string {
-  if (!dateStr) return "";
-  const d = new Date(dateStr);
-  return d.toLocaleDateString("en-US", {
-    year: "numeric",
-    month: "long",
-    day: "numeric"
-  });
-}
-
 function estimateReadingTime(markdown: string): number {
   const words = markdown.trim().split(/\s+/).filter(Boolean).length;
   return Math.max(1, Math.ceil(words / 200));
@@ -100,7 +79,7 @@ export default async function PostDetailPage({ params }: PageProps) {
     notFound();
   }
 
-  const publishedDate = formatPostDate(post.published_at || post.created_at);
+  const publishedDate = formatPostDate(post.published_at || post.created_at, "long");
   const readingTime = estimateReadingTime(post.markdown);
 
   return (
@@ -133,7 +112,7 @@ export default async function PostDetailPage({ params }: PageProps) {
             </span>
           </div>
           {post.metadata && Object.keys(post.metadata).length > 0 && (() => {
-            const customEntries = Object.entries(post.metadata).filter(([key]) => !SEO_META_KEYS.has(key));
+            const customEntries = Object.entries(post.metadata).filter(([key]) => !POST_SEO_META_KEY_SET.has(key));
             if (customEntries.length === 0) return null;
             return (
               <div className="mt-5 flex flex-wrap gap-2">

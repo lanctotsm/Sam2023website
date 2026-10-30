@@ -5,6 +5,11 @@ import LucideIcon from "@/components/LucideIcon";
 import type { PageBackgroundConfig, PageStyleConfig, PageStyleEntry } from "@/lib/frontPageDefaults";
 import { AVAILABLE_FONTS, fontFamilyValue } from "@/lib/fonts";
 import PageStylePreview from "@/components/PageStylePreview";
+import {
+  adminBtnAdd as btnAdd,
+  adminCompactInputClass as inputClass,
+  adminCompactLabelClass as labelClass
+} from "@/lib/admin-ui";
 
 type Props = {
     label: string;
@@ -14,11 +19,6 @@ type Props = {
     showToast: (message: string, type: "success" | "error") => void;
 };
 
-const inputClass =
-    "w-full rounded-lg border border-desert-tan-dark bg-white px-3 py-2 text-sm outline-none focus:border-chestnut dark:border-dark-muted dark:bg-dark-bg dark:text-dark-text dark:focus:border-caramel";
-const labelClass = "block text-sm font-semibold text-chestnut-dark dark:text-dark-text mb-1";
-const btnAdd =
-    "rounded-lg border border-desert-tan-dark bg-white px-4 py-2 text-sm font-medium text-chestnut transition-colors hover:bg-desert-tan dark:border-dark-muted dark:bg-dark-bg dark:text-dark-text dark:hover:bg-dark-surface";
 const groupClass =
     "rounded-lg border border-desert-tan-dark/30 bg-white/20 p-4 dark:border-dark-muted/30 dark:bg-dark-bg/20";
 const groupTitleClass = "mb-3 text-sm font-bold uppercase tracking-wider text-olive-dark dark:text-dark-muted";
