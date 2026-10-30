@@ -1,6 +1,7 @@
 "use client";
 
 import type { ContactSectionData, ContactLink } from "@/lib/frontPageDefaults";
+import { safeHttpUrl } from "@/lib/safe-url";
 import type { SectionEditorProps } from "@/components/home/sectionEditorTypes";
 import IconPicker from "@/components/IconPicker";
 import LucideIcon from "@/components/LucideIcon";
@@ -26,18 +27,36 @@ export function ContactSectionView({ data }: { data: ContactSectionData }) {
             </p>
             {data.showSocials && (
                 <div className="flex flex-wrap justify-center gap-4">
-                    {data.links.map((link) => (
-                        <a
-                            key={link.label}
-                            href={link.url}
-                            target={link.url.startsWith("http") ? "_blank" : undefined}
-                            rel={link.url.startsWith("http") ? "noopener noreferrer" : undefined}
-                            className="flex items-center gap-2 rounded-lg bg-chestnut px-6 py-3 font-semibold text-desert-tan transition-all hover:-translate-y-0.5 hover:bg-chestnut-light dark:bg-caramel dark:text-chestnut-dark dark:hover:bg-caramel-light"
-                        >
-                            <LucideIcon name={link.icon} size={20} />
-                            {link.label}
-                        </a>
-                    ))}
+                    {data.links.map((link) => {
+                        const href = safeHttpUrl(link.url);
+                        const className =
+                            "flex items-center gap-2 rounded-lg bg-chestnut px-6 py-3 font-semibold text-desert-tan transition-all hover:-translate-y-0.5 hover:bg-chestnut-light dark:bg-caramel dark:text-chestnut-dark dark:hover:bg-caramel-light";
+                        const content = (
+                            <>
+                                <LucideIcon name={link.icon} size={20} />
+                                {link.label}
+                            </>
+                        );
+                        if (!href) {
+                            return (
+                                <span key={link.label} className={className}>
+                                    {content}
+                                </span>
+                            );
+                        }
+                        const external = href.startsWith("http");
+                        return (
+                            <a
+                                key={link.label}
+                                href={href}
+                                target={external ? "_blank" : undefined}
+                                rel={external ? "noopener noreferrer" : undefined}
+                                className={className}
+                            >
+                                {content}
+                            </a>
+                        );
+                    })}
                 </div>
             )}
         </section>

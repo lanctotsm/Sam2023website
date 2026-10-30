@@ -5,9 +5,11 @@ import { getAlbumById } from "@/services/albums";
 import { serializePost } from "@/lib/serializers";
 import { serializeAlbum } from "@/lib/serializers";
 
+const MAX_SEARCH_QUERY_LENGTH = 100;
+
 /** Search posts and albums by full-text. Returns only published posts. */
 export async function searchFts(query: string) {
-  const q = query.trim();
+  const q = query.trim().slice(0, MAX_SEARCH_QUERY_LENGTH);
   if (!q) {
     return { posts: [], albums: [] };
   }

@@ -12,6 +12,9 @@ import {
   sessionUserFromToken,
   normalizeEmail
 } from "@/lib/admin-allowlist";
+import { assertProductionAuthConfig, isDevCredentialsEnabled } from "@/lib/security-env";
+
+assertProductionAuthConfig();
 
 async function ensureUserRecord(params: { email: string; googleId: string }) {
   const db = getDb();
@@ -41,9 +44,6 @@ async function ensureUserRecord(params: { email: string; googleId: string }) {
   return inserted[0]?.id ?? null;
 }
 
-const isDevAuthEnabled =
-  process.env.NODE_ENV === "development" || process.env.DEV_AUTH_BYPASS === "true";
-
 export const authOptions: NextAuthOptions = {
   secret: process.env.NEXTAUTH_SECRET,
   session: {
@@ -57,7 +57,7 @@ export const authOptions: NextAuthOptions = {
       clientId: process.env.GOOGLE_CLIENT_ID || "",
       clientSecret: process.env.GOOGLE_CLIENT_SECRET || ""
     }),
-    ...(isDevAuthEnabled
+    ...(isDevCredentialsEnabled()
       ? [
         CredentialsProvider({
           name: "Dev Login",
