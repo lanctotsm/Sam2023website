@@ -1,17 +1,20 @@
 #!/usr/bin/env bash
 # Provision an Ubuntu Lightsail nano as the Heron CMS runtime image.
-# Installs Node 24, Apache (proxy modules), pm2, certbot helpers, and app dirs.
+# Installs Node.js 24.22.2, Apache (proxy modules), pm2, certbot helpers, and app dirs.
 # Idempotent - safe to re-run.
 set -euo pipefail
 
 export DEBIAN_FRONTEND=noninteractive
 
 RUNTIME_USER="${RUNTIME_USER:-ubuntu}"
-NODE_MAJOR="${NODE_MAJOR:-24}"
+# 24.22.1 patched the Brotli decoder (CVE-2026-111497). 24.22.2 keeps that fix
+# and the follow-up regression fixes. Checksums are the linux-x64 and
+# linux-arm64 lines from https://nodejs.org/dist/v24.22.2/SHASUMS256.txt
+NODE_VERSION="24.22.2"
 IMAGE_VERSION="${IMAGE_VERSION:-dev}"
 MARKER="/var/lib/heron-cms/.runtime-image-version"
 
-echo "[provision] Starting Heron runtime provision (Node ${NODE_MAJOR}, version=${IMAGE_VERSION})"
+echo "[provision] Starting Heron runtime provision (Node ${NODE_VERSION}, version=${IMAGE_VERSION})"
 
 if [ "$(id -u)" -ne 0 ]; then
   echo "This script must run as root (use sudo)." >&2
@@ -75,10 +78,36 @@ systemctl mask apt-daily.timer apt-daily-upgrade.timer \
 apt-get -o DPkg::Lock::Timeout=60 remove -y unattended-upgrades apt-listchanges 2>/dev/null || true
 apt-get -o DPkg::Lock::Timeout=60 autoremove -y 2>/dev/null || true
 
-if ! command -v node >/dev/null 2>&1 || ! node -v | grep -q "v${NODE_MAJOR}"; then
-  echo "[provision] Installing Node.js ${NODE_MAJOR} from NodeSource..."
-  curl -fsSL "https://deb.nodesource.com/setup_${NODE_MAJOR}.x" | bash -
-  apt-get install -y nodejs
+case "$(uname -m)" in
+  x86_64)
+    NODE_DIST_ARCH="linux-x64"
+    NODE_SHA256="48cc0e21e048790e54c0cf5749c2725005313d652651c40b7a21feb9697aaf75"
+    ;;
+  aarch64|arm64)
+    NODE_DIST_ARCH="linux-arm64"
+    NODE_SHA256="eb187837a2230d4047161ac0be008584e16b46f726e9c9490ee35dc6b17d9ba8"
+    ;;
+  *)
+    echo "[provision] ERROR: unsupported architecture $(uname -m); Node ${NODE_VERSION} is pinned for x64 and arm64 only." >&2
+    exit 1
+    ;;
+esac
+
+if ! command -v node >/dev/null 2>&1 || [ "$(node -v)" != "v${NODE_VERSION}" ]; then
+  echo "[provision] Installing Node.js ${NODE_VERSION} (${NODE_DIST_ARCH}) from nodejs.org..."
+  NODE_ARCHIVE="$(mktemp /tmp/node-XXXXXX.tar.xz)"
+  curl -fsSL -o "$NODE_ARCHIVE" \
+    "https://nodejs.org/dist/v${NODE_VERSION}/node-v${NODE_VERSION}-${NODE_DIST_ARCH}.tar.xz"
+  echo "${NODE_SHA256}  ${NODE_ARCHIVE}" | sha256sum --check --status \
+    || { echo "[provision] ERROR: Node.js archive checksum mismatch — aborting." >&2; rm -f "$NODE_ARCHIVE"; exit 1; }
+  tar -xJ -C /usr/local --strip-components=1 -f "$NODE_ARCHIVE"
+  rm -f "$NODE_ARCHIVE"
+  hash -r
+fi
+
+if [ "$(node -v)" != "v${NODE_VERSION}" ]; then
+  echo "[provision] ERROR: expected Node v${NODE_VERSION}, found $(node -v) ($(command -v node))." >&2
+  exit 1
 fi
 
 node -v

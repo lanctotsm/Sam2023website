@@ -82,7 +82,7 @@ graph TD
 
 ### Local Development (no Docker)
 
-1. **Node**: Use Node.js 24 (via `nvm use 24`).
+1. **Node**: Use Node.js 24.22.2 or newer (`nvm use` from the repo root reads `.nvmrc`). 24.22.1 is the first 24.x release that patches the Brotli decoder (CVE-2026-111497); CI and the Lightsail runtime image pin 24.22.2.
 2. **Install deps**:
    ```bash
    cd heron && npm install
