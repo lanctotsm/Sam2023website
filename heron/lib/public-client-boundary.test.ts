@@ -19,7 +19,7 @@ describe("public client boundary", () => {
         expect(source("components/FrontPageContent.tsx")).not.toMatch(/["']use client["']/);
         expect(source("components/home/ServerLucideIcon.tsx")).not.toMatch(/["']use client["']/);
 
-        for (const name of ["Banner", "TextBlock", "CardGrid", "TagList", "Contact"]) {
+        for (const name of ["Banner", "TextBlock", "CardGrid", "TagList", "Contact", "RecentWork"]) {
             expect(source(`components/home/templates/${name}SectionView.tsx`)).not.toMatch(/["']use client["']/);
             expect(source(`components/home/templates/${name}SectionEditor.tsx`)).toMatch(/["']use client["']/);
         }

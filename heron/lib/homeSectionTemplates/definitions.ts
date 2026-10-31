@@ -1,11 +1,13 @@
 import type {
     BannerSectionData,
+    BannerVariant,
     CardGridSectionData,
     CardItem,
     ContactLink,
     ContactSectionData,
     HomeSectionTemplateData,
     HomeSectionTemplateId,
+    RecentWorkSectionData,
     TagItem,
     TagListSectionData,
     TextBlockSectionData,
@@ -33,6 +35,7 @@ export const HOME_SECTION_TEMPLATE_DEFS: Record<HomeSectionTemplateId, HomeSecti
             backgroundImage: "",
             gradientFrom: "",
             gradientTo: "",
+            variant: "panel",
         }),
         sanitize: (raw, fb) => sanitizeBannerData(raw, fb as BannerSectionData),
     },
@@ -68,6 +71,19 @@ export const HOME_SECTION_TEMPLATE_DEFS: Record<HomeSectionTemplateId, HomeSecti
             links: [],
         }),
         sanitize: (raw, fb) => sanitizeContactData(raw, fb as ContactSectionData),
+    },
+    "recent-work": {
+        id: "recent-work",
+        label: "Recent work",
+        description: "Published albums and posts, newest first.",
+        defaultData: () => ({
+            heading: "Recent work",
+            albumLimit: 3,
+            postLimit: 3,
+            showAlbums: true,
+            showPosts: true,
+        }),
+        sanitize: (raw, fb) => sanitizeRecentWorkData(raw, fb as RecentWorkSectionData),
     },
 };
 
@@ -159,8 +175,13 @@ function sanitizeContactLinks(value: unknown, fallback: ContactLink[]): ContactL
     return links.length > 0 ? links : fallback;
 }
 
+function bannerVariant(value: unknown): BannerVariant {
+    if (value === "panel" || value === "band" || value === "canvas") return value;
+    return "panel";
+}
+
 function sanitizeBannerData(raw: unknown, fallback: BannerSectionData): BannerSectionData {
-    if (!raw || typeof raw !== "object") return { ...fallback };
+    if (!raw || typeof raw !== "object") return { ...fallback, variant: bannerVariant(fallback.variant) };
     const r = raw as Record<string, unknown>;
     const bg =
         r.backgroundType === "gradient" || r.backgroundType === "color" || r.backgroundType === "image"
@@ -174,6 +195,7 @@ function sanitizeBannerData(raw: unknown, fallback: BannerSectionData): BannerSe
         backgroundImage: typeof r.backgroundImage === "string" ? r.backgroundImage : fallback.backgroundImage,
         gradientFrom: typeof r.gradientFrom === "string" ? r.gradientFrom : fallback.gradientFrom,
         gradientTo: typeof r.gradientTo === "string" ? r.gradientTo : fallback.gradientTo,
+        variant: bannerVariant(r.variant),
     };
 }
 
@@ -203,6 +225,24 @@ function sanitizeTagListData(raw: unknown, fallback: TagListSectionData): TagLis
     return {
         heading: typeof r.heading === "string" ? r.heading : fallback.heading,
         items: sanitizeTagItems(r.items, fallback.items),
+    };
+}
+
+function clampLimit(value: unknown, fallback: number): number {
+    const n = typeof value === "number" ? value : Number(value);
+    if (!Number.isFinite(n)) return fallback;
+    return Math.min(12, Math.max(1, Math.round(n)));
+}
+
+function sanitizeRecentWorkData(raw: unknown, fallback: RecentWorkSectionData): RecentWorkSectionData {
+    if (!raw || typeof raw !== "object") return { ...fallback };
+    const r = raw as Record<string, unknown>;
+    return {
+        heading: typeof r.heading === "string" ? r.heading : fallback.heading,
+        albumLimit: clampLimit(r.albumLimit, fallback.albumLimit),
+        postLimit: clampLimit(r.postLimit, fallback.postLimit),
+        showAlbums: typeof r.showAlbums === "boolean" ? r.showAlbums : fallback.showAlbums,
+        showPosts: typeof r.showPosts === "boolean" ? r.showPosts : fallback.showPosts,
     };
 }
 

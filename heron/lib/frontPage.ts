@@ -17,6 +17,8 @@ export type {
     CardGridSectionData,
     TagListSectionData,
     ContactSectionData,
+    RecentWorkSectionData,
+    BannerVariant,
     CardItem,
     TagItem,
     ContactLink,
@@ -46,7 +48,7 @@ export function newSectionId(): string {
 }
 
 export function getSectionDisplayLabel(section: HomeSection): string {
-    if (section.templateId === "text-block") {
+    if (section.templateId === "text-block" || section.templateId === "recent-work") {
         const heading = (section.data as { heading?: string }).heading?.trim();
         if (heading) return heading;
     }
@@ -72,6 +74,7 @@ function buildDefaultSections(): HomeSection[] {
                 backgroundImage: "",
                 gradientFrom: "",
                 gradientTo: "",
+                variant: "panel",
             },
         },
         {
