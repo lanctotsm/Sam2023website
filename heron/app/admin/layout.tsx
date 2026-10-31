@@ -1,25 +1,22 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
 import AdminLoginButton from "@/components/AdminLoginButton";
+import AdminSessionProvider from "@/components/AdminSessionProvider";
 import { getAuthUser } from "@/lib/api-utils";
 import { ADMIN_NAV_ITEMS, adminCardClass, adminNavLinkClass } from "@/lib/admin-ui";
 
 export default async function AdminLayout({ children }: { children: ReactNode }) {
   const user = await getAuthUser();
 
-  if (!user) {
-    return (
-      <div className="grid gap-4">
-        <div className={`mx-auto my-8 max-w-[28rem] ${adminCardClass}`}>
-          <h1 className="text-chestnut dark:text-dark-text">Admin</h1>
-          <p className="mt-2 text-chestnut-dark dark:text-dark-muted">Sign in to manage content.</p>
-          <AdminLoginButton />
-        </div>
+  const content = !user ? (
+    <div className="grid gap-4">
+      <div className={`mx-auto my-8 max-w-[28rem] ${adminCardClass}`}>
+        <h1 className="text-chestnut dark:text-dark-text">Admin</h1>
+        <p className="mt-2 text-chestnut-dark dark:text-dark-muted">Sign in to manage content.</p>
+        <AdminLoginButton />
       </div>
-    );
-  }
-
-  return (
+    </div>
+  ) : (
     <div className="grid gap-4">
       <header className={adminCardClass}>
         <div className="flex flex-wrap items-center justify-between gap-4">
@@ -37,4 +34,6 @@ export default async function AdminLayout({ children }: { children: ReactNode })
       {children}
     </div>
   );
+
+  return <AdminSessionProvider>{content}</AdminSessionProvider>;
 }

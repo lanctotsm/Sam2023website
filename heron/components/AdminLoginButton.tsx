@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Image from "next/image";
-import { signIn, useSession } from "next-auth/react";
+import { signIn, signOut, useSession } from "next-auth/react";
 import { toast } from "sonner";
 
 // Official Google "G" from Firebase Auth UI. Next does not proxy this SVG,
@@ -53,9 +53,18 @@ export default function AdminLoginButton() {
 
   if (session?.user?.email && session.user.id != null) {
     return (
-      <span className="text-sm text-olive-dark dark:text-dark-muted" title={userEmail}>
-        {userEmail}
-      </span>
+      <div className="flex flex-wrap items-center gap-3">
+        <span className="text-sm text-olive-dark dark:text-dark-muted" title={userEmail}>
+          {userEmail}
+        </span>
+        <button
+          type="button"
+          className="rounded-lg border border-chestnut bg-transparent px-3 py-1.5 text-sm font-semibold text-chestnut transition-colors hover:bg-chestnut/5 dark:border-dark-text dark:text-dark-text dark:hover:bg-dark-bg"
+          onClick={() => signOut({ callbackUrl: "/" })}
+        >
+          Logout
+        </button>
+      </div>
     );
   }
 
