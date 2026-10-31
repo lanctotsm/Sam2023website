@@ -118,7 +118,7 @@ if [ -f "$BASHRC" ] && ! grep -q '.local/bin' "$BASHRC"; then
 fi
 
 echo "[provision] Configuring Apache modules..."
-a2enmod proxy proxy_http ssl rewrite headers >/dev/null
+a2enmod proxy proxy_http ssl rewrite headers deflate >/dev/null
 # Disable default site so only heron vhost (written at deploy time) serves traffic
 a2dissite 000-default.conf >/dev/null 2>&1 || true
 systemctl enable apache2
