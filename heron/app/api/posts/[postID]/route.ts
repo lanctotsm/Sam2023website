@@ -12,6 +12,7 @@ import { isImageLinkedToAnyAlbum } from "@/services/albumImages";
 import { deleteImage, getImageById } from "@/services/images";
 import { deleteObjects } from "@/lib/s3";
 import { revalidatePublicContent } from "@/lib/revalidate-public";
+import { optionalImageId } from "@/lib/content-fields";
 
 export async function GET(_: Request, { params }: { params: Promise<{ postID: string }> }) {
   const { postID } = await params;
@@ -68,7 +69,8 @@ export async function PUT(request: Request, { params }: { params: Promise<{ post
     markdown,
     status: payload.status,
     publishedAt: payload.published_at || null,
-    metadata: payload.metadata || null
+    metadata: payload.metadata || null,
+    coverImageId: optionalImageId(payload.cover_image_id)
   });
 
   if (!updated) {

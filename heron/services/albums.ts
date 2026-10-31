@@ -1,8 +1,9 @@
 import { and, desc, eq, sql } from "drizzle-orm";
 import { getDb } from "@/lib/db";
 import { albums, albumImages, images } from "@/lib/db/schema";
+import { refreshPostsEmbeddingAlbum } from "@/services/posts";
 
-export async function getAllAlbums() {
+export async function getAllAlbums(options: { includeDrafts?: boolean } = {}) {
   const db = getDb();
 
   // Single query: use a subquery with ROW_NUMBER() to pick the first image per album,
@@ -18,19 +19,28 @@ export async function getAllAlbums() {
     .innerJoin(images, eq(albumImages.imageId, images.id))
     .as("cover_images");
 
-  return db
-    .select({
-      id: albums.id,
-      title: albums.title,
-      slug: albums.slug,
-      description: albums.description,
-      createdBy: albums.createdBy,
-      createdAt: albums.createdAt,
-      updatedAt: albums.updatedAt,
-      // Prefer thumbnail key for performance; fall back to full-size key if no thumbnail exists.
-      coverImageS3Key: sql<string | null>`COALESCE(${coverImageSubquery.s3KeyThumb}, ${coverImageSubquery.s3Key})`,
-      photoCount: sql<number>`(SELECT COUNT(*) FROM ${albumImages} WHERE ${albumImages.albumId} = ${albums.id})`.mapWith(Number)
-    })
+  const coverImageS3Key = sql<string | null>`COALESCE(
+    (SELECT COALESCE(cover.s3_key_thumb, cover.s3_key) FROM ${images} AS cover WHERE cover.id = ${albums.coverImageId}),
+    COALESCE(${coverImageSubquery.s3KeyThumb}, ${coverImageSubquery.s3Key})
+  )`;
+
+  const selection = {
+    id: albums.id,
+    title: albums.title,
+    slug: albums.slug,
+    description: albums.description,
+    status: albums.status,
+    coverImageId: albums.coverImageId,
+    displayDate: albums.displayDate,
+    createdBy: albums.createdBy,
+    createdAt: albums.createdAt,
+    updatedAt: albums.updatedAt,
+    coverImageS3Key,
+    photoCount: sql<number>`(SELECT COUNT(*) FROM ${albumImages} WHERE ${albumImages.albumId} = ${albums.id})`.mapWith(Number)
+  };
+
+  const joined = db
+    .select(selection)
     .from(albums)
     .leftJoin(
       coverImageSubquery,
@@ -38,8 +48,13 @@ export async function getAllAlbums() {
         eq(coverImageSubquery.albumId, albums.id),
         eq(coverImageSubquery.rowNum, 1)
       )
-    )
-    .orderBy(desc(albums.createdAt));
+    );
+
+  if (options.includeDrafts) {
+    return joined.orderBy(desc(albums.createdAt));
+  }
+
+  return joined.where(eq(albums.status, "published")).orderBy(desc(albums.createdAt));
 }
 
 export async function getAlbumBySlug(slug: string) {
@@ -52,10 +67,19 @@ export async function getAlbumById(id: number) {
   return rows[0] || null;
 }
 
+function albumStatus(status?: string | null): string {
+  const value = (status || "").trim().toLowerCase();
+  if (value === "draft" || value === "archived") return value;
+  return "published";
+}
+
 export async function createAlbum(data: {
   title: string;
   slug: string;
   description?: string;
+  status?: string | null;
+  displayDate?: string | null;
+  coverImageId?: number | null;
   createdBy: number;
 }) {
   const created = await getDb()
@@ -64,6 +88,9 @@ export async function createAlbum(data: {
       title: data.title,
       slug: data.slug,
       description: data.description,
+      status: albumStatus(data.status),
+      displayDate: data.displayDate ?? null,
+      coverImageId: data.coverImageId ?? null,
       createdBy: data.createdBy
     })
     .returning();
@@ -77,18 +104,37 @@ export async function updateAlbum(
     title: string;
     slug: string;
     description?: string;
+    status?: string | null;
+    displayDate?: string | null;
+    coverImageId?: number | null;
   }
 ) {
+  const existing = await getAlbumById(id);
   const updated = await getDb()
     .update(albums)
     .set({
-      ...data,
+      title: data.title,
+      slug: data.slug,
+      description: data.description,
+      status: albumStatus(data.status),
+      displayDate: data.displayDate ?? null,
+      coverImageId: data.coverImageId ?? null,
       updatedAt: sql`CURRENT_TIMESTAMP`
     })
     .where(eq(albums.id, id))
     .returning();
 
-  return updated[0] || null;
+  const saved = updated[0];
+  if (!saved) return null;
+
+  try {
+    if (existing?.slug) await refreshPostsEmbeddingAlbum(existing.slug);
+    if (saved.slug !== existing?.slug) await refreshPostsEmbeddingAlbum(saved.slug);
+  } catch (error) {
+    console.error("Failed to refresh posts embedding album", id, error);
+  }
+
+  return saved;
 }
 
 export async function deleteAlbum(id: number) {

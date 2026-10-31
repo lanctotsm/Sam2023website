@@ -75,6 +75,7 @@ export default async function PostDetailPage({ params }: PageProps) {
 
   const publishedDate = formatPostDate(post.published_at || post.created_at, "long");
   const readingTime = estimateReadingTime(post.markdown);
+  const renderedBody = post.html != null ? null : await renderWithShortcodes(post.markdown);
 
   return (
     <article className="mx-auto grid w-full max-w-3xl gap-6">
@@ -125,7 +126,7 @@ export default async function PostDetailPage({ params }: PageProps) {
           <hr className="mt-6 border-hairline dark:border-dark-hairline" />
         </header>
         <div className="markdown-body text-chestnut-dark dark:text-dark-text">
-          {await renderWithShortcodes(post.markdown)}
+          {post.html != null ? <div dangerouslySetInnerHTML={{ __html: post.html }} /> : renderedBody}
         </div>
       </div>
     </article>

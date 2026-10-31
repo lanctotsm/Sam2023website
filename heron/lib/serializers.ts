@@ -4,7 +4,20 @@ type PostRow = typeof posts.$inferSelect;
 type AlbumRow = typeof albums.$inferSelect;
 type ImageRow = typeof images.$inferSelect;
 
-export function serializePost(row: PostRow, options?: { inlineImageIds?: number[] }) {
+type PostInput = Omit<PostRow, "coverImageId" | "html"> & {
+  coverImageId?: number | null;
+  html?: string | null;
+};
+
+type AlbumInput = Omit<AlbumRow, "status" | "coverImageId" | "displayDate"> & {
+  status?: string | null;
+  coverImageId?: number | null;
+  displayDate?: string | null;
+  coverImageS3Key?: string | null;
+  photoCount?: number | null;
+};
+
+export function serializePost(row: PostInput, options?: { inlineImageIds?: number[] }) {
   const base = {
     id: row.id,
     title: row.title,
@@ -14,6 +27,8 @@ export function serializePost(row: PostRow, options?: { inlineImageIds?: number[
     status: row.status,
     published_at: row.publishedAt ?? null,
     metadata: row.metadata ?? null,
+    cover_image_id: row.coverImageId ?? null,
+    html: row.html ?? null,
     created_by: row.createdBy ?? null,
     created_at: row.createdAt,
     updated_at: row.updatedAt
@@ -27,12 +42,15 @@ export function serializePost(row: PostRow, options?: { inlineImageIds?: number[
   return base;
 }
 
-export function serializeAlbum(row: AlbumRow & { coverImageS3Key?: string | null; photoCount?: number | null }) {
+export function serializeAlbum(row: AlbumInput) {
   return {
     id: row.id,
     title: row.title,
     slug: row.slug,
     description: row.description || "",
+    status: row.status ?? "published",
+    cover_image_id: row.coverImageId ?? null,
+    display_date: row.displayDate ?? null,
     cover_image_s3_key: row.coverImageS3Key ?? null,
     photo_count: row.photoCount == null ? null : Number(row.photoCount),
     created_by: row.createdBy ?? null,

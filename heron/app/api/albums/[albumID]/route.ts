@@ -3,6 +3,7 @@ import { errorResponse, getAuthUser, parseId } from "@/lib/api-utils";
 import { serializeAlbum } from "@/lib/serializers";
 import { deleteAlbum, getAlbumById, updateAlbum } from "@/services/albums";
 import { revalidatePublicContent } from "@/lib/revalidate-public";
+import { displayDateValue, optionalImageId } from "@/lib/content-fields";
 
 export async function GET(_: Request, { params }: { params: Promise<{ albumID: string }> }) {
   const { albumID } = await params;
@@ -42,7 +43,10 @@ export async function PUT(request: Request, { params }: { params: Promise<{ albu
   const updated = await updateAlbum(id, {
     title,
     slug,
-    description: (payload.description || "").trim()
+    description: (payload.description || "").trim(),
+    status: payload.status,
+    displayDate: displayDateValue(payload.display_date),
+    coverImageId: optionalImageId(payload.cover_image_id)
   });
 
   if (!updated) {

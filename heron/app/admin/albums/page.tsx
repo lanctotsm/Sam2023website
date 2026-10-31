@@ -169,7 +169,14 @@ export default function AdminAlbumsPage() {
                 key={album.id}
               >
                 <div className="min-w-0 flex-1">
-                  <h3 className="m-0 text-chestnut dark:text-dark-text">{album.title}</h3>
+                  <h3 className="m-0 text-chestnut dark:text-dark-text">
+                    {album.title}
+                    {album.status && album.status !== "published" ? (
+                      <span className="ml-2 rounded-full bg-desert-tan/60 px-2 py-0.5 text-xs font-medium uppercase text-chestnut-dark dark:bg-dark-muted/40 dark:text-dark-text">
+                        {album.status}
+                      </span>
+                    ) : null}
+                  </h3>
                   <p className="text-chestnut-dark dark:text-dark-text">{album.description || "No description"}</p>
                   <p className="text-olive text-sm dark:text-dark-muted">/{album.slug}</p>
                 </div>

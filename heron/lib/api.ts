@@ -8,6 +8,8 @@ export type Post = {
   status: string;
   published_at?: string | null;
   metadata?: Record<string, string> | null;
+  cover_image_id?: number | null;
+  html?: string | null;
   created_at: string;
   updated_at: string;
 };
@@ -17,6 +19,9 @@ export type Album = {
   title: string;
   slug: string;
   description?: string;
+  status?: string;
+  cover_image_id?: number | null;
+  display_date?: string | null;
   cover_image_s3_key?: string | null;
   photo_count?: number | null;
   created_at: string;

@@ -1,6 +1,7 @@
 import { unstable_cache } from "next/cache";
 import { PUBLIC_CONTENT_TAG } from "@/lib/revalidate-public";
 import { serializeAlbum, serializeImage, serializePost } from "@/lib/serializers";
+import { isAlbumPubliclyVisible } from "@/lib/album-visibility";
 import { isPubliclyVisible } from "@/lib/posts-visibility";
 import { getAlbumImages } from "@/services/albumImages";
 import { getAlbumBySlug, getAllAlbums } from "@/services/albums";
@@ -36,7 +37,7 @@ export function getCachedPublicAlbums() {
 export function getCachedPublicAlbum(slug: string) {
   return unstable_cache(async () => {
     const row = await getAlbumBySlug(slug);
-    if (!row) return null;
+    if (!row || !isAlbumPubliclyVisible(row)) return null;
     return serializeAlbum(row);
   }, ["public-album", slug], publicCache)();
 }

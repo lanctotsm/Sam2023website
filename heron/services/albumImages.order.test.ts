@@ -8,6 +8,10 @@ vi.mock("@/lib/db", () => ({
   getDb: () => mockGetDb()
 }));
 
+vi.mock("@/services/posts", () => ({
+  refreshPostsEmbeddingAlbumId: vi.fn()
+}));
+
 import { updateAlbumImagesOrder } from "./albumImages";
 
 describe("updateAlbumImagesOrder", () => {

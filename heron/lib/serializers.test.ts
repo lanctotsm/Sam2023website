@@ -26,6 +26,8 @@ describe("lib/serializers", () => {
         status: "published",
         published_at: "2024-01-15T00:00:00Z",
         metadata: null,
+        cover_image_id: null,
+        html: null,
         created_by: 1,
         created_at: "2024-01-01T00:00:00Z",
         updated_at: "2024-01-15T00:00:00Z"
@@ -107,6 +109,9 @@ describe("lib/serializers", () => {
         title: "Trip",
         slug: "trip",
         description: "A trip",
+        status: "published",
+        cover_image_id: null,
+        display_date: null,
         cover_image_s3_key: "uploads/uuid/thumb.jpg",
         photo_count: null,
         created_by: 1,

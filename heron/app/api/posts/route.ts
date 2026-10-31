@@ -4,6 +4,7 @@ import { serializePost } from "@/lib/serializers";
 import { createPost, getAllPosts } from "@/services/posts";
 import { replacePostInlineImages } from "@/services/postInlineImages";
 import { revalidatePublicContent } from "@/lib/revalidate-public";
+import { optionalImageId } from "@/lib/content-fields";
 
 export async function GET(request: Request) {
   const user = await getAuthUser();
@@ -44,6 +45,7 @@ export async function POST(request: Request) {
       status: payload.status,
       publishedAt: payload.published_at || null,
       metadata: payload.metadata || null,
+      coverImageId: optionalImageId(payload.cover_image_id),
       createdBy: user.id
     });
     if (inlineImageIds) {
