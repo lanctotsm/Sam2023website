@@ -65,6 +65,8 @@ sudo tee "$DEPLOY_VHOST_PATH" > /dev/null <<APACHE
   SSLCertificateFile "${CERT_FILE}"
   SSLCertificateKeyFile "${KEY_FILE}"
   ProxyPreserveHost On
+  # TLS ends here. Without this, Node sees http:// and rejects the browser's https Origin.
+  RequestHeader set X-Forwarded-Proto "https"
   ProxyPass / http://127.0.0.1:3000/
   ProxyPassReverse / http://127.0.0.1:3000/
 </VirtualHost>
