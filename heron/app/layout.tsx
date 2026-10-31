@@ -4,7 +4,10 @@ import Navigation from "@/components/Navigation";
 import NavStyleProvider from "@/components/NavStyleProvider";
 import Footer from "@/components/Footer";
 import Providers from "@/app/providers";
-import { getSetting } from "@/services/settings";
+import { buildImageUrl } from "@/lib/images";
+import { ogImageUrl, siteDescription } from "@/lib/siteShare";
+import { getSetting, getSettings } from "@/services/settings";
+import { getCachedPublicAlbums } from "@/services/public-content";
 import { parseNavStyles, parsePageStyles } from "@/lib/frontPageDefaults";
 import { fontsUsedBySite } from "@/lib/publicFonts";
 import { publicFontsClassName } from "@/lib/siteFonts";
@@ -18,11 +21,21 @@ const defaultTitle =
   (typeof process !== "undefined" && process.env.SITE_TITLE?.trim()) || "Sam's website";
 
 export async function generateMetadata() {
-  const dbTitle = await getSetting("site_title");
+  const settings = await getSettings(["site_title", "site_description", "og_image", "front_page"]);
+  const title = settings.site_title?.trim() || defaultTitle;
+  const description = siteDescription(settings.site_description, settings.front_page) || title;
+  const albums = await getCachedPublicAlbums();
+  const coverKey = albums.find((album) => album.cover_image_s3_key)?.cover_image_s3_key ?? null;
+  const image = ogImageUrl(settings.og_image, coverKey ? buildImageUrl(coverKey) : null);
   return {
-    title: dbTitle || defaultTitle,
-    description: "Modern SQLite CMS",
+    title,
+    description,
     metadataBase: new URL(baseUrl),
+    openGraph: {
+      title,
+      description,
+      ...(image ? { images: [{ url: image }] } : {})
+    },
     alternates: {
       types: {
         "application/rss+xml": "/feed.xml"

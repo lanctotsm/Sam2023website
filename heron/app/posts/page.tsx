@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { buildImageUrl } from "@/lib/images";
 import PageStyleProvider from "@/components/PageStyleProvider";
 import { formatPostDate } from "@/lib/format-post-date";
 import { skipEmptyProductionBuild } from "@/lib/skip-empty-build";
@@ -25,8 +26,21 @@ export default async function PostsPage() {
             {posts.map((post) => (
               <article
                 key={post.id}
-                className="surface-card group transition-all hover:-translate-y-0.5 hover:shadow-card-hover dark:hover:shadow-none"
+                className="surface-card group overflow-hidden !p-0 transition-all hover:-translate-y-0.5 hover:shadow-card-hover dark:hover:shadow-none"
               >
+                {post.cover_image_s3_key ? (
+                  <Link href={`/posts/${post.slug}`} className="block">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={buildImageUrl(post.cover_image_s3_key)}
+                      alt=""
+                      className="block h-52 w-full object-cover"
+                      loading="lazy"
+                      decoding="async"
+                    />
+                  </Link>
+                ) : null}
+                <div className="p-5 sm:p-6">
                 <div className="mb-3 flex flex-wrap items-center gap-2">
                   <time
                     dateTime={post.published_at || post.created_at}
@@ -47,6 +61,7 @@ export default async function PostsPage() {
                 >
                   Read more →
                 </Link>
+                </div>
               </article>
             ))}
           </div>

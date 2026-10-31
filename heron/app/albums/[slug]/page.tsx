@@ -2,6 +2,8 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import AlbumViewer from "@/components/AlbumViewer";
 import ManageAlbumLink from "@/components/ManageAlbumLink";
+import WideColumn from "@/components/WideColumn";
+import { formatPostDate } from "@/lib/format-post-date";
 import { skipEmptyProductionBuild } from "@/lib/skip-empty-build";
 import { getCachedAlbumImages, getCachedPublicAlbum } from "@/services/public-content";
 
@@ -18,7 +20,11 @@ export default async function AlbumDetailPage({ params }: PageProps) {
   if (!album) notFound();
   const images = await getCachedAlbumImages(album.id);
 
+  const date = album.display_date?.slice(0, 10);
+  const dateLabel = date && /^\d{4}-\d{2}-\d{2}$/.test(date) ? formatPostDate(`${date}T12:00:00`) : "";
+
   return (
+    <WideColumn>
     <div className="grid gap-4">
       <Link
         href="/albums"
@@ -35,6 +41,7 @@ export default async function AlbumDetailPage({ params }: PageProps) {
           )}
           <p className="mt-1 text-sm text-olive dark:text-dark-muted">
             {images.length} {images.length === 1 ? "photo" : "photos"}
+            {dateLabel ? ` · ${dateLabel}` : ""}
           </p>
         </div>
         <ManageAlbumLink albumId={album.id} />
@@ -53,5 +60,6 @@ export default async function AlbumDetailPage({ params }: PageProps) {
         <AlbumViewer images={images} />
       )}
     </div>
+    </WideColumn>
   );
 }

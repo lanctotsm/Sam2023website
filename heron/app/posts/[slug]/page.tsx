@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
+import { buildImageUrl } from "@/lib/images";
 import { renderWithShortcodes } from "@/lib/shortcodes";
 import { formatPostDate } from "@/lib/format-post-date";
 import { POST_SEO_META_KEY_SET } from "@/lib/post-seo";
@@ -87,6 +88,14 @@ export default async function PostDetailPage({ params }: PageProps) {
       </Link>
       <div className="surface-card">
         <header className="mb-6">
+          {post.cover_image_large_key ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={buildImageUrl(post.cover_image_large_key)}
+              alt=""
+              className="mb-6 w-full rounded-xl object-cover"
+            />
+          ) : null}
           <h1 className="font-bold text-chestnut dark:text-dark-text">
             {post.title}
           </h1>
