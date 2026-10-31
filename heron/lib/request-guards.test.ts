@@ -51,4 +51,38 @@ describe("isCrossSiteMutation", () => {
       headers: { origin: "https://evil.example" }
     }))).toBe(false);
   });
+
+  it("accepts the https browser Origin when TLS stops at the reverse proxy", () => {
+    const previous = process.env.NEXTAUTH_URL;
+    process.env.NEXTAUTH_URL = "https://example.com";
+    try {
+      expect(isCrossSiteMutation(request({
+        url: "http://example.com/api/auth/signin/google",
+        headers: {
+          origin: "https://example.com",
+          host: "example.com"
+        }
+      }))).toBe(false);
+      expect(isCrossSiteMutation(request({
+        url: "http://example.com/api/auth/signin/google",
+        headers: {
+          origin: "https://evil.example",
+          host: "example.com"
+        }
+      }))).toBe(true);
+      expect(isCrossSiteMutation(request({
+        url: "http://localhost:3000/api/posts",
+        headers: {
+          origin: "http://localhost:3000",
+          host: "localhost:3000"
+        }
+      }))).toBe(false);
+    } finally {
+      if (previous === undefined) {
+        delete process.env.NEXTAUTH_URL;
+      } else {
+        process.env.NEXTAUTH_URL = previous;
+      }
+    }
+  });
 });

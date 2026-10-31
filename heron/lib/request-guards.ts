@@ -61,15 +61,47 @@ export function isCrossSiteMutation(request: GuardRequest): boolean {
   }
 }
 
+/** Public site URL, when configured. TLS often stops at the reverse proxy. */
+function canonicalSite(): URL | null {
+  const raw = process.env.NEXTAUTH_URL?.trim();
+  if (!raw) {
+    return null;
+  }
+  try {
+    return new URL(raw);
+  } catch {
+    return null;
+  }
+}
+
+function sameSiteHost(hostHeader: string, site: URL): boolean {
+  try {
+    const requestHost = new URL(`http://${hostHeader}`);
+    return requestHost.hostname === site.hostname && requestHost.port === site.port;
+  } catch {
+    return false;
+  }
+}
+
 /**
- * The origin the client used. Prefer Host / X-Forwarded-* over request.url,
+ * The origin the browser used. Prefer Host / X-Forwarded-* over request.url,
  * which can be an internal bind address such as 0.0.0.0.
+ *
+ * Apache terminates TLS and proxies to Node over HTTP, and it does not always
+ * set X-Forwarded-Proto. A browser on https://example.com then sends
+ * Origin: https://example.com while request.url is http://example.com.
+ * When that host is the configured public site, use NEXTAUTH_URL's origin.
  */
 function expectedOrigin(request: GuardRequest, requestUrl: URL): string | null {
   const forwardedHost = request.headers.get("x-forwarded-host");
   const host = (forwardedHost ? forwardedHost.split(",")[0] : request.headers.get("host"))?.trim();
   if (!host) {
     return requestUrl.origin;
+  }
+
+  const site = canonicalSite();
+  if (site && sameSiteHost(host, site)) {
+    return site.origin;
   }
 
   const forwardedProto = request.headers.get("x-forwarded-proto")?.split(",")[0]?.trim();

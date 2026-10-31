@@ -1,13 +1,7 @@
 /** @type {import('next').NextConfig} */
 
 function imageRemotePatterns() {
-  const patterns = [
-    {
-      protocol: "https",
-      hostname: "www.gstatic.com",
-      pathname: "/firebasejs/ui/**"
-    }
-  ];
+  const patterns = [];
 
   const raw = process.env.NEXT_PUBLIC_IMAGE_BASE_URL;
   if (!raw) {
@@ -34,7 +28,13 @@ function imageRemotePatterns() {
 }
 
 function imageHostSources() {
-  const sources = ["'self'", "data:", "blob:"];
+  // Only the official sign-in mark. A path in img-src does not allow the rest of the host.
+  const sources = [
+    "'self'",
+    "data:",
+    "blob:",
+    "https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg"
+  ];
   const raw = process.env.NEXT_PUBLIC_IMAGE_BASE_URL;
   if (!raw) {
     return sources.join(" ");
