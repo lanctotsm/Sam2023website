@@ -1,80 +1,34 @@
-"use client";
-
-import { useEffect, useState } from "react";
 import Link from "next/link";
-import type { Post, Album, Image } from "@/lib/api";
-import { apiFetch } from "@/lib/api";
-import { PostCardSkeleton, StatCardSkeleton } from "@/components/Skeleton";
 import AdminQuickActions from "@/components/admin/AdminQuickActions";
+import { getAuthUser } from "@/lib/api-utils";
+import { getContentCounts } from "@/services/content-stats";
+import { getAllPosts } from "@/services/posts";
 
-export default function AdminDashboardPage() {
-  const [stats, setStats] = useState({ posts: 0, albums: 0, images: 0 });
-  const [recentPosts, setRecentPosts] = useState<Post[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    const fetchStats = async () => {
-      try {
-        const [posts, albums, images] = await Promise.all([
-          apiFetch<Post[]>("/posts").then((d) => d || []),
-          apiFetch<Album[]>("/albums").then((d) => d || []),
-          apiFetch<Image[]>("/images").then((d) => d || [])
-        ]);
-        setStats({
-          posts: posts.length,
-          albums: albums.length,
-          images: images.length
-        });
-        setRecentPosts(posts.slice(0, 5));
-      } catch {
-        // Ignore errors
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchStats();
-  }, []);
-
-  if (loading) {
-    return (
-      <div className="grid gap-4">
-        <div className="grid grid-cols-[repeat(auto-fit,minmax(200px,1fr))] gap-4">
-          <StatCardSkeleton />
-          <StatCardSkeleton />
-          <StatCardSkeleton />
-        </div>
-        <section className="rounded-xl border border-desert-tan-dark bg-surface p-4 shadow-[0_2px_8px_rgba(72,9,3,0.08)] dark:border-dark-muted dark:bg-dark-surface">
-          <div className="h-6 w-32 animate-pulse rounded bg-desert-tan-dark/40 dark:bg-dark-muted/40" />
-          <div className="mt-4 grid gap-3">
-            {[1, 2, 3].map((i) => (
-              <PostCardSkeleton key={i} />
-            ))}
-          </div>
-        </section>
-      </div>
-    );
-  }
+export default async function AdminDashboardPage() {
+  const user = await getAuthUser();
+  const counts = getContentCounts();
+  const recentPosts = user ? (await getAllPosts({ user })).slice(0, 5) : [];
 
   return (
     <div className="grid gap-4">
       <div className="grid grid-cols-[repeat(auto-fit,minmax(200px,1fr))] gap-4">
         <div className="rounded-xl border border-desert-tan-dark bg-surface p-4 text-center shadow-[0_2px_8px_rgba(72,9,3,0.08)] dark:border-dark-muted dark:bg-dark-surface">
           <h3 className="mb-2 text-sm uppercase tracking-wide text-olive-dark dark:text-dark-muted">Posts</h3>
-          <p className="mb-3 text-4xl font-bold text-chestnut dark:text-dark-text">{stats.posts}</p>
+          <p className="mb-3 text-4xl font-bold text-chestnut dark:text-dark-text">{counts.posts}</p>
           <Link href="/admin/posts" className="font-medium text-copper hover:text-chestnut dark:text-caramel-light dark:hover:text-desert-tan">
             Manage posts →
           </Link>
         </div>
         <div className="rounded-xl border border-desert-tan-dark bg-surface p-4 text-center shadow-[0_2px_8px_rgba(72,9,3,0.08)] dark:border-dark-muted dark:bg-dark-surface">
           <h3 className="mb-2 text-sm uppercase tracking-wide text-olive-dark dark:text-dark-muted">Albums</h3>
-          <p className="mb-3 text-4xl font-bold text-chestnut dark:text-dark-text">{stats.albums}</p>
+          <p className="mb-3 text-4xl font-bold text-chestnut dark:text-dark-text">{counts.albums}</p>
           <Link href="/admin/albums" className="font-medium text-copper hover:text-chestnut dark:text-caramel-light dark:hover:text-desert-tan">
             Manage albums →
           </Link>
         </div>
         <div className="rounded-xl border border-desert-tan-dark bg-surface p-4 text-center shadow-[0_2px_8px_rgba(72,9,3,0.08)] dark:border-dark-muted dark:bg-dark-surface">
           <h3 className="mb-2 text-sm uppercase tracking-wide text-olive-dark dark:text-dark-muted">Images</h3>
-          <p className="mb-3 text-4xl font-bold text-chestnut dark:text-dark-text">{stats.images}</p>
+          <p className="mb-3 text-4xl font-bold text-chestnut dark:text-dark-text">{counts.images}</p>
           <Link href="/admin/media" className="font-medium text-copper hover:text-chestnut dark:text-caramel-light dark:hover:text-desert-tan">
             View media →
           </Link>

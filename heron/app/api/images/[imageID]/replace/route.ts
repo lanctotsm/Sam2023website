@@ -7,6 +7,7 @@ import { serializeImage } from "@/lib/serializers";
 import { deleteImage, getImageById, updateImage } from "@/services/images";
 import { deleteObjects, putObject } from "@/lib/s3";
 import { processImage } from "@/lib/image-processing";
+import { revalidatePublicContent } from "@/lib/revalidate-public";
 
 // Kept in sync with app/api/images/upload/route.ts - see the comment there.
 const MAX_FILE_BYTES = Number(process.env.MAX_UPLOAD_BYTES) || 25 * 1024 * 1024;
@@ -92,6 +93,7 @@ export async function PUT(
       await deleteObjects(oldKeys);
     }
 
+    revalidatePublicContent();
     return NextResponse.json(serializeImage(updated!));
   } catch (err) {
     const newKeys = [keyThumb, keyLarge, keyOriginal];

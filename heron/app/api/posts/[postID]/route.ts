@@ -11,6 +11,7 @@ import {
 import { isImageLinkedToAnyAlbum } from "@/services/albumImages";
 import { deleteImage, getImageById } from "@/services/images";
 import { deleteObjects } from "@/lib/s3";
+import { revalidatePublicContent } from "@/lib/revalidate-public";
 
 export async function GET(_: Request, { params }: { params: Promise<{ postID: string }> }) {
   const { postID } = await params;
@@ -78,6 +79,7 @@ export async function PUT(request: Request, { params }: { params: Promise<{ post
     await replacePostInlineImages(id, inlineImageIds);
   }
   const persistedInlineImageIds = await getPostInlineImageIds(id);
+  revalidatePublicContent();
   return NextResponse.json(serializePost(updated, { inlineImageIds: persistedInlineImageIds }));
 }
 
@@ -117,5 +119,6 @@ export async function DELETE(_: Request, { params }: { params: Promise<{ postID:
     }
     await deleteImage(imageId);
   }
+  revalidatePublicContent();
   return NextResponse.json({ status: "deleted" });
 }

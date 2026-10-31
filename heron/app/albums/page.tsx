@@ -1,43 +1,33 @@
 import Link from "next/link";
-import { serverFetch } from "@/lib/server";
-import type { Album, Image } from "@/lib/api";
-import { buildThumbUrl } from "@/lib/images";
+import { buildImageUrl } from "@/lib/images";
 import PageStyleProvider from "@/components/PageStyleProvider";
+import { skipEmptyProductionBuild } from "@/lib/skip-empty-build";
+import { getCachedPublicAlbums } from "@/services/public-content";
 
-export const dynamic = "force-dynamic";
+export const revalidate = 3600;
 
 export default async function AlbumsPage() {
-  const albumsData = await serverFetch<Album[]>("/albums");
-  const albums = albumsData || [];
-  const albumCards = await Promise.all(
-    albums.map(async (album) => {
-      const imagesData = await serverFetch<Image[]>(`/albums/${album.id}/images`);
-      const images = imagesData || [];
-      return {
-        album,
-        images,
-        count: images.length,
-        thumbnail: images[0]
-      };
-    })
-  );
+  await skipEmptyProductionBuild();
+  const albums = await getCachedPublicAlbums();
 
   return (
     <PageStyleProvider page="albums">
       <div className="grid gap-6">
         <h1 className="heading-rule text-[var(--page-h1-color,var(--color-chestnut))] dark:text-[var(--page-h1-color-dark,var(--color-dark-text))]" style={{ fontFamily: "var(--page-heading-font, var(--font-display))" }}>Albums</h1>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {albumCards.map(({ album, count, thumbnail }) => (
+          {albums.map((album) => {
+            const count = album.photo_count ?? 0;
+            return (
             <article key={album.id} className="surface-card">
               <Link
                 href={`/albums/${album.slug}`}
                 className="block overflow-hidden rounded-xl border border-desert-tan-dark bg-desert-tan-dark dark:border-dark-muted dark:bg-dark-bg"
               >
-                {thumbnail ? (
+                {album.cover_image_s3_key ? (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img
-                    src={buildThumbUrl(thumbnail)}
-                    alt={thumbnail.alt_text || album.title}
+                    src={buildImageUrl(album.cover_image_s3_key)}
+                    alt={album.title}
                     className="block h-44 w-full object-cover"
                     loading="lazy"
                     decoding="async"
@@ -60,7 +50,8 @@ export default async function AlbumsPage() {
                 View album →
               </Link>
             </article>
-          ))}
+            );
+          })}
         </div>
       </div>
     </PageStyleProvider>

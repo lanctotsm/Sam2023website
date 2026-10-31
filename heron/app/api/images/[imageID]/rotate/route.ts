@@ -7,6 +7,7 @@ import { serializeImage } from "@/lib/serializers";
 import { getImageById, updateImage } from "@/services/images";
 import { deleteObjects, getObject, putObject } from "@/lib/s3";
 import { processImage, rotateImage } from "@/lib/image-processing";
+import { revalidatePublicContent } from "@/lib/revalidate-public";
 
 const ROTATIONS = [90, 180, 270] as const;
 type Rotation = (typeof ROTATIONS)[number];
@@ -101,6 +102,7 @@ export async function PATCH(
       await deleteObjects(oldKeys);
     }
 
+    revalidatePublicContent();
     return NextResponse.json(serializeImage(updated!));
   } catch (err) {
     const message = err instanceof Error ? err.message : "rotate failed";

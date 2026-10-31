@@ -18,6 +18,7 @@ export type Album = {
   slug: string;
   description?: string;
   cover_image_s3_key?: string | null;
+  photo_count?: number | null;
   created_at: string;
   updated_at: string;
 };

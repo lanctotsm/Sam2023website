@@ -1,29 +1,22 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { serverFetch } from "@/lib/server";
-import { getAuthUser } from "@/lib/api-utils";
-import type { Album, Image as AlbumImage } from "@/lib/api";
 import AlbumViewer from "@/components/AlbumViewer";
+import ManageAlbumLink from "@/components/ManageAlbumLink";
+import { skipEmptyProductionBuild } from "@/lib/skip-empty-build";
+import { getCachedAlbumImages, getCachedPublicAlbum } from "@/services/public-content";
 
 type PageProps = {
   params: Promise<{ slug: string }>;
 };
 
-export const dynamic = "force-dynamic";
+export const revalidate = 3600;
 
 export default async function AlbumDetailPage({ params }: PageProps) {
+  await skipEmptyProductionBuild();
   const { slug } = await params;
-  let album: Album;
-  let images: AlbumImage[];
-  let user: Awaited<ReturnType<typeof getAuthUser>>;
-  try {
-    album = await serverFetch<Album>(`/albums/slug/${slug}`);
-    const imagesData = await serverFetch<AlbumImage[]>(`/albums/${album.id}/images`);
-    images = imagesData || [];
-    user = await getAuthUser();
-  } catch {
-    notFound();
-  }
+  const album = await getCachedPublicAlbum(slug);
+  if (!album) notFound();
+  const images = await getCachedAlbumImages(album.id);
 
   return (
     <div className="grid gap-4">
@@ -44,28 +37,17 @@ export default async function AlbumDetailPage({ params }: PageProps) {
             {images.length} {images.length === 1 ? "photo" : "photos"}
           </p>
         </div>
-        {user && (
-          <Link
-            href={`/admin/albums/${album.id}`}
-            className="rounded-lg border border-chestnut bg-transparent px-4 py-2 text-chestnut transition hover:bg-chestnut/5 dark:border-dark-text dark:text-dark-text dark:hover:bg-dark-bg"
-          >
-            Manage album
-          </Link>
-        )}
+        <ManageAlbumLink albumId={album.id} />
       </header>
 
       {images.length === 0 ? (
         <p className="rounded-xl border border-desert-tan-dark bg-surface p-4 text-olive shadow-[0_2px_8px_rgba(72,9,3,0.08)] dark:border-dark-muted dark:bg-dark-surface dark:text-dark-muted">
-          {user ? (
-            <>
-              This album is empty.{" "}
-              <Link href={`/admin/albums/${album.id}`} className="font-medium text-chestnut hover:underline dark:text-caramel-light dark:hover:text-desert-tan">
-                Add photos
-              </Link>
-            </>
-          ) : (
-            "This album is empty."
-          )}
+          This album is empty.{" "}
+          <ManageAlbumLink
+            albumId={album.id}
+            label="Add photos"
+            className="font-medium text-chestnut hover:underline dark:text-caramel-light dark:hover:text-desert-tan"
+          />
         </p>
       ) : (
         <AlbumViewer images={images} />

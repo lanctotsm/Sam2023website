@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { errorResponse, getAuthUser } from "@/lib/api-utils";
 import { serializeAlbum } from "@/lib/serializers";
 import { createAlbum, getAllAlbums } from "@/services/albums";
+import { revalidatePublicContent } from "@/lib/revalidate-public";
 
 export async function GET() {
   const rows = await getAllAlbums();
@@ -29,6 +30,7 @@ export async function POST(request: Request) {
       description: (payload.description || "").trim(),
       createdBy: user.id
     });
+    revalidatePublicContent();
     return NextResponse.json(serializeAlbum(created), { status: 201 });
   } catch (error) {
     return errorResponse("failed to create album", 500);

@@ -3,6 +3,7 @@ import { errorResponse, getAuthUser } from "@/lib/api-utils";
 import { serializePost } from "@/lib/serializers";
 import { createPost, getAllPosts } from "@/services/posts";
 import { replacePostInlineImages } from "@/services/postInlineImages";
+import { revalidatePublicContent } from "@/lib/revalidate-public";
 
 export async function GET(request: Request) {
   const user = await getAuthUser();
@@ -48,6 +49,7 @@ export async function POST(request: Request) {
     if (inlineImageIds) {
       await replacePostInlineImages(created.id, inlineImageIds);
     }
+    revalidatePublicContent();
     return NextResponse.json(
       serializePost(created, inlineImageIds ? { inlineImageIds } : undefined),
       { status: 201 }

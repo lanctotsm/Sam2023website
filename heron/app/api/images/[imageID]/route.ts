@@ -4,6 +4,7 @@ import { serializeImage } from "@/lib/serializers";
 import { deleteImage, getImageById, updateImage } from "@/services/images";
 import { isAllowedObjectKey } from "@/lib/object-key";
 import { deleteObjects } from "@/lib/s3";
+import { revalidatePublicContent } from "@/lib/revalidate-public";
 
 export async function GET(_: Request, { params }: { params: Promise<{ imageID: string }> }) {
   const user = await getAuthUser();
@@ -61,6 +62,7 @@ export async function PUT(request: Request, { params }: { params: Promise<{ imag
     return errorResponse("image not found", 404);
   }
 
+  revalidatePublicContent();
   return NextResponse.json(serializeImage(updated));
 }
 
@@ -114,6 +116,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ im
     return errorResponse("image not found", 404);
   }
 
+  revalidatePublicContent();
   return NextResponse.json(serializeImage(updated));
 }
 
@@ -144,5 +147,6 @@ export async function DELETE(_: Request, { params }: { params: Promise<{ imageID
     await deleteObjects(keys);
   }
   await deleteImage(id);
+  revalidatePublicContent();
   return NextResponse.json({ status: "deleted" });
 }
