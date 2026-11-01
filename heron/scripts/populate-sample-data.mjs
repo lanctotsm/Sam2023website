@@ -183,12 +183,24 @@ async function main() {
     await page.getByRole("heading", { name: /add photos/i }).click();
     const fileInput = page.getByLabel(/select photos or zip file/i);
     await fileInput.setInputFiles(imagePaths);
-    await page.waitForTimeout(1500);
 
     const uploadBtn = page.getByRole("button", { name: /upload \d+ photo/i });
-    if (await uploadBtn.isVisible()) {
+    const buttonReady = await uploadBtn
+      .waitFor({ state: "visible", timeout: 10000 })
+      .then(() => true)
+      .catch(() => false);
+    if (buttonReady) {
+      let completedUploads = 0;
+      page.on("response", (res) => {
+        if (res.url().includes("/api/images/upload") && res.request().method() === "POST") {
+          completedUploads += 1;
+        }
+      });
       await uploadBtn.click();
-      await page.waitForTimeout(5000);
+      const deadline = Date.now() + 60000;
+      while (completedUploads < imagePaths.length && Date.now() < deadline) {
+        await page.waitForTimeout(250);
+      }
       console.log("Uploaded", imagePaths.length, "images to album.");
     } else {
       console.log("Upload button not ready; skipping upload.");

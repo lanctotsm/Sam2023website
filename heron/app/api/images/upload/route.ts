@@ -8,11 +8,9 @@ import { createImage, updateImage, deleteImage } from "@/services/images";
 import { addAlbumImage } from "@/services/albumImages";
 import { putObject, deleteObjects } from "@/lib/s3";
 import { processImage } from "@/lib/image-processing";
-import { ALLOWED_IMAGE_TYPES, MAX_UPLOAD_BYTES } from "@/lib/upload-utils";
+import { ALLOWED_IMAGE_TYPES, MAX_UPLOAD_BYTES } from "@/lib/upload-limits";
 import { maybeGenerateAltText } from "./maybe-generate-alt";
 import { revalidatePublicContent } from "@/lib/revalidate-public";
-
-const MAX_FILE_BYTES = MAX_UPLOAD_BYTES;
 
 async function rollback(uploadedKeys: string[], createdImageIds: number[]) {
   for (const id of createdImageIds) {
@@ -42,9 +40,9 @@ export async function POST(request: Request) {
   if (contentLength) {
     const requestSize = parseInt(contentLength, 10);
     // Allow some overhead for multipart boundaries and headers (10% buffer)
-    const maxRequestSize = MAX_FILE_BYTES * 1.1;
+    const maxRequestSize = MAX_UPLOAD_BYTES * 1.1;
     if (requestSize > maxRequestSize) {
-      const maxMB = Math.round(MAX_FILE_BYTES / (1024 * 1024));
+      const maxMB = Math.round(MAX_UPLOAD_BYTES / (1024 * 1024));
       return errorResponse(`request size exceeds ${maxMB}MB limit`, 413);
     }
   }
@@ -74,7 +72,7 @@ export async function POST(request: Request) {
 
     for (let index = 0; index < files.length; index++) {
       const file = files[index];
-      if (file.size > MAX_FILE_BYTES) {
+      if (file.size > MAX_UPLOAD_BYTES) {
         await rollback(uploadedKeys, createdImageIds);
         return errorResponse(`file ${file.name} exceeds max size`, 400);
       }
