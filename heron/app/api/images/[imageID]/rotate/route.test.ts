@@ -27,6 +27,10 @@ vi.mock("@/lib/s3", () => ({
   putObject: vi.fn()
 }));
 
+vi.mock("@/lib/revalidate-public", () => ({
+  revalidatePublicContent: vi.fn()
+}));
+
 vi.mock("@/lib/image-processing", () => ({
   processImage: vi.fn().mockResolvedValue({
     thumb: { buffer: Buffer.from("thumb") },
@@ -38,6 +42,8 @@ vi.mock("@/lib/image-processing", () => ({
 
 const { getAuthUser } = await import("@/lib/api-utils");
 const { getImageById, updateImage } = await import("@/services/images");
+const { deleteObjects } = await import("@/lib/s3");
+const { revalidatePublicContent } = await import("@/lib/revalidate-public");
 
 const imageRow = {
   id: 1,
@@ -58,6 +64,7 @@ describe("IMAGES /api/images/[imageID]/rotate", () => {
     vi.clearAllMocks();
     vi.mocked(getAuthUser).mockResolvedValue(null);
     vi.mocked(getImageById).mockResolvedValue(null);
+    vi.mocked(deleteObjects).mockResolvedValue(undefined);
   });
 
   it("returns 401 when unauthenticated", async () => {
@@ -116,5 +123,19 @@ describe("IMAGES /api/images/[imageID]/rotate", () => {
     const data = await res.json();
     expect(data.id).toBe(1);
     expect(updateImage).toHaveBeenCalled();
+  });
+
+  it("refreshes the public cache when old-object cleanup fails", async () => {
+    vi.mocked(getAuthUser).mockResolvedValue(MOCK_AUTH_USER as never);
+    vi.mocked(getImageById).mockResolvedValue(imageRow as never);
+    vi.mocked(updateImage).mockResolvedValue({ ...imageRow } as never);
+    vi.mocked(deleteObjects).mockRejectedValue(new Error("s3 unavailable"));
+
+    const res = await PATCH(
+      jsonRequest("PATCH", "http://x", { rotate: 90 }),
+      { params: getParams({ imageID: "1" }) }
+    );
+    expect(res.status).toBe(200);
+    expect(revalidatePublicContent).toHaveBeenCalled();
   });
 });
