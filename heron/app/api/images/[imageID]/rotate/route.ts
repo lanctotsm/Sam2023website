@@ -97,12 +97,16 @@ export async function PATCH(
       height: processed.large.height,
       lqip: processed.lqip
     });
+    revalidatePublicContent();
 
     if (oldKeys.length > 0) {
-      await deleteObjects(oldKeys);
+      try {
+        await deleteObjects(oldKeys);
+      } catch (cleanupError) {
+        console.error("Failed to delete rotated image objects:", cleanupError);
+      }
     }
 
-    revalidatePublicContent();
     return NextResponse.json(serializeImage(updated!));
   } catch (err) {
     const message = err instanceof Error ? err.message : "rotate failed";

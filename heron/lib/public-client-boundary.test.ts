@@ -37,5 +37,6 @@ describe("public client boundary", () => {
         expect(source("app/providers.tsx")).not.toMatch(/SessionProvider/);
         expect(source("app/admin/layout.tsx")).toMatch(/AdminSessionProvider/);
         expect(source("components/ManageAlbumLink.tsx")).not.toMatch(/useSession/);
+        expect(source("components/ManageAlbumLink.tsx")).toMatch(/addEventListener\("focus"/);
     });
 });

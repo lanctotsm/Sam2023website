@@ -3,6 +3,11 @@ import { inArray } from "drizzle-orm";
 import { getDb } from "@/lib/db";
 import { images } from "@/lib/db/schema";
 import { PUBLIC_CONTENT_TAG } from "@/lib/revalidate-public";
+import {
+  nextScheduledPublicationMs,
+  PUBLIC_CACHE_MAX_SECONDS,
+  publicCacheRevalidateSeconds
+} from "@/lib/public-cache-window";
 import { serializeAlbum, serializeImage, serializePost } from "@/lib/serializers";
 import { isAlbumPubliclyVisible } from "@/lib/album-visibility";
 import { isPubliclyVisible } from "@/lib/posts-visibility";
@@ -45,24 +50,26 @@ function withCover<T extends { cover_image_id?: number | null }>(post: T, art: M
 
 const publicCache = {
   tags: [PUBLIC_CONTENT_TAG],
-  revalidate: 3600
+  revalidate: PUBLIC_CACHE_MAX_SECONDS
 };
 
-export function getCachedPublicPosts() {
+export async function getCachedPublicPosts() {
+  const revalidate = publicCacheRevalidateSeconds(await nextScheduledPublicationMs());
   return unstable_cache(async () => {
     const rows = await getAllPosts({});
     const art = await coverArtById(rows.map((row) => row.coverImageId));
     return rows.map((row) => withCover(serializePost(row), art));
-  }, ["public-posts-with-cover"], publicCache)();
+  }, ["public-posts-with-cover"], { ...publicCache, revalidate })();
 }
 
-export function getCachedPublicPost(slug: string) {
+export async function getCachedPublicPost(slug: string) {
+  const revalidate = publicCacheRevalidateSeconds(await nextScheduledPublicationMs(slug));
   return unstable_cache(async () => {
     const row = await getPostBySlug(slug);
     if (!row || !isPubliclyVisible(row)) return null;
     const art = await coverArtById([row.coverImageId]);
     return withCover(serializePost(row), art);
-  }, ["public-post-with-cover", slug], publicCache)();
+  }, ["public-post-with-cover", slug], { ...publicCache, revalidate })();
 }
 
 export function getCachedPublicAlbums() {
