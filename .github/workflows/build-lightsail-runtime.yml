@@ -24,7 +24,10 @@ jobs:
         uses: actions/checkout@v5
 
       - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v5
+        # v6 runs on Node 24. v5 still targets Node 20, which Actions only
+        # runs under a compatibility warning. Inputs are unchanged, and with
+        # no aws-profile the action still exports AWS_* env vars for later steps.
+        uses: aws-actions/configure-aws-credentials@v6
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
@@ -142,9 +145,71 @@ jobs:
           exit 1
 
       - name: Provision runtime
+        id: provision
         run: |
           set -euo pipefail
-          scp -F ssh_config infra/lightsail-image/provision.sh builder:/tmp/provision.sh
+          ssh -V
+          . /etc/os-release
+          echo "Runner: ${PRETTY_NAME}"
+
+          # The 2026-11-01 build accepted one SSH session, then scp got
+          # "Connection refused" ~100ms later and the builder was deleted
+          # before anything on the guest was recorded. Retry the copy, and on
+          # each refusal record firewall state, a TCP probe, the client trace,
+          # and (if SSH returns) sshd/cloud-init so the log shows which of
+          # those changed.
+          BUILDER_NAME="${{ steps.meta.outputs.builder_name }}"
+          CONFIGURED_IP=$(awk '/HostName / { print $2; exit }' ssh_config)
+
+          dump_aws() {
+            echo "===== Lightsail instance (SSH target ${CONFIGURED_IP}) ====="
+            aws lightsail get-instance \
+              --instance-name "$BUILDER_NAME" \
+              --query "instance.{state:state.name,publicIpAddress:publicIpAddress,blueprintId:blueprintId,createdAt:createdAt}" \
+              --output json || echo "get-instance failed"
+            echo "===== Firewall port states ====="
+            aws lightsail get-instance-port-states \
+              --instance-name "$BUILDER_NAME" \
+              --output json || echo "get-instance-port-states failed"
+            echo "===== TCP probe ${CONFIGURED_IP}:22 ====="
+            if timeout 5 bash -c "echo >/dev/tcp/${CONFIGURED_IP}/22" 2>/dev/null; then
+              echo "tcp/22 accepted a connection"
+            else
+              echo "tcp/22 did not accept a connection (exit $?)"
+            fi
+          }
+
+          dump_guest() {
+            echo "===== Guest sshd / cloud-init ====="
+            ssh -F ssh_config -o ConnectTimeout=10 builder "sudo -n bash -s" <<'GUEST' || echo "guest dump failed"
+          echo "uptime: $(uptime)"
+          cloud-init status || true
+          systemctl is-active ssh.service ssh.socket || true
+          ss -lnt || true
+          journalctl -u ssh.service -u ssh.socket -b --no-pager -n 40 || true
+          GUEST
+          }
+
+          scp_ok=0
+          for attempt in 1 2 3 4 5 6 7 8; do
+            if scp -F ssh_config infra/lightsail-image/provision.sh builder:/tmp/provision.sh; then
+              echo "scp succeeded on attempt ${attempt}"
+              echo "scp_attempts=${attempt}" >> "$GITHUB_OUTPUT"
+              scp_ok=1
+              break
+            fi
+            echo "scp attempt ${attempt}/8 failed"
+            dump_aws
+            echo "===== ssh -v ====="
+            ssh -v -F ssh_config -o ConnectTimeout=10 builder "echo probe-ok" || true
+            dump_guest
+            sleep 5
+          done
+          if [ "$scp_ok" -ne 1 ]; then
+            echo "scp failed after 8 attempts" >&2
+            exit 1
+          fi
+
           ssh -F ssh_config builder \
             "sudo IMAGE_VERSION='${{ steps.meta.outputs.image_version }}' bash /tmp/provision.sh"
           ssh -F ssh_config builder "cat /var/lib/heron-cms/.runtime-image-version && node -v && apache2ctl -v | head -1"
@@ -210,7 +275,12 @@ jobs:
             echo "| Image version | \`${{ steps.meta.outputs.image_version }}\` |"
             echo "| Blueprint | \`${{ steps.meta.outputs.blueprint }}\` |"
             echo "| Bundle | \`$BUNDLE_ID\` |"
+            echo "| SCP attempts | \`${{ steps.provision.outputs.scp_attempts }}\` |"
             echo ""
+            if [ "${{ steps.provision.outputs.scp_attempts }}" != "1" ]; then
+              echo "The first copy to the builder was refused. A later attempt worked. The Provision runtime log has the firewall state, TCP probe, and sshd/cloud-init output from the failed attempt."
+              echo ""
+            fi
             echo "Next: Lightsail console → Snapshots → **Create new instance** from this snapshot (nano), migrate data, attach static IP, set \`LIGHTSAIL_SSH_USER=ubuntu\`, run Deploy Lightsail CMS."
             echo ""
             echo "See \`docs/DEPLOY_RUNTIME_IMAGE.md\`."

@@ -7,6 +7,11 @@ import Providers from "@/app/providers";
 import { getSetting } from "@/services/settings";
 import { siteFontsClassName } from "@/lib/siteFonts";
 
+// @next-codemod-ignore Cache Components adoption: this segment temporarily allows blocking.
+// Remove this opt-out after verifying the segment passes validation without it.
+// See: https://nextjs.org/docs/app/guides/migrating-to-cache-components
+export const instant = false;
+
 const baseUrl =
   process.env.NEXTAUTH_URL?.trim() ||
   (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "http://localhost:3000") ||

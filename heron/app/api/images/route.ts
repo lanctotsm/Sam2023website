@@ -3,6 +3,7 @@ import { errorResponse, getAuthUser } from "@/lib/api-utils";
 import { serializeImage } from "@/lib/serializers";
 import { isAllowedObjectKey } from "@/lib/object-key";
 import { createImage, getAllImages } from "@/services/images";
+import { revalidatePublicContent } from "@/lib/revalidate-public";
 
 export async function GET() {
   const user = await getAuthUser();
@@ -38,6 +39,7 @@ export async function POST(request: Request) {
       altText: (payload.alt_text || "").trim(),
       createdBy: user.id
     });
+    revalidatePublicContent();
     return NextResponse.json(serializeImage(created), { status: 201 });
   } catch (error) {
     return errorResponse("failed to create image", 500);

@@ -3,6 +3,7 @@ import { errorResponse, getAuthUser } from "@/lib/api-utils";
 import { serializeImage } from "@/lib/serializers";
 import { isAllowedObjectKey } from "@/lib/object-key";
 import { createImage } from "@/services/images";
+import { revalidatePublicContent } from "@/lib/revalidate-public";
 
 type ImagePayload = {
   s3_key: string;
@@ -51,6 +52,7 @@ export async function POST(request: Request) {
       })
     );
 
+    revalidatePublicContent();
     return NextResponse.json(
       { images: createdImages.map(serializeImage) },
       { status: 201 }

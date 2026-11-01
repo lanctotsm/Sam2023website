@@ -1,21 +1,24 @@
+import { Suspense } from "react";
+import { connection } from "next/server";
 import { getSetting } from "@/services/settings";
-import { getAllPosts } from "@/services/posts";
-import { serializePost } from "@/lib/serializers";
 import { parsePostsPageConfig } from "@/lib/postsPage";
 import PageStyleProvider from "@/components/PageStyleProvider";
 import PostsPageContent from "@/components/posts/PostsPageContent";
+import { getCachedPublicPosts } from "@/services/public-content";
 
-export const dynamic = "force-dynamic";
+export default function PostsPage() {
+    return (
+        <Suspense fallback={null}>
+            <PostsContent />
+        </Suspense>
+    );
+}
 
-export default async function PostsPage() {
+async function PostsContent() {
+    await connection();
     const raw = await getSetting("posts_page");
     const config = parsePostsPageConfig(raw);
-
-    let posts: ReturnType<typeof serializePost>[] = [];
-    if (config.showPosts) {
-        const rows = await getAllPosts({});
-        posts = rows.map((row) => serializePost(row));
-    }
+    const posts = config.showPosts ? await getCachedPublicPosts() : [];
 
     return (
         <PageStyleProvider page="posts">

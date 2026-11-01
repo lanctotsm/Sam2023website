@@ -9,6 +9,7 @@ import { addAlbumImage } from "@/services/albumImages";
 import { putObject, deleteObjects } from "@/lib/s3";
 import { processImage } from "@/lib/image-processing";
 import { maybeGenerateAltText } from "./maybe-generate-alt";
+import { revalidatePublicContent } from "@/lib/revalidate-public";
 
 // Default lowered from 100MB to 25MB: the deploy target is a memory-
 // constrained instance, and decoding a large image into raw pixels for
@@ -178,6 +179,7 @@ export async function POST(request: Request) {
       }
     }
 
+    revalidatePublicContent();
     return NextResponse.json(
       { images: createdImages.map(serializeImage) },
       { status: 201 }

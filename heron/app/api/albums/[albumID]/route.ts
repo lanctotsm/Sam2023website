@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { errorResponse, getAuthUser, parseId } from "@/lib/api-utils";
 import { serializeAlbum } from "@/lib/serializers";
 import { deleteAlbum, getAlbumById, updateAlbum } from "@/services/albums";
+import { revalidatePublicContent } from "@/lib/revalidate-public";
 
 export async function GET(_: Request, { params }: { params: Promise<{ albumID: string }> }) {
   const { albumID } = await params;
@@ -48,6 +49,7 @@ export async function PUT(request: Request, { params }: { params: Promise<{ albu
     return errorResponse("album not found", 404);
   }
 
+  revalidatePublicContent();
   return NextResponse.json(serializeAlbum(updated));
 }
 
@@ -64,5 +66,6 @@ export async function DELETE(_: Request, { params }: { params: Promise<{ albumID
   }
 
   await deleteAlbum(id);
+  revalidatePublicContent();
   return NextResponse.json({ status: "deleted" });
 }

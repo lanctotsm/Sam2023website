@@ -11,6 +11,7 @@ import {
 import { isImageLinkedToAnyAlbum } from "@/services/albumImages";
 import { deleteImage, getImageById } from "@/services/images";
 import { deleteObjects } from "@/lib/s3";
+import { revalidatePublicContent } from "@/lib/revalidate-public";
 
 export async function GET(_: Request, { params }: { params: Promise<{ postID: string }> }) {
   const { postID } = await params;
@@ -74,6 +75,7 @@ export async function PUT(request: Request, { params }: { params: Promise<{ post
     return errorResponse("post not found", 404);
   }
 
+  revalidatePublicContent();
   if (inlineImageIds) {
     await replacePostInlineImages(id, inlineImageIds);
   }
@@ -95,27 +97,32 @@ export async function DELETE(_: Request, { params }: { params: Promise<{ postID:
 
   const ownedImageIds = await getPostInlineImageIds(id);
   await deletePost(id);
+  revalidatePublicContent();
 
-  for (const imageId of ownedImageIds) {
-    const stillUsedByPosts = await isImageReferencedByAnyPost(imageId);
-    if (stillUsedByPosts) continue;
+  try {
+    for (const imageId of ownedImageIds) {
+      const stillUsedByPosts = await isImageReferencedByAnyPost(imageId);
+      if (stillUsedByPosts) continue;
 
-    const linkedToAlbum = await isImageLinkedToAnyAlbum(imageId);
-    if (linkedToAlbum) continue;
+      const linkedToAlbum = await isImageLinkedToAnyAlbum(imageId);
+      if (linkedToAlbum) continue;
 
-    const row = await getImageById(imageId);
-    if (!row) continue;
+      const row = await getImageById(imageId);
+      if (!row) continue;
 
-    const keys: string[] = [];
-    for (const key of [row.s3Key, row.s3KeyThumb, row.s3KeyLarge, row.s3KeyOriginal]) {
-      if (key && typeof key === "string") {
-        keys.push(key.replace(/^\//, ""));
+      const keys: string[] = [];
+      for (const key of [row.s3Key, row.s3KeyThumb, row.s3KeyLarge, row.s3KeyOriginal]) {
+        if (key && typeof key === "string") {
+          keys.push(key.replace(/^\//, ""));
+        }
       }
+      if (keys.length > 0) {
+        await deleteObjects(keys);
+      }
+      await deleteImage(imageId);
     }
-    if (keys.length > 0) {
-      await deleteObjects(keys);
-    }
-    await deleteImage(imageId);
+  } catch (err) {
+    console.error("Failed to clean up images for deleted post:", err);
   }
   return NextResponse.json({ status: "deleted" });
 }
