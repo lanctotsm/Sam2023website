@@ -1,6 +1,14 @@
 import { NextResponse } from "next/server";
 import { errorResponse, getAuthUser } from "@/lib/api-utils";
+import { parsePostsPageConfig } from "@/lib/postsPage";
 import { getSetting, getSettings, updateSetting, updateSettings } from "@/services/settings";
+
+function normalizeSettingValue(key: string, value: string): string {
+    if (key === "posts_page") {
+        return JSON.stringify(parsePostsPageConfig(value));
+    }
+    return value;
+}
 
 // Settings change immediately after a save (see services/settings.ts), and the
 // admin Settings page relies on GET here always reflecting the latest values —
@@ -18,6 +26,7 @@ const ALLOWED_SETTING_KEYS = new Set([
     "site_title",
     "footer_text",
     "front_page",
+    "posts_page",
     "page_styles",
     "nav_styles",
     "ai_alt_text_enabled",
@@ -65,13 +74,14 @@ export async function PUT(request: Request) {
         if (payload.value.length > MAX_VALUE_LENGTH) {
             return errorResponse("value too large", 400);
         }
-        await updateSetting(payload.key, payload.value);
+        await updateSetting(payload.key, normalizeSettingValue(payload.key, payload.value));
         return NextResponse.json({ ok: true });
     }
 
     // Batch update: { settings: { key1: "val1", key2: "val2" } }
     if (payload.settings !== null && typeof payload.settings === "object" && !Array.isArray(payload.settings)) {
         const entries = payload.settings as Record<string, string>;
+        const normalized: Record<string, string> = {};
         for (const [key, value] of Object.entries(entries)) {
             if (!ALLOWED_SETTING_KEYS.has(key)) {
                 return errorResponse(`unknown setting key: ${key}`, 400);
@@ -79,8 +89,9 @@ export async function PUT(request: Request) {
             if (typeof value !== "string" || value.length > MAX_VALUE_LENGTH) {
                 return errorResponse(`invalid or too-large value for key: ${key}`, 400);
             }
+            normalized[key] = normalizeSettingValue(key, value);
         }
-        await updateSettings(entries);
+        await updateSettings(normalized);
         return NextResponse.json({ ok: true });
     }
 
