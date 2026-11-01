@@ -10,12 +10,10 @@ type PostHit = {
   title: string;
   slug: string;
   summary: string | null;
-  markdown: string;
   status: string;
   publishedAt: string | null;
   metadata: string | Record<string, string> | null;
   coverImageId: number | null;
-  html: string | null;
   createdBy: number | null;
   createdAt: string;
   updatedAt: string;
@@ -62,16 +60,22 @@ export async function searchFts(query: string) {
   try {
     postHits = db
       .prepare(
-        `SELECT posts.id, posts.title, posts.slug, posts.summary, posts.markdown, posts.status,
+        `SELECT posts.id, posts.title, posts.slug, posts.summary, posts.status,
                 posts.published_at AS publishedAt, posts.metadata, posts.cover_image_id AS coverImageId,
-                posts.html, posts.created_by AS createdBy, posts.created_at AS createdAt,
+                posts.created_by AS createdBy, posts.created_at AS createdAt,
                 posts.updated_at AS updatedAt
          FROM posts_fts
          INNER JOIN posts ON posts.id = posts_fts.rowid
          WHERE posts_fts MATCH ?
+           AND posts.status = 'published'
+           AND (
+             posts.published_at IS NULL
+             OR posts.published_at = ''
+             OR posts.published_at <= ?
+           )
          LIMIT 20`
       )
-      .all(q) as PostHit[];
+      .all(q, new Date().toISOString()) as PostHit[];
   } catch {
     // Table might not exist yet or the query is not valid FTS syntax.
   }
@@ -97,10 +101,13 @@ export async function searchFts(query: string) {
   const posts = postHits
     .filter((row) => isPubliclyVisible(row))
     .map((row) =>
-      serializePost({
-        ...row,
-        metadata: parseMetadata(row.metadata)
-      })
+      serializePost(
+        {
+          ...row,
+          metadata: parseMetadata(row.metadata)
+        },
+        { includeBody: false }
+      )
     );
 
   const albums = albumHits.filter((row) => isAlbumPubliclyVisible(row)).map((row) => serializeAlbum(row));

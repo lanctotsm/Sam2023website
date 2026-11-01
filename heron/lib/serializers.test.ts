@@ -34,6 +34,27 @@ describe("lib/serializers", () => {
       });
     });
 
+    it("omits the article body from public list rows", () => {
+      const row = {
+        id: 9,
+        title: "Listed",
+        slug: "listed",
+        summary: "Card",
+        markdown: "# Full",
+        html: "<h1>Full</h1>",
+        status: "published" as const,
+        publishedAt: null,
+        metadata: null,
+        createdBy: 1,
+        createdAt: "2024-01-01T00:00:00Z",
+        updatedAt: "2024-01-01T00:00:00Z"
+      };
+      const out = serializePost(row, { includeBody: false });
+      expect(out).not.toHaveProperty("markdown");
+      expect(out).not.toHaveProperty("html");
+      expect(out.summary).toBe("Card");
+    });
+
     it("uses empty string for null summary and normalizes null dates", () => {
       const row = {
         id: 2,
