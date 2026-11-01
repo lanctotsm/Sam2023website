@@ -3,16 +3,6 @@
 import type { PostsListSectionData } from "@/lib/postsPage";
 import type { SectionEditorProps } from "@/components/home/sectionEditorTypes";
 
-export function PostsListSectionView({ data }: { data: PostsListSectionData }) {
-    const heading = data.heading?.trim() || "Posts";
-    return (
-        <section className="grid gap-4">
-            <h2 className="heading-rule m-0 font-bold text-chestnut dark:text-dark-text">{heading}</h2>
-            <p className="text-sm text-olive dark:text-dark-muted">Blog posts from the CMS appear here.</p>
-        </section>
-    );
-}
-
 export function PostsListSectionEditor({
     data,
     onChange,

@@ -11,7 +11,6 @@ import {
     getPostsPageRegistryEntry,
     POSTS_PAGE_ADD_TEMPLATE_IDS,
 } from "@/components/posts/sectionRegistry";
-import { createHomeSection } from "@/lib/frontPageDefaults";
 
 type Props = {
     config: PostsPageSettings;
@@ -61,19 +60,7 @@ export default function PostsPageSectionOrderPanel({
     };
 
     const addTextBlock = () => {
-        const homeSection = createHomeSection("text-block");
-        const section = {
-            id: homeSection.id,
-            templateId: "text-block" as const,
-            label: homeSection.label,
-            removable: true,
-            data: homeSection.data,
-        };
-        setConfig((c) => ({
-            ...c,
-            sections: [...c.sections, section],
-            sectionOrder: [...c.sectionOrder, section.id],
-        }));
+        addNewSection("text-block");
     };
 
     const hiddenSections = config.sections.filter((s) => !config.sectionOrder.includes(s.id));

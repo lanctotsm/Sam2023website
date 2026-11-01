@@ -1,5 +1,10 @@
 import { describe, it, expect } from "vitest";
-import { isZipFile, extractImagesFromZip, getImageDimensions } from "./upload-utils";
+import {
+  isZipFile,
+  extractImagesFromZip,
+  prepareUploadFiles,
+  MAX_UPLOAD_BYTES,
+} from "./upload-utils";
 import JSZip from "jszip";
 
 describe("upload-utils", () => {
@@ -173,22 +178,35 @@ describe("upload-utils", () => {
     });
   });
 
-  describe("getImageDimensions", () => {
-    it("returns null for non-image files", async () => {
-      // Skip this test in Node environment since it requires browser APIs
-      if (typeof window === "undefined") {
-        return;
-      }
-      
-      const file = new File(["not an image"], "test.txt", { type: "text/plain" });
-      const dimensions = await getImageDimensions(file);
-      expect(dimensions).toBeNull();
+  describe("prepareUploadFiles", () => {
+    it("returns image files and extracted zip images", async () => {
+      const zip = new JSZip();
+      zip.file("photo.jpg", "fake-jpg");
+      const zipBlob = await zip.generateAsync({ type: "blob" });
+      const zipFile = new File([zipBlob], "photos.zip", { type: "application/zip" });
+      const extra = new File(["x"], "extra.png", { type: "image/png" });
+
+      const result = await prepareUploadFiles([extra, zipFile]);
+      expect(result).toEqual({
+        ok: true,
+        files: expect.arrayContaining([
+          expect.objectContaining({ name: "extra.png" }),
+          expect.objectContaining({ name: "photo.jpg" }),
+        ]),
+        extractedCount: 1,
+      });
     });
 
-    // Note: Testing actual image dimension extraction requires either:
-    // 1. Real image files (which we'd need to generate or load)
-    // 2. Mocking the Image constructor and load events
-    // Since this is a browser API that creates actual DOM Image elements,
-    // it's better tested in an E2E environment with real images
+    it("rejects files over the upload size limit", async () => {
+      const oversized = new File([new Uint8Array(MAX_UPLOAD_BYTES + 1)], "huge.jpg", {
+        type: "image/jpeg",
+      });
+      const result = await prepareUploadFiles([oversized]);
+      expect(result).toEqual({
+        ok: false,
+        reason: "oversized",
+        oversizedNames: ["huge.jpg"],
+      });
+    });
   });
 });

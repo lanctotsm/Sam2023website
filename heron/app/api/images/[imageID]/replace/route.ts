@@ -7,11 +7,10 @@ import { serializeImage } from "@/lib/serializers";
 import { deleteImage, getImageById, updateImage } from "@/services/images";
 import { deleteObjects, putObject } from "@/lib/s3";
 import { processImage } from "@/lib/image-processing";
+import { ALLOWED_IMAGE_TYPES, MAX_UPLOAD_BYTES } from "@/lib/upload-utils";
 import { revalidatePublicContent } from "@/lib/revalidate-public";
 
-// Kept in sync with app/api/images/upload/route.ts - see the comment there.
-const MAX_FILE_BYTES = Number(process.env.MAX_UPLOAD_BYTES) || 25 * 1024 * 1024;
-const ALLOWED_TYPES = /^image\/(jpeg|jpg|png|gif|webp|bmp)$/i;
+const MAX_FILE_BYTES = MAX_UPLOAD_BYTES;
 
 export async function PUT(
   request: Request,
@@ -42,7 +41,7 @@ export async function PUT(
     return errorResponse("file exceeds max size", 400);
   }
   const contentType = file.type || "image/jpeg";
-  if (!ALLOWED_TYPES.test(contentType)) {
+  if (!ALLOWED_IMAGE_TYPES.test(contentType)) {
     return errorResponse("unsupported file type", 400);
   }
 

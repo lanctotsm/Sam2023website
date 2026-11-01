@@ -1,16 +1,16 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { GET, POST } from "./route";
-import { jsonRequest, MOCK_AUTH_USER } from "../__tests__/helpers";
+import { GET } from "./route";
+import { MOCK_AUTH_USER } from "../__tests__/helpers";
 
 vi.mock("@/lib/api-utils", () => ({
   getAuthUser: vi.fn(),
   errorResponse: (msg: string, status: number) => new Response(JSON.stringify({ error: msg }), { status })
 }));
-vi.mock("@/services/images", () => ({ getAllImages: vi.fn(), createImage: vi.fn() }));
+vi.mock("@/services/images", () => ({ getAllImages: vi.fn() }));
 vi.mock("@/lib/serializers", () => ({ serializeImage: (i: unknown) => i }));
 
 const { getAuthUser } = await import("@/lib/api-utils");
-const { getAllImages, createImage } = await import("@/services/images");
+const { getAllImages } = await import("@/services/images");
 
 describe("IMAGES /api/images", () => {
   beforeEach(() => {
@@ -29,31 +29,5 @@ describe("IMAGES /api/images", () => {
     const res = await GET();
     expect(res.status).toBe(200);
     expect((await res.json())).toHaveLength(1);
-  });
-
-  it("POST returns 401 when unauthenticated", async () => {
-    const res = await POST(jsonRequest("POST", "http://x", { s3_key: "k" }));
-    expect(res.status).toBe(401);
-  });
-
-  it("POST returns 400 when s3_key missing", async () => {
-    vi.mocked(getAuthUser).mockResolvedValue(MOCK_AUTH_USER as never);
-    const res = await POST(jsonRequest("POST", "http://x", {}));
-    expect(res.status).toBe(400);
-  });
-
-  it("POST returns 400 when s3_key is outside the allowed prefixes", async () => {
-    vi.mocked(getAuthUser).mockResolvedValue(MOCK_AUTH_USER as never);
-    const res = await POST(jsonRequest("POST", "http://x", { s3_key: "../secret" }));
-    expect(res.status).toBe(400);
-    expect(createImage).not.toHaveBeenCalled();
-  });
-
-  it("POST returns 201 when valid", async () => {
-    vi.mocked(getAuthUser).mockResolvedValue(MOCK_AUTH_USER as never);
-    vi.mocked(createImage).mockResolvedValue({ id: 1, s3Key: "uploads/k.jpg", width: null, height: null, caption: null, altText: null, createdBy: 1, createdAt: "" } as never);
-    const res = await POST(jsonRequest("POST", "http://x", { s3_key: "uploads/k.jpg" }));
-    expect(res.status).toBe(201);
-    expect(createImage).toHaveBeenCalledWith(expect.objectContaining({ s3Key: "uploads/k.jpg", createdBy: 1 }));
   });
 });

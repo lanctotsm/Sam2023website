@@ -8,16 +8,11 @@ import { createImage, updateImage, deleteImage } from "@/services/images";
 import { addAlbumImage } from "@/services/albumImages";
 import { putObject, deleteObjects } from "@/lib/s3";
 import { processImage } from "@/lib/image-processing";
+import { ALLOWED_IMAGE_TYPES, MAX_UPLOAD_BYTES } from "@/lib/upload-utils";
 import { maybeGenerateAltText } from "./maybe-generate-alt";
 import { revalidatePublicContent } from "@/lib/revalidate-public";
 
-// Default lowered from 100MB to 25MB: the deploy target is a memory-
-// constrained instance, and decoding a large image into raw pixels for
-// resizing can use several times its compressed file size in RAM (see
-// docs/ARCHITECTURE_PROPOSAL.md, "Raise the memory ceiling on uploads").
-// 25MB comfortably covers a phone or full-frame camera photo.
-const MAX_FILE_BYTES = Number(process.env.MAX_UPLOAD_BYTES) || 25 * 1024 * 1024;
-const ALLOWED_TYPES = /^image\/(jpeg|jpg|png|gif|webp|bmp)$/i;
+const MAX_FILE_BYTES = MAX_UPLOAD_BYTES;
 
 async function rollback(uploadedKeys: string[], createdImageIds: number[]) {
   for (const id of createdImageIds) {
@@ -84,7 +79,7 @@ export async function POST(request: Request) {
         return errorResponse(`file ${file.name} exceeds max size`, 400);
       }
       const contentType = file.type || "image/jpeg";
-      if (!ALLOWED_TYPES.test(contentType)) {
+      if (!ALLOWED_IMAGE_TYPES.test(contentType)) {
         await rollback(uploadedKeys, createdImageIds);
         return errorResponse(`file ${file.name}: unsupported type`, 400);
       }

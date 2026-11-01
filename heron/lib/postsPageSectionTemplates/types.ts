@@ -49,5 +49,3 @@ export const POSTS_PAGE_HOME_TEMPLATE_IDS = [
     "tag-list",
     "contact",
 ] as const satisfies readonly PostsPageTemplateId[];
-
-export const POSTS_PAGE_ONLY_TEMPLATE_IDS = ["posts-list", "rss-feed"] as const satisfies readonly PostsPageTemplateId[];
