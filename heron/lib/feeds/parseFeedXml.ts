@@ -1,5 +1,6 @@
 import type { FeedItem } from "./types";
 import { MAX_FEED_ITEMS } from "./types";
+import { sanitizePublicHttpUrl } from "./urlSafety";
 
 function decodeXmlEntities(text: string): string {
     return text
@@ -77,10 +78,10 @@ function parseRssItem(block: string): FeedItem | null {
 
     return {
         title: title || "Untitled",
-        url: link,
+        url: sanitizePublicHttpUrl(link) ?? "",
         publishedAt: pubDate ? normalizeDate(pubDate) : null,
         excerpt: stripHtml(description).slice(0, 500),
-        imageUrl: extractImageUrl(block, description),
+        imageUrl: sanitizePublicHttpUrl(extractImageUrl(block, description)),
     };
 }
 
@@ -99,10 +100,10 @@ function parseAtomEntry(block: string): FeedItem | null {
 
     return {
         title: title || "Untitled",
-        url: link,
+        url: sanitizePublicHttpUrl(link) ?? "",
         publishedAt: published ? normalizeDate(published) : null,
         excerpt: stripHtml(content).slice(0, 500),
-        imageUrl: extractImageUrl(block, content),
+        imageUrl: sanitizePublicHttpUrl(extractImageUrl(block, content)),
     };
 }
 

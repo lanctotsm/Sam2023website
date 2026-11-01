@@ -4,7 +4,7 @@ import {
     sanitizeTemplateData,
 } from "@/lib/homeSectionTemplates/definitions";
 import type { HomeSectionTemplateId } from "@/lib/homeSectionTemplates/types";
-import { isAllowedFeedUrl } from "@/lib/feeds/fetchFeed";
+import { isAllowedFeedUrl } from "@/lib/feeds/urlSafety";
 import type {
     PostsListSectionData,
     PostsPageSection,
@@ -46,8 +46,7 @@ export const POSTS_PAGE_TEMPLATE_DEFS = {
             const r = raw as Record<string, unknown>;
             const title = typeof r.title === "string" ? r.title.trim() : fb.title;
             const feedUrl = typeof r.feedUrl === "string" ? r.feedUrl.trim() : fb.feedUrl;
-            const allowHttp = process.env.NODE_ENV === "test";
-            const safeUrl = feedUrl && isAllowedFeedUrl(feedUrl, allowHttp) ? feedUrl : "";
+            const safeUrl = feedUrl && isAllowedFeedUrl(feedUrl) ? feedUrl : "";
             return { title, feedUrl: safeUrl };
         },
     },

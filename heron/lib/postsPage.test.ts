@@ -72,4 +72,34 @@ describe("parsePostsPageConfig", () => {
         const feed = config.sections.find((s) => s.id === "feed-ok");
         expect((feed?.data as { feedUrl: string }).feedUrl).toBe("https://example.com/rss.xml");
     });
+
+    it("clears http and private feed URLs", () => {
+        const raw = JSON.stringify({
+            showPosts: true,
+            sections: createDefaultPostsPageConfig().sections.concat(
+                {
+                    id: "feed-http",
+                    templateId: "rss-feed" as const,
+                    label: "HTTP",
+                    removable: true,
+                    data: { title: "HTTP", feedUrl: "http://example.com/rss.xml" },
+                },
+                {
+                    id: "feed-private",
+                    templateId: "rss-feed" as const,
+                    label: "Private",
+                    removable: true,
+                    data: { title: "Private", feedUrl: "https://127.0.0.1/rss" },
+                }
+            ),
+            sectionOrder: [DEFAULT_POSTS_LIST_SECTION_ID, "feed-http", "feed-private"],
+        });
+        const config = parsePostsPageConfig(raw);
+        expect((config.sections.find((s) => s.id === "feed-http")?.data as { feedUrl: string }).feedUrl).toBe(
+            ""
+        );
+        expect(
+            (config.sections.find((s) => s.id === "feed-private")?.data as { feedUrl: string }).feedUrl
+        ).toBe("");
+    });
 });

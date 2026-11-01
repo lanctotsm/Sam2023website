@@ -73,4 +73,19 @@ describe("parseFeedXml", () => {
         const items = parseFeedXml(BLOG_RSS);
         expect(items[0].title).not.toBe("My Blog");
     });
+
+    it("drops javascript item links and images", () => {
+        const xml = `<?xml version="1.0"?>
+<rss version="2.0"><channel>
+  <item>
+    <title>Evil</title>
+    <link>javascript:alert(1)</link>
+    <description><![CDATA[<img src="javascript:alert(2)"/>]]></description>
+  </item>
+</channel></rss>`;
+        const items = parseFeedXml(xml);
+        expect(items).toHaveLength(1);
+        expect(items[0].url).toBe("");
+        expect(items[0].imageUrl).toBeNull();
+    });
 });
