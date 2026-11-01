@@ -75,6 +75,13 @@ describe("searchFts", () => {
     expect(mockPrepareAll).toHaveBeenCalledWith(expect.stringContaining("posts_fts"), "a".repeat(100));
   });
 
+  it("requires published albums in the SQL before the result limit", async () => {
+    await searchFts("harbor");
+    const albumSql = mockPrepareAll.mock.calls.map((call) => String(call[0])).find((sql) => sql.includes("albums_fts"));
+    expect(albumSql).toContain("albums.status = 'published'");
+    expect(albumSql?.indexOf("albums.status")).toBeLessThan(albumSql?.indexOf("LIMIT") ?? -1);
+  });
+
   it("returns the joined post and album without a per-hit lookup", async () => {
     const result = await searchFts("hello");
     expect(result.posts).toEqual([{ id: 1, kind: "post" }]);

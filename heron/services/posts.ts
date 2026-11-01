@@ -1,4 +1,4 @@
-import { desc, eq, sql } from "drizzle-orm";
+import { and, desc, eq, sql } from "drizzle-orm";
 import { getDb, getRawDb } from "@/lib/db";
 import { albums, posts } from "@/lib/db/schema";
 import { normalizeStatus } from "@/lib/api-utils";
@@ -21,7 +21,29 @@ export async function refreshPostsEmbeddingAlbum(slug: string): Promise<void> {
   const db = getDb();
   for (const match of matches) {
     const html = await renderPostHtml(match.markdown);
-    await db.update(posts).set({ html }).where(eq(posts.id, match.id));
+    await db
+      .update(posts)
+      .set({ html })
+      .where(and(eq(posts.id, match.id), eq(posts.markdown, match.markdown)));
+  }
+}
+
+export function albumSlugsUsingImage(imageId: number): string[] {
+  const rows = getRawDb()
+    .prepare(
+      `SELECT DISTINCT albums.slug AS slug
+       FROM album_images
+       INNER JOIN albums ON albums.id = album_images.album_id
+       WHERE album_images.image_id = ?`
+    )
+    .all(imageId) as { slug: string }[];
+  return rows.map((row) => row.slug).filter(Boolean);
+}
+
+/** Re-render posts that embed an album containing this image. */
+export async function refreshPostsUsingImage(imageId: number): Promise<void> {
+  for (const slug of albumSlugsUsingImage(imageId)) {
+    await refreshPostsEmbeddingAlbum(slug);
   }
 }
 
@@ -61,8 +83,15 @@ export async function getPostBySlug(slug: string) {
   if (row.html != null) return row;
 
   const html = await renderPostHtml(row.markdown);
-  await db.update(posts).set({ html }).where(eq(posts.id, row.id));
-  return { ...row, html };
+  const written = await db
+    .update(posts)
+    .set({ html })
+    .where(and(eq(posts.id, row.id), eq(posts.markdown, row.markdown), sql`${posts.html} IS NULL`))
+    .returning();
+  if (written[0]) return written[0];
+
+  const fresh = await db.select().from(posts).where(eq(posts.id, row.id)).limit(1);
+  return fresh[0] ?? null;
 }
 
 export async function getPostById(id: number) {
