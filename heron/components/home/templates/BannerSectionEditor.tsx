@@ -27,8 +27,9 @@ export function BannerSectionEditor({
                 />
             </div>
             <div>
-                <label className={labelClass}>Banner treatment</label>
+                <label className={labelClass} htmlFor={`${sectionId}-banner-variant`}>Banner treatment</label>
                 <select
+                    id={`${sectionId}-banner-variant`}
                     className={inputClass}
                     value={data.variant || "panel"}
                     onChange={(e) => onChange({ variant: e.target.value as BannerSectionData["variant"] })}

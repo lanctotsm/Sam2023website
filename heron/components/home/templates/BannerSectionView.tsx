@@ -47,13 +47,13 @@ export function BannerSectionView({ data }: { data: BannerSectionData }) {
         ? "text-white"
         : filled
           ? "bg-gradient-to-br from-chestnut to-chestnut-light text-desert-tan dark:from-chestnut-dark dark:to-chestnut"
-          : "text-chestnut dark:text-dark-text";
-    const titleColor = customBg ? "" : filled ? "text-desert-tan" : "text-chestnut dark:text-dark-text";
+          : "text-[var(--page-h1-color,var(--color-chestnut))] dark:text-[var(--page-h1-color-dark,var(--color-dark-text))]";
+    const titleColor = customBg ? "" : filled ? "text-desert-tan" : "text-[var(--page-h1-color,var(--color-chestnut))] dark:text-[var(--page-h1-color-dark,var(--color-dark-text))]";
     const subtitleColor = customBg
         ? "text-white/90"
         : filled
           ? "text-desert-tan-light"
-          : "text-chestnut-dark dark:text-dark-muted";
+          : "text-[var(--page-body-color,var(--color-chestnut-dark))] dark:text-[var(--page-body-color-dark,var(--color-dark-muted))]";
 
     return (
         <section className={`${shape} ${palette}`} style={customBg ? bannerStyle(data) : undefined}>

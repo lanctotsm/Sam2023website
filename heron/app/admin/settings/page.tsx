@@ -19,7 +19,7 @@ import PageStyleEditor from "@/components/PageStyleEditor";
 import NavStyleEditor from "@/components/NavStyleEditor";
 import HomePageSettingsTab from "@/components/admin/HomePageSettingsTab";
 import TemplatesTab from "@/components/admin/TemplatesTab";
-import type { SavedSiteTemplate } from "@/lib/siteTemplates/types";
+import type { SavedSiteTemplate, SiteTemplateSnapshot } from "@/lib/siteTemplates/types";
 import {
   adminBtnAdd as btnAdd,
   adminBtnDanger as btnDanger,
@@ -65,6 +65,12 @@ export default function AdminSettingsPage() {
 
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
+    const writeLock = useRef(false);
+    const [persistedSnapshot, setPersistedSnapshot] = useState<SiteTemplateSnapshot>({
+        front_page: defaultFrontPage,
+        page_styles: defaultPageStyles,
+        nav_styles: defaultNavStyle,
+    });
     const [toast, setToast] = useState<Toast | null>(null);
     const router = useRouter();
 
@@ -94,6 +100,11 @@ export default function AdminSettingsPage() {
                 const loadedNavStyles = parseNavStyles(data.nav_styles ?? null);
                 setPageStyles(loadedPageStyles);
                 setNavStyles(loadedNavStyles);
+                setPersistedSnapshot({
+                    front_page: data.front_page ? parseFrontPageConfig(data.front_page) : defaultFrontPage,
+                    page_styles: loadedPageStyles,
+                    nav_styles: loadedNavStyles,
+                });
                 savedStylesRef.current = {
                     pageStyles: JSON.stringify(loadedPageStyles),
                     navStyles: JSON.stringify(loadedNavStyles),
@@ -115,8 +126,20 @@ export default function AdminSettingsPage() {
     }, []);
 
     // ── Save (all tabs at once) ─────────────────────────────────────────────────
-    const handleSave = async () => {
+    const beginWrite = () => {
+        if (writeLock.current) return false;
+        writeLock.current = true;
         setSaving(true);
+        return true;
+    };
+
+    const endWrite = () => {
+        writeLock.current = false;
+        setSaving(false);
+    };
+
+    const handleSave = async () => {
+        if (!beginWrite()) return;
         try {
             const newPageStylesJson = JSON.stringify(pageStyles);
             const newNavStylesJson = JSON.stringify(navStyles);
@@ -139,6 +162,11 @@ export default function AdminSettingsPage() {
             });
 
             savedStylesRef.current = { pageStyles: newPageStylesJson, navStyles: newNavStylesJson };
+            setPersistedSnapshot({
+                front_page: config,
+                page_styles: pageStyles,
+                nav_styles: navStyles,
+            });
 
             const savedAt = new Date().toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
             if (stylesChanged) {
@@ -158,7 +186,7 @@ export default function AdminSettingsPage() {
         } catch {
             showToast("Failed to save settings", "error");
         } finally {
-            setSaving(false);
+            endWrite();
         }
     };
 
@@ -318,6 +346,10 @@ export default function AdminSettingsPage() {
                     frontPage={config}
                     pageStyles={pageStyles}
                     navStyles={navStyles}
+                    persistedSnapshot={persistedSnapshot}
+                    writing={saving}
+                    beginWrite={beginWrite}
+                    endWrite={endWrite}
                     activeTemplate={activeTemplate}
                     savedTemplates={savedTemplates}
                     onSavedTemplates={setSavedTemplates}
@@ -325,6 +357,7 @@ export default function AdminSettingsPage() {
                         setConfig(snapshot.front_page);
                         setPageStyles(snapshot.page_styles);
                         setNavStyles(snapshot.nav_styles);
+                        setPersistedSnapshot(snapshot);
                         setActiveTemplate(templateId);
                         savedStylesRef.current = {
                             pageStyles: JSON.stringify(snapshot.page_styles),

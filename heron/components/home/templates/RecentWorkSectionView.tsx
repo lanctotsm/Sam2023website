@@ -15,7 +15,7 @@ export async function RecentWorkSectionView({ data }: { data: RecentWorkSectionD
     const posts = data.showPosts ? (await getCachedPublicPosts()).slice(0, data.postLimit) : [];
 
     return (
-        <section className={homeCardClass}>
+        <section className={homeCardClass} style={homeBodyStyle}>
             <h2 className={homeSectionTitleClass} style={homeHeadingStyle}>
                 {data.heading}
             </h2>
