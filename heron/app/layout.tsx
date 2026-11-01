@@ -5,7 +5,9 @@ import NavStyleProvider from "@/components/NavStyleProvider";
 import Footer from "@/components/Footer";
 import Providers from "@/app/providers";
 import { getSetting } from "@/services/settings";
-import { siteFontsClassName } from "@/lib/siteFonts";
+import { parseNavStyles, parsePageStyles } from "@/lib/frontPageDefaults";
+import { fontsUsedBySite } from "@/lib/publicFonts";
+import { publicFontsClassName } from "@/lib/siteFonts";
 
 const baseUrl =
   process.env.NEXTAUTH_URL?.trim() ||
@@ -49,7 +51,15 @@ const themeScript = `
 })();
 `;
 
-export default function RootLayout({ children }: { children: ReactNode }) {
+export default async function RootLayout({ children }: { children: ReactNode }) {
+  const [pageStylesRaw, navStylesRaw] = await Promise.all([
+    getSetting("page_styles"),
+    getSetting("nav_styles"),
+  ]);
+  const fontClass = publicFontsClassName(
+    fontsUsedBySite(parsePageStyles(pageStylesRaw), parseNavStyles(navStylesRaw))
+  );
+
   return (
     <html lang="en" suppressHydrationWarning>
       <head>
@@ -62,7 +72,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
         />
       </head>
       <body
-        className={`m-0 flex min-h-svh flex-col bg-canvas text-chestnut-dark dark:bg-dark-canvas dark:text-dark-text ${siteFontsClassName}`}
+        className={`m-0 flex min-h-svh flex-col bg-canvas text-chestnut-dark dark:bg-dark-canvas dark:text-dark-text ${fontClass}`}
       >
         <a
           href="#main-content"

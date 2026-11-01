@@ -1,6 +1,7 @@
 import { getSetting } from "@/services/settings";
 import { parsePageStyles } from "@/lib/frontPageDefaults";
 import { buildPageBgStyle, buildPageCssVars } from "@/lib/pageStyleVars";
+import { publicFontsClassName } from "@/lib/siteFonts";
 
 type PageKey = "home" | "albums" | "posts" | "resume";
 
@@ -16,6 +17,7 @@ export default async function PageStyleProvider({ page, children }: Props) {
 
     const cssVars = buildPageCssVars(style);
     const hasCssVars = Object.keys(cssVars).length > 0;
+    const fontClass = publicFontsClassName([style.headingFont, style.bodyFont]);
 
     const hasBg = background.backgroundType !== "none";
     const bgStyles = hasBg ? buildPageBgStyle(background, { attachment: "fixed" }) : {};
@@ -27,14 +29,11 @@ export default async function PageStyleProvider({ page, children }: Props) {
             {hasBgStyles && (
                 <div className="fixed inset-0 -z-10" style={bgStyles} />
             )}
-            {/* CSS custom properties wrapper (or just children if no vars).
-                Font vars use next/font CSS variable references (no quoted
-                family names), so they survive React SSR style serialization. */}
-            {hasCssVars ? (
-                <div style={cssVars}>{children}</div>
-            ) : (
-                children
-            )}
+            {/* Font classes live with the page styles so a client navigation
+                picks up a newly saved family without waiting for the root layout. */}
+            <div className={fontClass} style={hasCssVars ? cssVars : undefined}>
+                {children}
+            </div>
         </>
     );
 }

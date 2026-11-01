@@ -6,7 +6,7 @@ import type {
     PageStyleConfig,
 } from "@/lib/frontPageDefaults";
 import { findSection, getSectionDisplayLabel } from "@/lib/frontPageDefaults";
-import { HOME_SECTION_REGISTRY } from "@/components/home/sectionRegistry";
+import { HOME_SECTION_EDITOR_REGISTRY } from "@/components/home/sectionEditorRegistry";
 import type { SectionEditorUi } from "@/components/home/sectionEditorTypes";
 import { homeHeadingStyle } from "@/components/home/homeSectionStyles";
 import HomePageSectionOrderPanel from "@/components/admin/HomePageSectionOrderPanel";
@@ -69,7 +69,7 @@ export default function HomePageSettingsTab({
         const section = findSection(config, id);
         if (!section) return null;
 
-        const entry = HOME_SECTION_REGISTRY[section.templateId];
+        const entry = HOME_SECTION_EDITOR_REGISTRY[section.templateId];
         if (!entry) return null;
 
         const Editor = entry.Editor;

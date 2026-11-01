@@ -5,9 +5,9 @@ import {
     createHomeSection,
     createTextBlockSection,
     getSectionDisplayLabel,
+    getTemplateLabel,
     HOME_SECTION_TEMPLATE_IDS,
 } from "@/lib/frontPageDefaults";
-import { HOME_SECTION_REGISTRY } from "@/components/home/sectionRegistry";
 
 type Props = {
     config: FrontPageSettings;
@@ -79,7 +79,6 @@ export default function HomePageSectionOrderPanel({
                     {config.sectionOrder.map((id, index) => {
                         const section = config.sections.find((s) => s.id === id);
                         if (!section) return null;
-                        const template = HOME_SECTION_REGISTRY[section.templateId];
                         return (
                             <li
                                 key={id}
@@ -88,7 +87,7 @@ export default function HomePageSectionOrderPanel({
                                 <span className="min-w-0 flex-1 text-sm font-medium text-chestnut-dark dark:text-dark-text">
                                     {getSectionDisplayLabel(section)}
                                     <span className="ml-2 text-xs font-normal text-olive dark:text-dark-muted">
-                                        ({template?.label ?? section.templateId})
+                                        ({getTemplateLabel(section.templateId)})
                                     </span>
                                 </span>
                                 <button
@@ -156,7 +155,7 @@ export default function HomePageSectionOrderPanel({
                     </option>
                     {HOME_SECTION_TEMPLATE_IDS.map((templateId) => (
                         <option key={templateId} value={templateId}>
-                            {HOME_SECTION_REGISTRY[templateId].label}
+                            {getTemplateLabel(templateId)}
                         </option>
                     ))}
                 </select>

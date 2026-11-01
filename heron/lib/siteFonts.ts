@@ -16,7 +16,7 @@ import {
     Roboto,
     Source_Sans_3,
 } from "next/font/google";
-import type { AvailableFont } from "@/lib/fonts";
+import { isAvailableFont, type AvailableFont } from "@/lib/fonts";
 
 /**
  * Self-hosted copies of every font offered in Settings. Using next/font means
@@ -145,25 +145,44 @@ const crimsonText = Crimson_Text({
     preload: false,
 });
 
+const fontVariableClass: Record<AvailableFont, string> = {
+    Inter: inter.variable,
+    Fraunces: fraunces.variable,
+    Roboto: roboto.variable,
+    "Open Sans": openSans.variable,
+    Lato: lato.variable,
+    Montserrat: montserrat.variable,
+    "Playfair Display": playfairDisplay.variable,
+    Merriweather: merriweather.variable,
+    Raleway: raleway.variable,
+    Poppins: poppins.variable,
+    "Source Sans 3": sourceSans3.variable,
+    Nunito: nunito.variable,
+    Outfit: outfit.variable,
+    "DM Sans": dmSans.variable,
+    "Cormorant Garamond": cormorantGaramond.variable,
+    "Crimson Text": crimsonText.variable,
+};
+
 /** Space-separated class names that define every `--font-*` CSS variable on an element. */
-export const siteFontsClassName = [
-    inter.variable,
-    fraunces.variable,
-    roboto.variable,
-    openSans.variable,
-    lato.variable,
-    montserrat.variable,
-    playfairDisplay.variable,
-    merriweather.variable,
-    raleway.variable,
-    poppins.variable,
-    sourceSans3.variable,
-    nunito.variable,
-    outfit.variable,
-    dmSans.variable,
-    cormorantGaramond.variable,
-    crimsonText.variable,
-].join(" ");
+export const siteFontsClassName = Object.values(fontVariableClass).join(" ");
+
+/**
+ * Variable classes for the public document. Inter and Fraunces are always
+ * included; pass the families `fontsUsedBySite` returns for anything else.
+ */
+export function publicFontsClassName(fonts: readonly string[]): string {
+    const classes = [inter.variable, fraunces.variable];
+    const seen = new Set<string>(classes);
+    for (const font of fonts) {
+        if (!isAvailableFont(font)) continue;
+        const variableClass = fontVariableClass[font];
+        if (seen.has(variableClass)) continue;
+        seen.add(variableClass);
+        classes.push(variableClass);
+    }
+    return classes.join(" ");
+}
 
 /** Exhaustiveness check: every AVAILABLE_FONTS entry has a loader variable. */
 const _allFontsHaveVars: Record<AvailableFont, true> = {
