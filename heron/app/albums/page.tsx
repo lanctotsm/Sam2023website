@@ -1,13 +1,20 @@
+import { Suspense } from "react";
 import Link from "next/link";
+import { connection } from "next/server";
 import { buildImageUrl } from "@/lib/images";
 import PageStyleProvider from "@/components/PageStyleProvider";
-import { skipEmptyProductionBuild } from "@/lib/skip-empty-build";
 import { getCachedPublicAlbums } from "@/services/public-content";
 
-export const revalidate = 3600;
+export default function AlbumsPage() {
+  return (
+    <Suspense fallback={null}>
+      <AlbumsContent />
+    </Suspense>
+  );
+}
 
-export default async function AlbumsPage() {
-  await skipEmptyProductionBuild();
+async function AlbumsContent() {
+  await connection();
   const albums = await getCachedPublicAlbums();
 
   return (

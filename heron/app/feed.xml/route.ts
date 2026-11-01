@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { connection } from "next/server";
 import { getAllPosts } from "@/services/posts";
 import { serializePost } from "@/lib/serializers";
 
@@ -25,6 +26,7 @@ const siteTitle =
   (typeof process !== "undefined" && process.env.SITE_TITLE?.trim()) || "Sam's website";
 
 export async function GET() {
+  await connection();
   const rows = await getAllPosts({});
   const posts = Array.isArray(rows) ? rows.map((row) => serializePost(row)) : [];
 

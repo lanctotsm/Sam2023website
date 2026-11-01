@@ -1,13 +1,20 @@
+import { Suspense } from "react";
 import Link from "next/link";
+import { connection } from "next/server";
 import PageStyleProvider from "@/components/PageStyleProvider";
 import { formatPostDate } from "@/lib/format-post-date";
-import { skipEmptyProductionBuild } from "@/lib/skip-empty-build";
 import { getCachedPublicPosts } from "@/services/public-content";
 
-export const revalidate = 3600;
+export default function PostsPage() {
+  return (
+    <Suspense fallback={null}>
+      <PostsContent />
+    </Suspense>
+  );
+}
 
-export default async function PostsPage() {
-  await skipEmptyProductionBuild();
+async function PostsContent() {
+  await connection();
   const posts = await getCachedPublicPosts();
 
   return (

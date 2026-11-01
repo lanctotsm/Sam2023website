@@ -4,9 +4,8 @@ import { getSetting, getSettings, updateSetting, updateSettings } from "@/servic
 
 // Settings change immediately after a save (see services/settings.ts), and the
 // admin Settings page relies on GET here always reflecting the latest values —
-// never a browser/CDN-cached response from an earlier visit. Force dynamic
-// rendering and an explicit no-store header so nothing caches this route.
-export const dynamic = "force-dynamic";
+// never a browser/CDN-cached response from an earlier visit.
+// Cache-Control: no-store keeps this response out of a browser or CDN cache.
 
 function jsonNoStore(body: unknown, status = 200) {
     return NextResponse.json(body, {

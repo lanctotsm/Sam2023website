@@ -1,59 +1,85 @@
-import { unstable_cache } from "next/cache";
+import { cacheLife, cacheTag } from "next/cache";
 import { PUBLIC_CONTENT_TAG } from "@/lib/revalidate-public";
-import {
-  nextScheduledPublicationMs,
-  PUBLIC_CACHE_MAX_SECONDS,
-  publicCacheRevalidateSeconds,
-  publicationWindowId
-} from "@/lib/public-cache-window";
+import { nextScheduledPublicationMs } from "@/lib/public-cache-window";
 import { serializeAlbum, serializeImage, serializePost } from "@/lib/serializers";
 import { isPubliclyVisible } from "@/lib/posts-visibility";
 import { getAlbumImages } from "@/services/albumImages";
 import { getAlbumBySlug, getAllAlbums } from "@/services/albums";
 import { getAllPosts, getPostBySlug } from "@/services/posts";
 
-const publicCache = {
-  tags: [PUBLIC_CONTENT_TAG],
-  revalidate: PUBLIC_CACHE_MAX_SECONDS
-};
+const HOUR_SECONDS = 3600;
+
+/**
+ * `hours` revalidates after an hour. A post scheduled sooner than that would
+ * stay hidden until the entry revalidated, so the entry expires when the post
+ * becomes public. `expire` has to be longer than `revalidate`.
+ */
+function cacheUntilPublication(nextChangeAtMs: number | null) {
+  const seconds =
+    nextChangeAtMs == null || Number.isNaN(nextChangeAtMs)
+      ? null
+      : Math.ceil((nextChangeAtMs - Date.now()) / 1000);
+
+  if (seconds == null || seconds <= 0 || seconds >= HOUR_SECONDS) {
+    cacheLife("hours");
+    return;
+  }
+
+  const expire = Math.max(seconds, 2);
+  cacheLife({
+    stale: 30,
+    revalidate: Math.floor(expire / 2),
+    expire
+  });
+}
 
 export async function getCachedPublicPosts() {
+  "use cache";
+  cacheTag(PUBLIC_CONTENT_TAG);
   const nextChangeAtMs = await nextScheduledPublicationMs();
-  const revalidate = publicCacheRevalidateSeconds(nextChangeAtMs);
-  return unstable_cache(async () => {
-    const rows = await getAllPosts({});
-    return rows.map((row) => serializePost(row));
-  }, ["public-posts", publicationWindowId(nextChangeAtMs)], { ...publicCache, revalidate })();
+  cacheUntilPublication(nextChangeAtMs);
+  const rows = await getAllPosts({});
+  return rows.map((row) => serializePost(row));
 }
 
 export async function getCachedPublicPost(slug: string) {
-  const nextChangeAtMs = await nextScheduledPublicationMs(slug);
-  const revalidate = publicCacheRevalidateSeconds(nextChangeAtMs);
-  return unstable_cache(async () => {
-    const row = await getPostBySlug(slug);
-    if (!row || !isPubliclyVisible(row)) return null;
-    return serializePost(row);
-  }, ["public-post", slug, publicationWindowId(nextChangeAtMs)], { ...publicCache, revalidate })();
+  "use cache";
+  cacheTag(PUBLIC_CONTENT_TAG);
+  const row = await getPostBySlug(slug);
+  if (!row || !isPubliclyVisible(row)) {
+    const nextChangeAtMs = row ? await nextScheduledPublicationMs(slug) : null;
+    if (nextChangeAtMs == null) {
+      cacheLife("minutes");
+    } else {
+      cacheUntilPublication(nextChangeAtMs);
+    }
+    return null;
+  }
+  cacheLife("hours");
+  return serializePost(row);
 }
 
-export function getCachedPublicAlbums() {
-  return unstable_cache(async () => {
-    const rows = await getAllAlbums();
-    return rows.map((row) => serializeAlbum(row));
-  }, ["public-albums"], publicCache)();
+export async function getCachedPublicAlbums() {
+  "use cache";
+  cacheTag(PUBLIC_CONTENT_TAG);
+  cacheLife("hours");
+  const rows = await getAllAlbums();
+  return rows.map((row) => serializeAlbum(row));
 }
 
-export function getCachedPublicAlbum(slug: string) {
-  return unstable_cache(async () => {
-    const row = await getAlbumBySlug(slug);
-    if (!row) return null;
-    return serializeAlbum(row);
-  }, ["public-album", slug], publicCache)();
+export async function getCachedPublicAlbum(slug: string) {
+  "use cache";
+  cacheTag(PUBLIC_CONTENT_TAG);
+  cacheLife("hours");
+  const row = await getAlbumBySlug(slug);
+  if (!row) return null;
+  return serializeAlbum(row);
 }
 
-export function getCachedAlbumImages(albumId: number) {
-  return unstable_cache(async () => {
-    const rows = await getAlbumImages(albumId);
-    return rows.map((row) => serializeImage(row));
-  }, ["album-images", String(albumId)], publicCache)();
+export async function getCachedAlbumImages(albumId: number) {
+  "use cache";
+  cacheTag(PUBLIC_CONTENT_TAG);
+  cacheLife("hours");
+  const rows = await getAlbumImages(albumId);
+  return rows.map((row) => serializeImage(row));
 }

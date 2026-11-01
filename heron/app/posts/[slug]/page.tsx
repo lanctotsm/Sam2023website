@@ -4,17 +4,13 @@ import type { Metadata } from "next";
 import { renderWithShortcodes } from "@/lib/shortcodes";
 import { formatPostDate } from "@/lib/format-post-date";
 import { POST_SEO_META_KEY_SET } from "@/lib/post-seo";
-import { skipEmptyProductionBuild } from "@/lib/skip-empty-build";
 import { getCachedPublicPost } from "@/services/public-content";
 
 type PageProps = {
   params: Promise<{ slug: string }>;
 };
 
-export const revalidate = 3600;
-
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
-  await skipEmptyProductionBuild();
   const { slug } = await params;
   const post = await getCachedPublicPost(slug);
   if (!post) return {};
@@ -68,7 +64,6 @@ function estimateReadingTime(markdown: string): number {
 }
 
 export default async function PostDetailPage({ params }: PageProps) {
-  await skipEmptyProductionBuild();
   const { slug } = await params;
   const post = await getCachedPublicPost(slug);
   if (!post) notFound();

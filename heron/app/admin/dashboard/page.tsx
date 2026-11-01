@@ -4,6 +4,11 @@ import { getAuthUser } from "@/lib/api-utils";
 import { getContentCounts } from "@/services/content-stats";
 import { getAllPosts } from "@/services/posts";
 
+// @next-codemod-ignore Cache Components adoption: this segment temporarily allows blocking.
+// Remove this opt-out after verifying the segment passes validation without it.
+// See: https://nextjs.org/docs/app/guides/migrating-to-cache-components
+export const instant = false;
+
 export default async function AdminDashboardPage() {
   const user = await getAuthUser();
   const counts = getContentCounts();
