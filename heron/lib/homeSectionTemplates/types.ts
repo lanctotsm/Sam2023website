@@ -1,5 +1,7 @@
 /** Data shapes for each home section template (stored in `front_page` JSON). */
 
+export type BannerVariant = "panel" | "band" | "canvas";
+
 export type BannerSectionData = {
     title: string;
     subtitle: string;
@@ -8,6 +10,8 @@ export type BannerSectionData = {
     backgroundImage: string;
     gradientFrom: string;
     gradientTo: string;
+    /** Empty or unknown values are stored as `panel` (the original rounded block). */
+    variant: BannerVariant;
 };
 
 export type TextBlockSectionData = {
@@ -50,11 +54,26 @@ export type ContactSectionData = {
     links: ContactLink[];
 };
 
-export type HomeSectionTemplateId = "banner" | "text-block" | "card-grid" | "tag-list" | "contact";
+export type RecentWorkSectionData = {
+    heading: string;
+    albumLimit: number;
+    postLimit: number;
+    showAlbums: boolean;
+    showPosts: boolean;
+};
+
+export type HomeSectionTemplateId =
+    | "banner"
+    | "text-block"
+    | "card-grid"
+    | "tag-list"
+    | "contact"
+    | "recent-work";
 
 export type HomeSectionTemplateData =
     | BannerSectionData
     | TextBlockSectionData
     | CardGridSectionData
     | TagListSectionData
-    | ContactSectionData;
+    | ContactSectionData
+    | RecentWorkSectionData;

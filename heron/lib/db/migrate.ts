@@ -1,6 +1,7 @@
 import fs from "fs";
 import path from "path";
 import type Database from "better-sqlite3";
+import { applyJournalIfUntouched } from "../siteTemplates/applyUntouched";
 
 type MigrationRow = { id: string };
 
@@ -41,6 +42,8 @@ export function migrateIfNeeded(sqlite: Database.Database) {
       sqlite.exec(sql);
       insertMigration.run(file);
     }
+
+    applyJournalIfUntouched(sqlite);
 
     sqlite.exec("COMMIT");
   } catch (error) {

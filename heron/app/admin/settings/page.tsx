@@ -18,6 +18,8 @@ import {
 import PageStyleEditor from "@/components/PageStyleEditor";
 import NavStyleEditor from "@/components/NavStyleEditor";
 import HomePageSettingsTab from "@/components/admin/HomePageSettingsTab";
+import TemplatesTab from "@/components/admin/TemplatesTab";
+import type { SavedSiteTemplate, SiteTemplateSnapshot } from "@/lib/siteTemplates/types";
 import {
   adminBtnAdd as btnAdd,
   adminBtnDanger as btnDanger,
@@ -27,7 +29,7 @@ import {
 } from "@/lib/admin-ui";
 
 type Toast = { message: string; type: "success" | "error" };
-type Tab = "general" | "homepage" | "styles";
+type Tab = "general" | "homepage" | "styles" | "templates";
 
 const textareaClass = `${inputClass} min-h-[80px] resize-y`;
 
@@ -58,9 +60,17 @@ export default function AdminSettingsPage() {
     
     // Nav styles
     const [navStyles, setNavStyles] = useState<NavStyleConfig>(defaultNavStyle);
+    const [activeTemplate, setActiveTemplate] = useState("");
+    const [savedTemplates, setSavedTemplates] = useState<SavedSiteTemplate[]>([]);
 
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
+    const writeLock = useRef(false);
+    const [persistedSnapshot, setPersistedSnapshot] = useState<SiteTemplateSnapshot>({
+        front_page: defaultFrontPage,
+        page_styles: defaultPageStyles,
+        nav_styles: defaultNavStyle,
+    });
     const [toast, setToast] = useState<Toast | null>(null);
     const router = useRouter();
 
@@ -77,22 +87,30 @@ export default function AdminSettingsPage() {
         (async () => {
             try {
                 const data = await apiFetch<Record<string, string>>(
-                    "/settings?keys=site_title,footer_text,front_page,page_styles,nav_styles,ai_alt_text_enabled",
+                    "/settings?keys=site_title,footer_text,front_page,page_styles,nav_styles,active_template,ai_alt_text_enabled",
                     { cache: "no-store" }
                 );
                 if (data.site_title) setSiteTitle(data.site_title);
                 if (data.footer_text) setFooterText(data.footer_text);
                 if (data.ai_alt_text_enabled === "true") setAiAltTextEnabled(true);
+                if (data.active_template) setActiveTemplate(data.active_template);
                 if (data.front_page) setConfig(parseFrontPageConfig(data.front_page));
 
                 const loadedPageStyles = parsePageStyles(data.page_styles ?? null);
                 const loadedNavStyles = parseNavStyles(data.nav_styles ?? null);
                 setPageStyles(loadedPageStyles);
                 setNavStyles(loadedNavStyles);
+                setPersistedSnapshot({
+                    front_page: data.front_page ? parseFrontPageConfig(data.front_page) : defaultFrontPage,
+                    page_styles: loadedPageStyles,
+                    nav_styles: loadedNavStyles,
+                });
                 savedStylesRef.current = {
                     pageStyles: JSON.stringify(loadedPageStyles),
                     navStyles: JSON.stringify(loadedNavStyles),
                 };
+                const saved = await apiFetch<{ templates: SavedSiteTemplate[] }>("/site-templates");
+                setSavedTemplates(saved.templates);
             } catch {
                 // settings not saved yet, defaults are fine
             } finally {
@@ -108,8 +126,20 @@ export default function AdminSettingsPage() {
     }, []);
 
     // ── Save (all tabs at once) ─────────────────────────────────────────────────
-    const handleSave = async () => {
+    const beginWrite = () => {
+        if (writeLock.current) return false;
+        writeLock.current = true;
         setSaving(true);
+        return true;
+    };
+
+    const endWrite = () => {
+        writeLock.current = false;
+        setSaving(false);
+    };
+
+    const handleSave = async () => {
+        if (!beginWrite()) return;
         try {
             const newPageStylesJson = JSON.stringify(pageStyles);
             const newNavStylesJson = JSON.stringify(navStyles);
@@ -132,6 +162,11 @@ export default function AdminSettingsPage() {
             });
 
             savedStylesRef.current = { pageStyles: newPageStylesJson, navStyles: newNavStylesJson };
+            setPersistedSnapshot({
+                front_page: config,
+                page_styles: pageStyles,
+                nav_styles: navStyles,
+            });
 
             const savedAt = new Date().toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
             if (stylesChanged) {
@@ -151,7 +186,7 @@ export default function AdminSettingsPage() {
         } catch {
             showToast("Failed to save settings", "error");
         } finally {
-            setSaving(false);
+            endWrite();
         }
     };
 
@@ -213,6 +248,7 @@ export default function AdminSettingsPage() {
                 {tabBtn("general", "⚙️ General")}
                 {tabBtn("homepage", "🏠 Home Page")}
                 {tabBtn("styles", "🎨 Page Styles")}
+                {tabBtn("templates", "🗂️ Templates")}
             </div>
 
             {/* ── Tab: General ─────────────────────────────────────────────── */}
@@ -304,6 +340,33 @@ export default function AdminSettingsPage() {
                 />
             )}
 
+
+            {activeTab === "templates" && (
+                <TemplatesTab
+                    frontPage={config}
+                    pageStyles={pageStyles}
+                    navStyles={navStyles}
+                    persistedSnapshot={persistedSnapshot}
+                    writing={saving}
+                    beginWrite={beginWrite}
+                    endWrite={endWrite}
+                    activeTemplate={activeTemplate}
+                    savedTemplates={savedTemplates}
+                    onSavedTemplates={setSavedTemplates}
+                    onApplied={(snapshot, templateId) => {
+                        setConfig(snapshot.front_page);
+                        setPageStyles(snapshot.page_styles);
+                        setNavStyles(snapshot.nav_styles);
+                        setPersistedSnapshot(snapshot);
+                        setActiveTemplate(templateId);
+                        savedStylesRef.current = {
+                            pageStyles: JSON.stringify(snapshot.page_styles),
+                            navStyles: JSON.stringify(snapshot.nav_styles),
+                        };
+                    }}
+                    showToast={showToast}
+                />
+            )}
 
             {/* ── Tab: Page Styles ────────────────────────────────────────── */}
             {activeTab === "styles" && (

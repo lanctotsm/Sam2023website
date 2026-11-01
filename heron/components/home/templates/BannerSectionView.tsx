@@ -34,24 +34,34 @@ function hasCustomBackground(data: BannerSectionData): boolean {
 }
 
 export function BannerSectionView({ data }: { data: BannerSectionData }) {
-    const customBg = hasCustomBackground(data);
+    const variant = data.variant === "band" || data.variant === "canvas" ? data.variant : "panel";
+    const customBg = variant !== "canvas" && hasCustomBackground(data);
+    const filled = variant !== "canvas";
+    const shape =
+        variant === "band"
+            ? "-mx-4 mt-0 px-5 py-6 text-center sm:-mx-6 sm:py-8 lg:-mx-8 lg:px-10"
+            : variant === "canvas"
+              ? "mt-0 px-1 py-8 text-center sm:py-12"
+              : "-mx-4 mt-0 rounded-2xl px-5 py-10 text-center sm:-mx-6 sm:py-14 lg:-mx-8 lg:px-10 lg:py-20";
+    const palette = customBg
+        ? "text-white"
+        : filled
+          ? "bg-gradient-to-br from-chestnut to-chestnut-light text-desert-tan dark:from-chestnut-dark dark:to-chestnut"
+          : "text-[var(--page-h1-color,var(--color-chestnut))] dark:text-[var(--page-h1-color-dark,var(--color-dark-text))]";
+    const titleColor = customBg ? "" : filled ? "text-desert-tan" : "text-[var(--page-h1-color,var(--color-chestnut))] dark:text-[var(--page-h1-color-dark,var(--color-dark-text))]";
+    const subtitleColor = customBg
+        ? "text-white/90"
+        : filled
+          ? "text-desert-tan-light"
+          : "text-[var(--page-body-color,var(--color-chestnut-dark))] dark:text-[var(--page-body-color-dark,var(--color-dark-muted))]";
+
     return (
-        <section
-            className={`-mx-4 mt-0 rounded-2xl px-5 py-10 text-center sm:-mx-6 sm:py-14 lg:-mx-8 lg:px-10 lg:py-20 ${
-                customBg
-                    ? "text-white"
-                    : "bg-gradient-to-br from-chestnut to-chestnut-light text-desert-tan dark:from-chestnut-dark dark:to-chestnut"
-            }`}
-            style={customBg ? bannerStyle(data) : undefined}
-        >
-            <h1
-                className={`mb-4 text-[length:var(--text-display)] font-bold ${customBg ? "" : "text-desert-tan"}`}
-                style={homeHeadingStyle}
-            >
+        <section className={`${shape} ${palette}`} style={customBg ? bannerStyle(data) : undefined}>
+            <h1 className={`mb-4 text-[length:var(--text-display)] font-bold ${titleColor}`} style={homeHeadingStyle}>
                 {data.title}
             </h1>
             <p
-                className={`mx-auto max-w-[600px] text-lg leading-relaxed md:text-xl ${customBg ? "text-white/90" : "text-desert-tan-light"}`}
+                className={`mx-auto max-w-[600px] text-lg leading-relaxed md:text-xl ${subtitleColor}`}
                 style={homeBodyStyle}
             >
                 {data.subtitle}

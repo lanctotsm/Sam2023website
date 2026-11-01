@@ -132,6 +132,15 @@ describe("SETTINGS /api/settings", () => {
             expect(updateSettings).toHaveBeenCalledWith({ nav_styles: navJson });
         });
 
+        it("accepts active_template as a batch setting key", async () => {
+            vi.mocked(getAuthUser).mockResolvedValue(MOCK_AUTH_USER as never);
+            const res = await PUT(
+                jsonRequest("PUT", "http://localhost:3000/api/settings", { settings: { active_template: "journal" } })
+            );
+            expect(res.status).toBe(200);
+            expect(updateSettings).toHaveBeenCalledWith({ active_template: "journal" });
+        });
+
         it("rejects unknown setting keys even in batch", async () => {
             vi.mocked(getAuthUser).mockResolvedValue(MOCK_AUTH_USER as never);
             const res = await PUT(

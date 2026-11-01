@@ -21,6 +21,7 @@ const ALLOWED_SETTING_KEYS = new Set([
     "front_page",
     "page_styles",
     "nav_styles",
+    "active_template",
     "ai_alt_text_enabled",
 ]);
 

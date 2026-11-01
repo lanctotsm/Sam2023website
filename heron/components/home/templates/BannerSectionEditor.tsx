@@ -27,6 +27,22 @@ export function BannerSectionEditor({
                 />
             </div>
             <div>
+                <label className={labelClass} htmlFor={`${sectionId}-banner-variant`}>Banner treatment</label>
+                <select
+                    id={`${sectionId}-banner-variant`}
+                    className={inputClass}
+                    value={data.variant || "panel"}
+                    onChange={(e) => onChange({ variant: e.target.value as BannerSectionData["variant"] })}
+                >
+                    <option value="panel">Rounded panel</option>
+                    <option value="band">Full-width band</option>
+                    <option value="canvas">Page canvas</option>
+                </select>
+                <p className="mt-1 text-xs text-olive dark:text-dark-muted">
+                    Canvas uses the page background. Panel and band use the theme chestnut block unless a background is set below.
+                </p>
+            </div>
+            <div>
                 <label className={labelClass}>Background type</label>
                 <select
                     className={inputClass}

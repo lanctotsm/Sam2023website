@@ -9,6 +9,7 @@ import { TextBlockSectionEditor } from "@/components/home/templates/TextBlockSec
 import { CardGridSectionEditor } from "@/components/home/templates/CardGridSectionEditor";
 import { TagListSectionEditor } from "@/components/home/templates/TagListSectionEditor";
 import { ContactSectionEditor } from "@/components/home/templates/ContactSectionEditor";
+import { RecentWorkSectionEditor } from "@/components/home/templates/RecentWorkSectionEditor";
 
 type SectionEditorComponent = ComponentType<SectionEditorProps<HomeSectionTemplateData>>;
 
@@ -49,5 +50,11 @@ export const HOME_SECTION_EDITOR_REGISTRY: Record<HomeSectionTemplateId, HomeSec
         label: HOME_SECTION_TEMPLATE_DEFS.contact.label,
         description: HOME_SECTION_TEMPLATE_DEFS.contact.description,
         Editor: ContactSectionEditor as SectionEditorComponent,
+    },
+    "recent-work": {
+        id: "recent-work",
+        label: HOME_SECTION_TEMPLATE_DEFS["recent-work"].label,
+        description: HOME_SECTION_TEMPLATE_DEFS["recent-work"].description,
+        Editor: RecentWorkSectionEditor as SectionEditorComponent,
     },
 };
