@@ -1,17 +1,5 @@
 import JSZip from "jszip";
-
-const DEFAULT_MAX_UPLOAD_BYTES = 25 * 1024 * 1024;
-
-/**
- * Max file size for uploads. Reads MAX_UPLOAD_BYTES when set, otherwise 25MB.
- * Keep next.config.js serverActions.bodySizeLimit in sync with this default.
- */
-export const MAX_UPLOAD_BYTES = (() => {
-  const parsed = Number(process.env.MAX_UPLOAD_BYTES);
-  return Number.isFinite(parsed) && parsed > 0 ? parsed : DEFAULT_MAX_UPLOAD_BYTES;
-})();
-
-export const ALLOWED_IMAGE_TYPES = /^image\/(jpeg|jpg|png|gif|webp|bmp)$/i;
+import { MAX_UPLOAD_BYTES } from "@/lib/upload-limits";
 
 export function maxUploadMegabytes(): number {
   return Math.round(MAX_UPLOAD_BYTES / (1024 * 1024));

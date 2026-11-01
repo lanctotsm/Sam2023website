@@ -113,7 +113,7 @@ const nextConfig = {
   experimental: {
     // No Server Actions currently accept file uploads (uploads go through the
     // app/api/images/upload route handler, which enforces MAX_UPLOAD_BYTES),
-    // but keep this in sync with the 25MB default in lib/upload-utils.ts.
+    // but keep this in sync with the 25MB default in lib/upload-limits.ts.
     serverActions: {
       bodySizeLimit: "25mb"
     }

@@ -3,8 +3,8 @@ import {
   isZipFile,
   extractImagesFromZip,
   prepareUploadFiles,
-  MAX_UPLOAD_BYTES,
 } from "./upload-utils";
+import { MAX_UPLOAD_BYTES } from "./upload-limits";
 import JSZip from "jszip";
 
 describe("upload-utils", () => {
