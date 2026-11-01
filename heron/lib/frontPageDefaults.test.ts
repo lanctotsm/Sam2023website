@@ -49,11 +49,11 @@ describe("parseFrontPageConfig", () => {
 
     it("parses sections with templateId", () => {
         const config = createDefaultFrontPageConfig();
-        const journey = config.sections.find((s) => s.label === "Journey");
-        expect(journey?.templateId).toBe("text-block");
-        const order = config.sectionOrder.filter((id) => id !== journey!.id);
+        const about = config.sections.find((s) => s.label === "About");
+        expect(about?.templateId).toBe("text-block");
+        const order = config.sectionOrder.filter((id) => id !== about!.id);
         const result = parseFrontPageConfig(JSON.stringify({ sections: config.sections, sectionOrder: order }));
-        expect(result.sectionOrder).not.toContain(journey!.id);
+        expect(result.sectionOrder).not.toContain(about!.id);
     });
 
     it("parses user text block sections", () => {

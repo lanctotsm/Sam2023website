@@ -49,6 +49,8 @@ export default function AdminSettingsPage() {
 
     // General
     const [siteTitle, setSiteTitle] = useState("");
+    const [siteDescription, setSiteDescription] = useState("");
+    const [ogImage, setOgImage] = useState("");
     const [footerText, setFooterText] = useState("");
     const [aiAltTextEnabled, setAiAltTextEnabled] = useState(false);
 
@@ -87,10 +89,12 @@ export default function AdminSettingsPage() {
         (async () => {
             try {
                 const data = await apiFetch<Record<string, string>>(
-                    "/settings?keys=site_title,footer_text,front_page,page_styles,nav_styles,active_template,ai_alt_text_enabled",
+                    "/settings?keys=site_title,site_description,og_image,footer_text,front_page,page_styles,nav_styles,active_template,ai_alt_text_enabled",
                     { cache: "no-store" }
                 );
                 if (data.site_title) setSiteTitle(data.site_title);
+                setSiteDescription(data.site_description ?? "");
+                setOgImage(data.og_image ?? "");
                 if (data.footer_text) setFooterText(data.footer_text);
                 if (data.ai_alt_text_enabled === "true") setAiAltTextEnabled(true);
                 if (data.active_template) setActiveTemplate(data.active_template);
@@ -152,6 +156,8 @@ export default function AdminSettingsPage() {
                 body: JSON.stringify({
                     settings: {
                         site_title: siteTitle,
+                        site_description: siteDescription,
+                        og_image: ogImage,
                         footer_text: footerText,
                         ai_alt_text_enabled: aiAltTextEnabled ? "true" : "false",
                         front_page: JSON.stringify(config),
@@ -264,6 +270,26 @@ export default function AdminSettingsPage() {
                                 value={siteTitle}
                                 onChange={(e) => setSiteTitle(e.target.value)}
                                 placeholder="My Website"
+                            />
+                        </div>
+                        <div>
+                            <label className={labelClass} htmlFor="settings-site-description">Site description</label>
+                            <textarea
+                                id="settings-site-description"
+                                className={textareaClass}
+                                value={siteDescription}
+                                onChange={(e) => setSiteDescription(e.target.value)}
+                                placeholder="Used for link previews. Leave blank to use the homepage subtitle."
+                            />
+                        </div>
+                        <div>
+                            <label className={labelClass} htmlFor="settings-og-image">Share image URL</label>
+                            <input
+                                id="settings-og-image"
+                                className={inputClass}
+                                value={ogImage}
+                                onChange={(e) => setOgImage(e.target.value)}
+                                placeholder="Leave blank to use the newest album cover"
                             />
                         </div>
                         <div>

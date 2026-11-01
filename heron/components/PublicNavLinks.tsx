@@ -19,7 +19,7 @@ const navItems: NavItem[] = [
 
 /**
  * Public links and the mobile drawer. Session controls stay in the admin layout.
- * `leading` is the wordmark slot; the server header fills it later.
+ * `leading` is the site wordmark. Search stays on the right of the bar.
  */
 export default function PublicNavLinks({ leading }: { leading?: ReactNode }) {
   const pathname = usePathname();

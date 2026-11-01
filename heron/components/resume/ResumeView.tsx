@@ -6,7 +6,6 @@ import {
     bodyFontStyle,
     headingFontStyle,
     linkText,
-    sectionCard,
     sectionHeading
 } from "./styles";
 
@@ -35,7 +34,7 @@ function BasicsHeader({ doc }: { doc: ResumeDocument }) {
         .filter(Boolean)
         .join(", ");
     return (
-        <section className={`${sectionCard} text-center`}>
+        <header className="text-center">
             <h1
                 className="mb-2 text-center text-[var(--page-h1-color,var(--color-chestnut))] dark:text-[var(--page-h1-color-dark,var(--color-dark-text))]"
                 style={headingFontStyle}
@@ -93,7 +92,7 @@ function BasicsHeader({ doc }: { doc: ResumeDocument }) {
                     {basics.summary}
                 </p>
             )}
-        </section>
+        </header>
     );
 }
 
@@ -106,7 +105,7 @@ export default function ResumeView({ doc }: { doc: ResumeDocument }) {
     );
 
     return (
-        <div className="mx-auto flex max-w-[900px] flex-col gap-6">
+        <article className="resume-section mx-auto flex max-w-[42rem] flex-col">
             <BasicsHeader doc={doc} />
             {doc.meta.heron.sectionOrder.map((id) => {
                 if (hidden.has(id)) return null;
@@ -116,7 +115,7 @@ export default function ResumeView({ doc }: { doc: ResumeDocument }) {
                     if (def.isEmpty(doc)) return null;
                     const View = def.View;
                     return (
-                        <section key={id} className={sectionCard}>
+                        <section key={id} className="mt-10">
                             <h2 className={sectionHeading} style={headingFontStyle}>
                                 {def.label}
                             </h2>
@@ -128,7 +127,7 @@ export default function ResumeView({ doc }: { doc: ResumeDocument }) {
                 const custom = customById.get(id);
                 if (!custom || custom.entries.length === 0) return null;
                 return (
-                    <section key={id} className={sectionCard}>
+                    <section key={id} className="mt-10">
                         <h2 className={sectionHeading} style={headingFontStyle}>
                             {custom.heading}
                         </h2>
@@ -136,6 +135,6 @@ export default function ResumeView({ doc }: { doc: ResumeDocument }) {
                     </section>
                 );
             })}
-        </div>
+        </article>
     );
 }

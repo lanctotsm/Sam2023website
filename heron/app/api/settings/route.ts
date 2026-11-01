@@ -17,6 +17,8 @@ function jsonNoStore(body: unknown, status = 200) {
 
 const ALLOWED_SETTING_KEYS = new Set([
     "site_title",
+    "site_description",
+    "og_image",
     "footer_text",
     "front_page",
     "page_styles",

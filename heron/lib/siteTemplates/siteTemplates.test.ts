@@ -7,8 +7,18 @@ import { legacyBuiltInFrontPage } from "./legacyDefault";
 import { getFieldNotesPreset, getJournalPreset, getSiteTemplatePresets } from "./presets";
 
 describe("site template presets", () => {
-    it("keeps the pre-template homepage as the untouched baseline", () => {
-        expect(legacyBuiltInFrontPage).toEqual(createDefaultFrontPageConfig());
+    it("keeps the pre-template homepage frozen when Journal becomes the default", () => {
+        expect(legacyBuiltInFrontPage).not.toEqual(createDefaultFrontPageConfig());
+        const about = legacyBuiltInFrontPage.sections.find((section) => section.label === "About");
+        expect(about?.templateId).toBe("text-block");
+        if (about?.templateId === "text-block") {
+            expect(about.data.heading).toBe("About Me");
+        }
+        const contact = legacyBuiltInFrontPage.sections.find((section) => section.templateId === "contact");
+        if (contact?.templateId === "contact") {
+            expect(contact.data.links.some((link) => link.icon === "Briefcase")).toBe(true);
+        }
+        expect(createDefaultFrontPageConfig()).toEqual(getJournalPreset().snapshot.front_page);
     });
 
     it("ships two different kits", () => {
