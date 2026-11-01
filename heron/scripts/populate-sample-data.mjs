@@ -191,15 +191,31 @@ async function main() {
       .catch(() => false);
     if (buttonReady) {
       let completedUploads = 0;
+      const uploadFailures = [];
       page.on("response", (res) => {
         if (res.url().includes("/api/images/upload") && res.request().method() === "POST") {
-          completedUploads += 1;
+          if (res.ok()) {
+            completedUploads += 1;
+          } else {
+            uploadFailures.push(`${res.status()} ${res.statusText()}`);
+          }
         }
       });
       await uploadBtn.click();
       const deadline = Date.now() + 60000;
-      while (completedUploads < imagePaths.length && Date.now() < deadline) {
+      while (
+        completedUploads + uploadFailures.length < imagePaths.length &&
+        Date.now() < deadline
+      ) {
         await page.waitForTimeout(250);
+      }
+      if (uploadFailures.length > 0) {
+        throw new Error(`Image upload failed: ${uploadFailures.join(", ")}`);
+      }
+      if (completedUploads < imagePaths.length) {
+        throw new Error(
+          `Timed out waiting for image uploads (${completedUploads}/${imagePaths.length} succeeded).`
+        );
       }
       console.log("Uploaded", imagePaths.length, "images to album.");
     } else {
@@ -209,6 +225,7 @@ async function main() {
     console.log("\nDone! Visit", BASE_URL, "to see the populated site.");
   } catch (err) {
     console.error("Error:", err.message);
+    process.exitCode = 1;
   } finally {
     await browser.close();
   }
