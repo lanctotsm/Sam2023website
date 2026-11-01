@@ -48,10 +48,10 @@ export async function POST(request: Request) {
       coverImageId: optionalImageId(payload.cover_image_id),
       createdBy: user.id
     });
+    revalidatePublicContent();
     if (inlineImageIds) {
       await replacePostInlineImages(created.id, inlineImageIds);
     }
-    revalidatePublicContent();
     return NextResponse.json(
       serializePost(created, inlineImageIds ? { inlineImageIds } : undefined),
       { status: 201 }
