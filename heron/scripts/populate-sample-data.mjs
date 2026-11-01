@@ -190,18 +190,40 @@ async function main() {
       .then(() => true)
       .catch(() => false);
     if (buttonReady) {
-      let completedUploads = 0;
+      const UPLOAD_TIMEOUT_MS = 60000;
+      let succeededUploads = 0;
+      const failedUploads = [];
       page.on("response", (res) => {
-        if (res.url().includes("/api/images/upload") && res.request().method() === "POST") {
-          completedUploads += 1;
+        if (!res.url().includes("/api/images/upload") || res.request().method() !== "POST") {
+          return;
+        }
+        if (res.ok()) {
+          succeededUploads += 1;
+        } else {
+          failedUploads.push(res.status());
         }
       });
       await uploadBtn.click();
-      const deadline = Date.now() + 60000;
-      while (completedUploads < imagePaths.length && Date.now() < deadline) {
+      const deadline = Date.now() + UPLOAD_TIMEOUT_MS;
+      while (
+        succeededUploads + failedUploads.length < imagePaths.length &&
+        Date.now() < deadline
+      ) {
         await page.waitForTimeout(250);
       }
-      console.log("Uploaded", imagePaths.length, "images to album.");
+      if (failedUploads.length > 0) {
+        throw new Error(
+          `${failedUploads.length} upload(s) failed (HTTP ${failedUploads.join(", ")}); ` +
+            `${succeededUploads}/${imagePaths.length} succeeded.`
+        );
+      }
+      if (succeededUploads < imagePaths.length) {
+        throw new Error(
+          `Timed out after ${UPLOAD_TIMEOUT_MS / 1000}s: ` +
+            `${succeededUploads}/${imagePaths.length} uploads completed.`
+        );
+      }
+      console.log("Uploaded", succeededUploads, "images to album.");
     } else {
       console.log("Upload button not ready; skipping upload.");
     }
@@ -209,6 +231,7 @@ async function main() {
     console.log("\nDone! Visit", BASE_URL, "to see the populated site.");
   } catch (err) {
     console.error("Error:", err.message);
+    process.exitCode = 1;
   } finally {
     await browser.close();
   }
