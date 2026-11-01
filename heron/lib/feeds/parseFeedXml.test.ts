@@ -74,6 +74,41 @@ describe("parseFeedXml", () => {
         expect(items[0].title).not.toBe("My Blog");
     });
 
+    it("unwraps CDATA titles and decodes escaped URLs", () => {
+        const xml = `<?xml version="1.0"?>
+<rss version="2.0"><channel>
+  <item>
+    <title><![CDATA[Tom &amp; Jerry]]></title>
+    <link>https://example.com/watch?x=1&amp;y=2</link>
+    <enclosure url="https://img.example/a.jpg?w=1&amp;h=2" type="image/jpeg"/>
+    <description><![CDATA[<p>A cartoon.</p>]]></description>
+  </item>
+</channel></rss>`;
+        const items = parseFeedXml(xml);
+        expect(items[0].title).toBe("Tom & Jerry");
+        expect(items[0].url).toBe("https://example.com/watch?x=1&y=2");
+        expect(items[0].imageUrl).toBe("https://img.example/a.jpg?w=1&h=2");
+        expect(items[0].excerpt).toBe("A cartoon.");
+        expect(items[0].excerpt).not.toContain("]]>");
+    });
+
+    it("reads images out of escaped Atom HTML", () => {
+        const xml = `<?xml version="1.0"?>
+<feed xmlns="http://www.w3.org/2005/Atom">
+  <entry>
+    <title>Escaped</title>
+    <link href="https://example.com/atom?a=1&amp;b=2" rel="alternate"/>
+    <summary type="html">&lt;p&gt;&lt;img src="https://img.example/p.jpg?w=1&amp;h=2"/&gt; Caption&lt;/p&gt;</summary>
+  </entry>
+</feed>`;
+        const items = parseFeedXml(xml);
+        expect(items[0].title).toBe("Escaped");
+        expect(items[0].url).toBe("https://example.com/atom?a=1&b=2");
+        expect(items[0].excerpt).toContain("Caption");
+        expect(items[0].excerpt).not.toContain("<p>");
+        expect(items[0].imageUrl).toBe("https://img.example/p.jpg?w=1&h=2");
+    });
+
     it("drops javascript item links and images", () => {
         const xml = `<?xml version="1.0"?>
 <rss version="2.0"><channel>

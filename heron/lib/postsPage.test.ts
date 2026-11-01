@@ -56,6 +56,57 @@ describe("parsePostsPageConfig", () => {
         expect(config.sections.some((s) => s.templateId === "posts-list")).toBe(true);
     });
 
+    it("keeps a removed section out of the page order", () => {
+        const raw = JSON.stringify({
+            showPosts: true,
+            sections: [
+                {
+                    id: DEFAULT_POSTS_LIST_SECTION_ID,
+                    templateId: "posts-list",
+                    label: "Posts",
+                    removable: false,
+                    data: { heading: "Posts" },
+                },
+                {
+                    id: "feed-1",
+                    templateId: "rss-feed",
+                    label: "Watches",
+                    removable: true,
+                    data: { title: "Recent watches", feedUrl: "https://letterboxd.com/user/rss/" },
+                },
+            ],
+            sectionOrder: [DEFAULT_POSTS_LIST_SECTION_ID],
+        });
+        const config = parsePostsPageConfig(raw);
+        expect(config.sections.map((section) => section.id)).toContain("feed-1");
+        expect(config.sectionOrder).toEqual([DEFAULT_POSTS_LIST_SECTION_ID]);
+    });
+
+    it("puts the posts list back when the order omitted it", () => {
+        const raw = JSON.stringify({
+            showPosts: true,
+            sections: [
+                {
+                    id: DEFAULT_POSTS_LIST_SECTION_ID,
+                    templateId: "posts-list",
+                    label: "Posts",
+                    removable: false,
+                    data: { heading: "Posts" },
+                },
+                {
+                    id: "feed-1",
+                    templateId: "rss-feed",
+                    label: "Feed",
+                    removable: true,
+                    data: { title: "Feed", feedUrl: "https://example.com/rss.xml" },
+                },
+            ],
+            sectionOrder: ["feed-1"],
+        });
+        const config = parsePostsPageConfig(raw);
+        expect(config.sectionOrder).toEqual(["feed-1", DEFAULT_POSTS_LIST_SECTION_ID]);
+    });
+
     it("keeps https feed URLs", () => {
         const raw = JSON.stringify({
             showPosts: true,

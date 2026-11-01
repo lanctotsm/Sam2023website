@@ -77,6 +77,68 @@ function isBlockedHostname(hostname: string): boolean {
 }
 
 /**
+ * Whether a resolved address is a private, loopback, link-local, or otherwise
+ * non-public target. Public IPv6 addresses are allowed; typed IPv6 URL hosts
+ * stay blocked in `isBlockedHostname`.
+ */
+export function isBlockedResolvedAddress(address: string): boolean {
+    const raw = address.trim().toLowerCase().replace(/^\[|\]$/g, "");
+    if (!raw) return true;
+
+    if (!raw.includes(":")) {
+        return isBlockedIpv4(raw);
+    }
+
+    const v4mappedDotted = raw.match(/^::ffff:(\d{1,3}(?:\.\d{1,3}){3})$/i);
+    if (v4mappedDotted) return isBlockedIpv4(v4mappedDotted[1]);
+
+    const v4mappedHex = raw.match(/^::ffff:([0-9a-f]{1,4}):([0-9a-f]{1,4})$/i);
+    if (v4mappedHex) {
+        const hi = parseInt(v4mappedHex[1], 16);
+        const lo = parseInt(v4mappedHex[2], 16);
+        const ip = `${(hi >> 8) & 255}.${hi & 255}.${(lo >> 8) & 255}.${lo & 255}`;
+        return isBlockedIpv4(ip);
+    }
+
+    if (raw === "::1" || raw === "::") return true;
+    // fe80::/10 link-local, fc00::/7 unique local, ff00::/8 multicast
+    if (/^fe[89a-f]/.test(raw) || raw.startsWith("fc") || raw.startsWith("fd") || raw.startsWith("ff")) {
+        return true;
+    }
+    return false;
+}
+
+export type AddressLookup = (hostname: string) => Promise<string[]>;
+
+function isIpLiteralHost(hostname: string): boolean {
+    const host = hostname.replace(/^\[|\]$/g, "");
+    return isIpv4Literal(host) || host.includes(":");
+}
+
+/**
+ * A public hostname is safe only when every address it resolves to is public.
+ * IP literals are classified by the URL check and are not looked up.
+ */
+export async function hostResolvesToPublicAddresses(
+    url: string,
+    lookup: AddressLookup,
+    allowHttp = false
+): Promise<boolean> {
+    if (!isAllowedFeedUrl(url, allowHttp)) return false;
+    const hostname = new URL(url).hostname;
+    if (isIpLiteralHost(hostname)) return true;
+
+    let addresses: string[];
+    try {
+        addresses = await lookup(hostname);
+    } catch {
+        return false;
+    }
+    if (addresses.length === 0) return false;
+    return addresses.every((address) => !isBlockedResolvedAddress(address));
+}
+
+/**
  * Whether a URL is safe for the server to fetch as an RSS/Atom source.
  * HTTPS only (HTTP when allowHttp), no credentials, no private/link-local hosts.
  */

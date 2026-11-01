@@ -2,15 +2,28 @@ import type { FeedItem } from "./types";
 import { MAX_FEED_ITEMS } from "./types";
 import { sanitizePublicHttpUrl } from "./urlSafety";
 
+function fromXmlCodePoint(code: number): string {
+    if (!Number.isInteger(code) || code < 0 || code > 0x10ffff) return "";
+    return String.fromCodePoint(code);
+}
+
 function decodeXmlEntities(text: string): string {
     return text
-        .replace(/&amp;/g, "&")
+        .replace(/&#(\d+);/g, (_, code) => fromXmlCodePoint(Number(code)))
+        .replace(/&#x([0-9a-fA-F]+);/g, (_, hex) => fromXmlCodePoint(parseInt(hex, 16)))
         .replace(/&lt;/g, "<")
         .replace(/&gt;/g, ">")
         .replace(/&quot;/g, '"')
         .replace(/&apos;/g, "'")
-        .replace(/&#(\d+);/g, (_, code) => String.fromCharCode(Number(code)))
-        .replace(/&#x([0-9a-fA-F]+);/g, (_, hex) => String.fromCharCode(parseInt(hex, 16)));
+        .replace(/&amp;/g, "&");
+}
+
+function unwrapCdata(text: string): string {
+    return text.replace(/<!\[CDATA\[([\s\S]*?)\]\]>/g, "$1").trim();
+}
+
+function xmlText(raw: string): string {
+    return decodeXmlEntities(unwrapCdata(raw));
 }
 
 function stripHtml(html: string): string {
@@ -26,7 +39,7 @@ function firstTag(block: string, tag: string): string | null {
     const re = new RegExp(`<${tag}[^>]*>([\\s\\S]*?)<\\/${tag}>`, "i");
     const match = block.match(re);
     if (!match) return null;
-    return match[1].trim();
+    return xmlText(match[1]);
 }
 
 function attrValue(block: string, tag: string, attr: string): string | null {
@@ -35,7 +48,7 @@ function attrValue(block: string, tag: string, attr: string): string | null {
     if (!open) return null;
     const attrRe = new RegExp(`${attr}\\s*=\\s*["']([^"']+)["']`, "i");
     const m = open[0].match(attrRe);
-    return m ? m[1].trim() : null;
+    return m ? decodeXmlEntities(m[1].trim()) : null;
 }
 
 function linkHref(block: string): string | null {
@@ -43,7 +56,7 @@ function linkHref(block: string): string | null {
     const candidate = relAlternate?.[0] ?? block.match(/<link\b[^>]*>/i)?.[0];
     if (!candidate) return null;
     const href = candidate.match(/href\s*=\s*["']([^"']+)["']/i);
-    return href ? href[1].trim() : null;
+    return href ? decodeXmlEntities(href[1].trim()) : null;
 }
 
 function extractImageUrl(block: string, description: string): string | null {
@@ -51,7 +64,7 @@ function extractImageUrl(block: string, description: string): string | null {
     if (enclosure) {
         const type = enclosure.match(/type\s*=\s*["']([^"']+)["']/i)?.[1] ?? "";
         const url = enclosure.match(/url\s*=\s*["']([^"']+)["']/i)?.[1];
-        if (url && (type.startsWith("image/") || !type)) return url;
+        if (url && (type.startsWith("image/") || !type)) return decodeXmlEntities(url.trim());
     }
 
     for (const tag of ["media:content", "media:thumbnail", "media:group"]) {

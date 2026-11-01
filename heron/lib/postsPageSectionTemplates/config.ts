@@ -205,9 +205,11 @@ function sanitizeSections(value: unknown): PostsPageSection[] {
     return withPostsList;
 }
 
-function sanitizeSectionOrder(value: unknown, sectionIds: Set<string>): string[] {
-    const defaultOrder = defaultPostsPage.sectionOrder;
+function sanitizeSectionOrder(value: unknown, sections: PostsPageSection[]): string[] {
+    const sectionIds = new Set(sections.map((section) => section.id));
+    const defaultOrder = defaultPostsPage.sectionOrder.filter((id) => sectionIds.has(id));
     if (!Array.isArray(value)) return [...defaultOrder];
+
     const order: string[] = [];
     for (const entry of value) {
         if (typeof entry !== "string" || entry.length === 0) continue;
@@ -217,9 +219,13 @@ function sanitizeSectionOrder(value: unknown, sectionIds: Set<string>): string[]
         }
     }
 
-    for (const section of sectionIds) {
-        if (!order.includes(section)) {
-            order.push(section);
+    // Optional sections may sit in `sections` while omitted from the order so
+    // Remove can hide them and "Add existing section" can put them back.
+    // The posts list cannot be removed, so put it back if the order dropped it.
+    for (const section of sections) {
+        if (section.templateId !== "posts-list") continue;
+        if (!order.includes(section.id)) {
+            order.push(section.id);
         }
     }
 
@@ -233,8 +239,7 @@ export function parsePostsPageConfig(raw: string | null): PostsPageSettings {
         const root = parsed && typeof parsed === "object" ? (parsed as Record<string, unknown>) : {};
         const showPosts = typeof root.showPosts === "boolean" ? root.showPosts : true;
         const sections = sanitizeSections(root.sections);
-        const sectionIds = new Set(sections.map((s) => s.id));
-        const sectionOrder = sanitizeSectionOrder(root.sectionOrder, sectionIds);
+        const sectionOrder = sanitizeSectionOrder(root.sectionOrder, sections);
         return { showPosts, sections, sectionOrder };
     } catch {
         return createDefaultPostsPageConfig();
