@@ -3,6 +3,7 @@ import { GET } from "./route";
 import { getParams } from "../../../__tests__/helpers";
 
 vi.mock("@/lib/api-utils", () => ({
+  getAuthUser: vi.fn(),
   errorResponse: (message: string, status: number) =>
     new Response(JSON.stringify({ error: message }), { status })
 }));

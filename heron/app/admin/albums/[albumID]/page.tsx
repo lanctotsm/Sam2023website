@@ -36,7 +36,14 @@ export default function AdminAlbumEditorPage() {
   const id = typeof params.albumID === "string" ? parseId(params.albumID) : null;
   const [album, setAlbum] = useState<Album | null>(null);
   const [images, setImages] = useState<SortableImage[]>([]);
-  const [form, setForm] = useState({ title: "", slug: "", description: "" });
+  const [form, setForm] = useState({
+    title: "",
+    slug: "",
+    description: "",
+    status: "published",
+    display_date: "",
+    cover_image_id: ""
+  });
   const [initialLoading, setInitialLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
@@ -72,7 +79,10 @@ export default function AdminAlbumEditorPage() {
         setForm({
           title: a.title,
           slug: a.slug,
-          description: a.description ?? ""
+          description: a.description ?? "",
+          status: a.status || "published",
+          display_date: a.display_date ? a.display_date.slice(0, 10) : "",
+          cover_image_id: a.cover_image_id ? String(a.cover_image_id) : ""
         });
       }
     } catch {
@@ -461,6 +471,44 @@ export default function AdminAlbumEditorPage() {
               placeholder="Brief description"
               rows={2}
             />
+          </div>
+          <div className="grid gap-4 sm:grid-cols-3">
+            <div>
+              <label className={labelClass}>Status</label>
+              <select
+                className={inputClass}
+                value={form.status}
+                onChange={(e) => setForm((f) => ({ ...f, status: e.target.value }))}
+              >
+                <option value="published">Published</option>
+                <option value="draft">Draft</option>
+                <option value="archived">Archived</option>
+              </select>
+            </div>
+            <div>
+              <label className={labelClass}>Display date</label>
+              <input
+                type="date"
+                className={inputClass}
+                value={form.display_date}
+                onChange={(e) => setForm((f) => ({ ...f, display_date: e.target.value }))}
+              />
+            </div>
+            <div>
+              <label className={labelClass}>Cover photo</label>
+              <select
+                className={inputClass}
+                value={form.cover_image_id}
+                onChange={(e) => setForm((f) => ({ ...f, cover_image_id: e.target.value }))}
+              >
+                <option value="">First photo</option>
+                {images.map((image, index) => (
+                  <option key={image.id} value={image.id}>
+                    {image.name || image.caption || `Photo ${index + 1}`}
+                  </option>
+                ))}
+              </select>
+            </div>
           </div>
           {error && <p className="text-copper text-sm">{error}</p>}
         </form>

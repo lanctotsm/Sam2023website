@@ -3,9 +3,11 @@ import { errorResponse, getAuthUser } from "@/lib/api-utils";
 import { serializeAlbum } from "@/lib/serializers";
 import { createAlbum, getAllAlbums } from "@/services/albums";
 import { revalidatePublicContent } from "@/lib/revalidate-public";
+import { displayDateValue, optionalImageId } from "@/lib/content-fields";
 
 export async function GET() {
-  const rows = await getAllAlbums();
+  const user = await getAuthUser();
+  const rows = await getAllAlbums({ includeDrafts: Boolean(user) });
   return NextResponse.json(rows.map(serializeAlbum));
 }
 
@@ -28,6 +30,9 @@ export async function POST(request: Request) {
       title,
       slug,
       description: (payload.description || "").trim(),
+      status: payload.status,
+      displayDate: displayDateValue(payload.display_date),
+      coverImageId: optionalImageId(payload.cover_image_id),
       createdBy: user.id
     });
     revalidatePublicContent();

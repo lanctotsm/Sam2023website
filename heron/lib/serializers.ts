@@ -4,35 +4,87 @@ type PostRow = typeof posts.$inferSelect;
 type AlbumRow = typeof albums.$inferSelect;
 type ImageRow = typeof images.$inferSelect;
 
-export function serializePost(row: PostRow, options?: { inlineImageIds?: number[] }) {
+type PostInput = Omit<PostRow, "coverImageId" | "html" | "markdown"> & {
+  markdown?: string | null;
+  coverImageId?: number | null;
+  html?: string | null;
+};
+
+type AlbumInput = Omit<AlbumRow, "status" | "coverImageId" | "displayDate"> & {
+  status?: string | null;
+  coverImageId?: number | null;
+  displayDate?: string | null;
+  coverImageS3Key?: string | null;
+  photoCount?: number | null;
+};
+
+type PostCard = {
+  id: number;
+  title: string;
+  slug: string;
+  summary: string;
+  status: string;
+  published_at: string | null;
+  metadata: Record<string, string> | null;
+  cover_image_id: number | null;
+  created_by: number | null;
+  created_at: string;
+  updated_at: string;
+};
+
+type PostBody = PostCard & {
+  markdown: string;
+  html: string | null;
+  inline_image_ids?: number[];
+};
+
+type SerializePostOptions = {
+  inlineImageIds?: number[];
+  /** Public lists and search only need the card fields. */
+  includeBody?: boolean;
+};
+
+export function serializePost(row: PostInput, options: { includeBody: false }): PostCard;
+export function serializePost(row: PostInput, options?: { inlineImageIds?: number[]; includeBody?: boolean }): PostBody;
+export function serializePost(row: PostInput, options?: SerializePostOptions): PostCard | PostBody {
   const base = {
     id: row.id,
     title: row.title,
     slug: row.slug,
     summary: row.summary || "",
-    markdown: row.markdown,
     status: row.status,
     published_at: row.publishedAt ?? null,
     metadata: row.metadata ?? null,
+    cover_image_id: row.coverImageId ?? null,
     created_by: row.createdBy ?? null,
     created_at: row.createdAt,
     updated_at: row.updatedAt
   };
+  if (options?.includeBody === false) return base;
+
+  const withBody = {
+    ...base,
+    markdown: row.markdown ?? "",
+    html: row.html ?? null
+  };
   if (options?.inlineImageIds) {
     return {
-      ...base,
+      ...withBody,
       inline_image_ids: options.inlineImageIds
     };
   }
-  return base;
+  return withBody;
 }
 
-export function serializeAlbum(row: AlbumRow & { coverImageS3Key?: string | null; photoCount?: number | null }) {
+export function serializeAlbum(row: AlbumInput) {
   return {
     id: row.id,
     title: row.title,
     slug: row.slug,
     description: row.description || "",
+    status: row.status ?? "published",
+    cover_image_id: row.coverImageId ?? null,
+    display_date: row.displayDate ?? null,
     cover_image_s3_key: row.coverImageS3Key ?? null,
     photo_count: row.photoCount == null ? null : Number(row.photoCount),
     created_by: row.createdBy ?? null,

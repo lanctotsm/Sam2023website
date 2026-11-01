@@ -7,6 +7,7 @@ import {
   publicationWindowId
 } from "@/lib/public-cache-window";
 import { serializeAlbum, serializeImage, serializePost } from "@/lib/serializers";
+import { isAlbumPubliclyVisible } from "@/lib/album-visibility";
 import { isPubliclyVisible } from "@/lib/posts-visibility";
 import { getAlbumImages } from "@/services/albumImages";
 import { getAlbumBySlug, getAllAlbums } from "@/services/albums";
@@ -22,7 +23,7 @@ export async function getCachedPublicPosts() {
   const revalidate = publicCacheRevalidateSeconds(nextChangeAtMs);
   return unstable_cache(async () => {
     const rows = await getAllPosts({});
-    return rows.map((row) => serializePost(row));
+    return rows.map((row) => serializePost(row, { includeBody: false }));
   }, ["public-posts", publicationWindowId(nextChangeAtMs)], { ...publicCache, revalidate })();
 }
 
@@ -46,7 +47,7 @@ export function getCachedPublicAlbums() {
 export function getCachedPublicAlbum(slug: string) {
   return unstable_cache(async () => {
     const row = await getAlbumBySlug(slug);
-    if (!row) return null;
+    if (!row || !isAlbumPubliclyVisible(row)) return null;
     return serializeAlbum(row);
   }, ["public-album", slug], publicCache)();
 }

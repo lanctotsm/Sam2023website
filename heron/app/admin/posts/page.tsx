@@ -25,6 +25,7 @@ const emptyPost = {
   markdown: "",
   status: "draft",
   published_at: "",
+  cover_image_id: "",
   metadata: {} as Record<string, string>
 };
 
@@ -95,6 +96,7 @@ export default function AdminPostsPage() {
       const payload = {
         ...form,
         published_at: fromDateTimeLocal(form.published_at),
+        cover_image_id: form.cover_image_id ? Number(form.cover_image_id) : null,
         inline_image_ids: ownedImageIds || []
       };
 
@@ -133,6 +135,7 @@ export default function AdminPostsPage() {
         markdown: fullPost.markdown,
         status: fullPost.status,
         published_at: toDateTimeLocal(fullPost.published_at),
+        cover_image_id: fullPost.cover_image_id ? String(fullPost.cover_image_id) : "",
         metadata: fullPost.metadata || {}
       });
       setOwnedImageIds(fullPost.inline_image_ids || []);
@@ -368,6 +371,25 @@ export default function AdminPostsPage() {
               Set a future date with &apos;Published&apos; status to schedule.
             </p>
           </div>
+        </div>
+
+        <div className="mt-2">
+          <label className={labelClass}>Cover image</label>
+          <select
+            className={inputClass}
+            value={form.cover_image_id}
+            onChange={(e) => setForm({ ...form, cover_image_id: e.target.value })}
+          >
+            <option value="">None</option>
+            {(ownedImageIds || []).map((imageId) => (
+              <option key={imageId} value={imageId}>
+                Image {imageId}
+              </option>
+            ))}
+            {form.cover_image_id && !(ownedImageIds || []).includes(Number(form.cover_image_id)) ? (
+              <option value={form.cover_image_id}>Image {form.cover_image_id}</option>
+            ) : null}
+          </select>
         </div>
 
         <div className="mt-4 border-t border-desert-tan-dark pt-4 dark:border-dark-muted">

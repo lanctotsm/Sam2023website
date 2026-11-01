@@ -26,10 +26,33 @@ describe("lib/serializers", () => {
         status: "published",
         published_at: "2024-01-15T00:00:00Z",
         metadata: null,
+        cover_image_id: null,
+        html: null,
         created_by: 1,
         created_at: "2024-01-01T00:00:00Z",
         updated_at: "2024-01-15T00:00:00Z"
       });
+    });
+
+    it("omits the article body from public list rows", () => {
+      const row = {
+        id: 9,
+        title: "Listed",
+        slug: "listed",
+        summary: "Card",
+        markdown: "# Full",
+        html: "<h1>Full</h1>",
+        status: "published" as const,
+        publishedAt: null,
+        metadata: null,
+        createdBy: 1,
+        createdAt: "2024-01-01T00:00:00Z",
+        updatedAt: "2024-01-01T00:00:00Z"
+      };
+      const out = serializePost(row, { includeBody: false });
+      expect(out).not.toHaveProperty("markdown");
+      expect(out).not.toHaveProperty("html");
+      expect(out.summary).toBe("Card");
     });
 
     it("uses empty string for null summary and normalizes null dates", () => {
@@ -107,6 +130,9 @@ describe("lib/serializers", () => {
         title: "Trip",
         slug: "trip",
         description: "A trip",
+        status: "published",
+        cover_image_id: null,
+        display_date: null,
         cover_image_s3_key: "uploads/uuid/thumb.jpg",
         photo_count: null,
         created_by: 1,

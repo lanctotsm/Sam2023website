@@ -1,6 +1,7 @@
 import { and, asc, eq } from "drizzle-orm";
 import { getDb } from "@/lib/db";
 import { albumImages, images } from "@/lib/db/schema";
+import { refreshPostsEmbeddingAlbumId } from "@/services/posts";
 
 export async function addAlbumImage(albumId: number, imageId: number, sortOrder: number) {
   await getDb()
@@ -10,6 +11,7 @@ export async function addAlbumImage(albumId: number, imageId: number, sortOrder:
       target: [albumImages.albumId, albumImages.imageId],
       set: { sortOrder }
     });
+  await refreshPostsEmbeddingAlbumId(albumId);
 }
 
 export async function getAlbumImages(albumId: number) {
@@ -52,6 +54,7 @@ export async function updateAlbumImagesOrder(albumId: number, imageIdsInOrder: n
         .run();
     }
   });
+  await refreshPostsEmbeddingAlbumId(albumId);
 }
 
 export async function isImageLinkedToAnyAlbum(imageId: number) {

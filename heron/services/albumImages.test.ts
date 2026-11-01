@@ -8,6 +8,10 @@ vi.mock("@/lib/db", () => ({
   getDb: () => mockGetDb()
 }));
 
+vi.mock("@/services/posts", () => ({
+  refreshPostsEmbeddingAlbumId: vi.fn()
+}));
+
 import { albumImages } from "@/lib/db/schema";
 import { addAlbumImage } from "./albumImages";
 

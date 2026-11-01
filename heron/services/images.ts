@@ -1,6 +1,7 @@
 import { desc, eq } from "drizzle-orm";
 import { getDb } from "@/lib/db";
 import { images } from "@/lib/db/schema";
+import { albumSlugsUsingImage, refreshPostsEmbeddingAlbum, refreshPostsUsingImage } from "@/services/posts";
 
 export async function getAllImages() {
   return await getDb().select().from(images).orderBy(desc(images.createdAt));
@@ -71,11 +72,27 @@ export async function updateImage(
     .where(eq(images.id, id))
     .returning();
 
+  if (updated[0]) {
+    try {
+      await refreshPostsUsingImage(id);
+    } catch (error) {
+      console.error("Failed to refresh posts using image", id, error);
+    }
+  }
+
   return updated[0] || null;
 }
 
 export async function deleteImage(id: number) {
+  const slugs = albumSlugsUsingImage(id);
   await getDb().delete(images).where(eq(images.id, id));
+  try {
+    for (const slug of slugs) {
+      await refreshPostsEmbeddingAlbum(slug);
+    }
+  } catch (error) {
+    console.error("Failed to refresh posts using deleted image", id, error);
+  }
 }
 
 /** Return all S3 keys referenced in the images table (for orphan cleanup). */

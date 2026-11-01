@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
-import { errorResponse } from "@/lib/api-utils";
+import { errorResponse, getAuthUser } from "@/lib/api-utils";
+import { isAlbumPubliclyVisible } from "@/lib/album-visibility";
 import { serializeAlbum } from "@/lib/serializers";
 import { getAlbumBySlug } from "@/services/albums";
 
@@ -12,6 +13,11 @@ export async function GET(_: Request, { params }: { params: Promise<{ slug: stri
 
   const row = await getAlbumBySlug(slug);
   if (!row) {
+    return errorResponse("album not found", 404);
+  }
+
+  const user = await getAuthUser();
+  if (!user && !isAlbumPubliclyVisible(row)) {
     return errorResponse("album not found", 404);
   }
 

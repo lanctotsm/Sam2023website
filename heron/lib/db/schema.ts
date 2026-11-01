@@ -27,6 +27,8 @@ export const posts = sqliteTable(
     status: text("status").notNull().default("draft"),
     publishedAt: text("published_at"),
     metadata: text("metadata", { mode: "json" }).$type<Record<string, string>>(),
+    coverImageId: integer("cover_image_id"),
+    html: text("html"),
     createdBy: integer("created_by").references(() => users.id, { onDelete: "set null" }),
     createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
     updatedAt: text("updated_at").notNull().default(sql`CURRENT_TIMESTAMP`)
@@ -44,6 +46,9 @@ export const albums = sqliteTable(
     title: text("title").notNull(),
     slug: text("slug").notNull(),
     description: text("description"),
+    status: text("status").notNull().default("published"),
+    coverImageId: integer("cover_image_id"),
+    displayDate: text("display_date"),
     createdBy: integer("created_by").references(() => users.id, { onDelete: "set null" }),
     createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
     updatedAt: text("updated_at").notNull().default(sql`CURRENT_TIMESTAMP`)
@@ -133,4 +138,11 @@ export const settings = sqliteTable("settings", {
   key: text("key").primaryKey(),
   value: text("value").notNull().default(""),
   updatedAt: text("updated_at").notNull().default(sql`CURRENT_TIMESTAMP`)
+});
+
+export const siteTemplates = sqliteTable("site_templates", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  name: text("name").notNull(),
+  snapshot: text("snapshot").notNull(),
+  createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`)
 });
