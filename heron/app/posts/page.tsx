@@ -1,14 +1,14 @@
 import Link from "next/link";
-import { serverFetch } from "@/lib/server";
-import type { Post } from "@/lib/api";
 import PageStyleProvider from "@/components/PageStyleProvider";
 import { formatPostDate } from "@/lib/format-post-date";
+import { skipEmptyProductionBuild } from "@/lib/skip-empty-build";
+import { getCachedPublicPosts } from "@/services/public-content";
 
-export const dynamic = "force-dynamic";
+export const revalidate = 3600;
 
 export default async function PostsPage() {
-  const postsData = await serverFetch<Post[]>("/posts");
-  const posts = postsData || [];
+  await skipEmptyProductionBuild();
+  const posts = await getCachedPublicPosts();
 
   return (
     <PageStyleProvider page="posts">

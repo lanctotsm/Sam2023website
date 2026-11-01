@@ -7,6 +7,7 @@ import { serializeImage } from "@/lib/serializers";
 import { getImageById, updateImage } from "@/services/images";
 import { deleteObjects, getObject, putObject } from "@/lib/s3";
 import { processImage, rotateImage } from "@/lib/image-processing";
+import { revalidatePublicContent } from "@/lib/revalidate-public";
 
 const ROTATIONS = [90, 180, 270] as const;
 type Rotation = (typeof ROTATIONS)[number];
@@ -96,9 +97,14 @@ export async function PATCH(
       height: processed.large.height,
       lqip: processed.lqip
     });
+    revalidatePublicContent();
 
     if (oldKeys.length > 0) {
-      await deleteObjects(oldKeys);
+      try {
+        await deleteObjects(oldKeys);
+      } catch (cleanupError) {
+        console.error("Failed to delete rotated image objects:", cleanupError);
+      }
     }
 
     return NextResponse.json(serializeImage(updated!));

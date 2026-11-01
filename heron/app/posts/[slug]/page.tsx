@@ -1,26 +1,23 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
-import { serverFetch } from "@/lib/server";
-import type { Post } from "@/lib/api";
 import { renderWithShortcodes } from "@/lib/shortcodes";
 import { formatPostDate } from "@/lib/format-post-date";
 import { POST_SEO_META_KEY_SET } from "@/lib/post-seo";
+import { skipEmptyProductionBuild } from "@/lib/skip-empty-build";
+import { getCachedPublicPost } from "@/services/public-content";
 
 type PageProps = {
   params: Promise<{ slug: string }>;
 };
 
-export const dynamic = "force-dynamic";
+export const revalidate = 3600;
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
+  await skipEmptyProductionBuild();
   const { slug } = await params;
-  let post: Post;
-  try {
-    post = await serverFetch<Post>(`/posts/slug/${slug}`);
-  } catch {
-    return {};
-  }
+  const post = await getCachedPublicPost(slug);
+  if (!post) return {};
 
   const meta = post.metadata ?? {};
   const title = meta.seo_title || post.title;
@@ -71,13 +68,10 @@ function estimateReadingTime(markdown: string): number {
 }
 
 export default async function PostDetailPage({ params }: PageProps) {
+  await skipEmptyProductionBuild();
   const { slug } = await params;
-  let post: Post;
-  try {
-    post = await serverFetch<Post>(`/posts/slug/${slug}`);
-  } catch {
-    notFound();
-  }
+  const post = await getCachedPublicPost(slug);
+  if (!post) notFound();
 
   const publishedDate = formatPostDate(post.published_at || post.created_at, "long");
   const readingTime = estimateReadingTime(post.markdown);

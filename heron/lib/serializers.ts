@@ -27,13 +27,14 @@ export function serializePost(row: PostRow, options?: { inlineImageIds?: number[
   return base;
 }
 
-export function serializeAlbum(row: AlbumRow & { coverImageS3Key?: string | null }) {
+export function serializeAlbum(row: AlbumRow & { coverImageS3Key?: string | null; photoCount?: number | null }) {
   return {
     id: row.id,
     title: row.title,
     slug: row.slug,
     description: row.description || "",
     cover_image_s3_key: row.coverImageS3Key ?? null,
+    photo_count: row.photoCount == null ? null : Number(row.photoCount),
     created_by: row.createdBy ?? null,
     created_at: row.createdAt,
     updated_at: row.updatedAt

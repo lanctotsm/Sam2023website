@@ -3,6 +3,7 @@ import { errorResponse, getAuthUser } from "@/lib/api-utils";
 import { serializePost } from "@/lib/serializers";
 import { createPost, getAllPosts } from "@/services/posts";
 import { replacePostInlineImages } from "@/services/postInlineImages";
+import { revalidatePublicContent } from "@/lib/revalidate-public";
 
 export async function GET(request: Request) {
   const user = await getAuthUser();
@@ -45,6 +46,7 @@ export async function POST(request: Request) {
       metadata: payload.metadata || null,
       createdBy: user.id
     });
+    revalidatePublicContent();
     if (inlineImageIds) {
       await replacePostInlineImages(created.id, inlineImageIds);
     }

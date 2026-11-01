@@ -3,6 +3,7 @@ import { errorResponse, getAuthUser, parseId } from "@/lib/api-utils";
 import { serializeImage } from "@/lib/serializers";
 import { getAlbumById } from "@/services/albums";
 import { addAlbumImage, getAlbumImages, updateAlbumImagesOrder } from "@/services/albumImages";
+import { revalidatePublicContent } from "@/lib/revalidate-public";
 
 type Params = { params: Promise<{ albumID: string }> };
 
@@ -51,6 +52,7 @@ export async function POST(request: Request, { params }: Params) {
   }
 
   await addAlbumImage(albumId, imageId, sortOrder);
+  revalidatePublicContent();
   return NextResponse.json({ ok: true }, { status: 201 });
 }
 
@@ -78,5 +80,6 @@ export async function PUT(request: Request, { params }: Params) {
   }
 
   await updateAlbumImagesOrder(albumId, order);
+  revalidatePublicContent();
   return NextResponse.json({ ok: true });
 }

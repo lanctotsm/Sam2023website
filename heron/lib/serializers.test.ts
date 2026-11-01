@@ -108,6 +108,7 @@ describe("lib/serializers", () => {
         slug: "trip",
         description: "A trip",
         cover_image_s3_key: "uploads/uuid/thumb.jpg",
+        photo_count: null,
         created_by: 1,
         created_at: "2024-01-01T00:00:00Z",
         updated_at: "2024-01-01T00:00:00Z"
@@ -142,6 +143,22 @@ describe("lib/serializers", () => {
         updatedAt: ""
       };
       expect(serializeAlbum(row).cover_image_s3_key).toBeNull();
+      expect(serializeAlbum(row).photo_count).toBeNull();
+    });
+
+    it("includes a photo count when the list query computed one", () => {
+      const row = {
+        id: 4,
+        title: "Counted",
+        slug: "counted",
+        description: null,
+        coverImageS3Key: "uploads/cover.jpg",
+        photoCount: 12,
+        createdBy: null,
+        createdAt: "",
+        updatedAt: ""
+      };
+      expect(serializeAlbum(row).photo_count).toBe(12);
     });
   });
 

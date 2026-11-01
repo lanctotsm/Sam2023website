@@ -33,6 +33,10 @@ vi.mock("@/lib/s3", () => ({
   deleteObjects: vi.fn()
 }));
 
+vi.mock("@/lib/revalidate-public", () => ({
+  revalidatePublicContent: vi.fn()
+}));
+
 vi.mock("@/lib/serializers", () => ({
   serializePost: (p: unknown) => p
 }));
@@ -43,6 +47,7 @@ const { getPostInlineImageIds, replacePostInlineImages, isImageReferencedByAnyPo
 const { isImageLinkedToAnyAlbum } = await import("@/services/albumImages");
 const { getImageById, deleteImage } = await import("@/services/images");
 const { deleteObjects } = await import("@/lib/s3");
+const { revalidatePublicContent } = await import("@/lib/revalidate-public");
 
 describe("POSTS /api/posts/[postID]", () => {
   const post = {
@@ -161,6 +166,26 @@ describe("POSTS /api/posts/[postID]", () => {
       expect(replacePostInlineImages).toHaveBeenCalledWith(1, [5, 6]);
     });
 
+    it("invalidates public pages even when inline image association fails", async () => {
+      vi.mocked(getAuthUser).mockResolvedValue(MOCK_AUTH_USER as never);
+      vi.mocked(getPostById).mockResolvedValue(post as never);
+      vi.mocked(updatePost).mockResolvedValue(post as never);
+      vi.mocked(replacePostInlineImages).mockRejectedValue(new Error("missing image"));
+
+      await expect(
+        PUT(
+          jsonRequest("PUT", "http://x", {
+            title: "Updated",
+            slug: "post",
+            markdown: "m",
+            inline_image_ids: [5]
+          }),
+          { params: getParams({ postID: "1" }) }
+        )
+      ).rejects.toThrow("missing image");
+      expect(revalidatePublicContent).toHaveBeenCalled();
+    });
+
     it("passes published status and published_at through to updatePost", async () => {
       vi.mocked(getAuthUser).mockResolvedValue(MOCK_AUTH_USER as never);
       vi.mocked(updatePost).mockResolvedValue({
@@ -228,6 +253,26 @@ describe("POSTS /api/posts/[postID]", () => {
       expect(res.status).toBe(200);
       expect(deleteImage).not.toHaveBeenCalled();
       expect(deleteObjects).not.toHaveBeenCalled();
+    });
+
+    it("still reports the post deleted when image cleanup fails", async () => {
+      vi.mocked(getAuthUser).mockResolvedValue(MOCK_AUTH_USER as never);
+      vi.mocked(getPostInlineImageIds).mockResolvedValue([101]);
+      vi.mocked(getImageById).mockResolvedValue({
+        id: 101,
+        s3Key: "uploads/a/large.jpg",
+        s3KeyThumb: null,
+        s3KeyLarge: "uploads/a/large.jpg",
+        s3KeyOriginal: "uploads/a/original.jpg"
+      } as never);
+      vi.mocked(deleteObjects).mockRejectedValue(new Error("s3 unavailable"));
+
+      const res = await DELETE(getRequest("http://x"), { params: getParams({ postID: "1" }) });
+      expect(res.status).toBe(200);
+      expect(deletePost).toHaveBeenCalledWith(1);
+      expect(revalidatePublicContent).toHaveBeenCalled();
+      const data = await res.json();
+      expect(data.status).toBe("deleted");
     });
 
     it("keeps image when referenced by album", async () => {

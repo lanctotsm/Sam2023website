@@ -28,7 +28,8 @@ export async function getAllAlbums() {
       createdAt: albums.createdAt,
       updatedAt: albums.updatedAt,
       // Prefer thumbnail key for performance; fall back to full-size key if no thumbnail exists.
-      coverImageS3Key: sql<string | null>`COALESCE(${coverImageSubquery.s3KeyThumb}, ${coverImageSubquery.s3Key})`
+      coverImageS3Key: sql<string | null>`COALESCE(${coverImageSubquery.s3KeyThumb}, ${coverImageSubquery.s3Key})`,
+      photoCount: sql<number>`(SELECT COUNT(*) FROM ${albumImages} WHERE ${albumImages.albumId} = ${albums.id})`.mapWith(Number)
     })
     .from(albums)
     .leftJoin(

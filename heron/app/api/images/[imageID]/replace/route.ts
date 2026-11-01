@@ -7,6 +7,7 @@ import { serializeImage } from "@/lib/serializers";
 import { deleteImage, getImageById, updateImage } from "@/services/images";
 import { deleteObjects, putObject } from "@/lib/s3";
 import { processImage } from "@/lib/image-processing";
+import { revalidatePublicContent } from "@/lib/revalidate-public";
 
 // Kept in sync with app/api/images/upload/route.ts - see the comment there.
 const MAX_FILE_BYTES = Number(process.env.MAX_UPLOAD_BYTES) || 25 * 1024 * 1024;
@@ -61,6 +62,8 @@ export async function PUT(
     }
   }
 
+  const newKeys = [keyThumb, keyLarge, keyOriginal];
+  let committed = false;
   try {
     await putObject({
       key: keyThumb,
@@ -87,18 +90,28 @@ export async function PUT(
       height: processed.large.height,
       lqip: processed.lqip
     });
+    if (!updated) {
+      throw new Error("image not found");
+    }
+    committed = true;
+    revalidatePublicContent();
 
     if (oldKeys.length > 0) {
-      await deleteObjects(oldKeys);
+      try {
+        await deleteObjects(oldKeys);
+      } catch (cleanupError) {
+        console.error("Failed to delete replaced image objects:", cleanupError);
+      }
     }
 
-    return NextResponse.json(serializeImage(updated!));
+    return NextResponse.json(serializeImage(updated));
   } catch (err) {
-    const newKeys = [keyThumb, keyLarge, keyOriginal];
-    try {
-      await deleteObjects(newKeys);
-    } catch {
-      // best effort
+    if (!committed) {
+      try {
+        await deleteObjects(newKeys);
+      } catch {
+        // best effort — the replacement was not committed
+      }
     }
     const message = err instanceof Error ? err.message : "replace failed";
     return errorResponse(message, 500);
