@@ -3,7 +3,8 @@ import { PUBLIC_CONTENT_TAG } from "@/lib/revalidate-public";
 import {
   nextScheduledPublicationMs,
   PUBLIC_CACHE_MAX_SECONDS,
-  publicCacheRevalidateSeconds
+  publicCacheRevalidateSeconds,
+  publicationWindowId
 } from "@/lib/public-cache-window";
 import { serializeAlbum, serializeImage, serializePost } from "@/lib/serializers";
 import { isAlbumPubliclyVisible } from "@/lib/album-visibility";
@@ -18,20 +19,22 @@ const publicCache = {
 };
 
 export async function getCachedPublicPosts() {
-  const revalidate = publicCacheRevalidateSeconds(await nextScheduledPublicationMs());
+  const nextChangeAtMs = await nextScheduledPublicationMs();
+  const revalidate = publicCacheRevalidateSeconds(nextChangeAtMs);
   return unstable_cache(async () => {
     const rows = await getAllPosts({});
     return rows.map((row) => serializePost(row));
-  }, ["public-posts"], { ...publicCache, revalidate })();
+  }, ["public-posts", publicationWindowId(nextChangeAtMs)], { ...publicCache, revalidate })();
 }
 
 export async function getCachedPublicPost(slug: string) {
-  const revalidate = publicCacheRevalidateSeconds(await nextScheduledPublicationMs(slug));
+  const nextChangeAtMs = await nextScheduledPublicationMs(slug);
+  const revalidate = publicCacheRevalidateSeconds(nextChangeAtMs);
   return unstable_cache(async () => {
     const row = await getPostBySlug(slug);
     if (!row || !isPubliclyVisible(row)) return null;
     return serializePost(row);
-  }, ["public-post", slug], { ...publicCache, revalidate })();
+  }, ["public-post", slug, publicationWindowId(nextChangeAtMs)], { ...publicCache, revalidate })();
 }
 
 export function getCachedPublicAlbums() {

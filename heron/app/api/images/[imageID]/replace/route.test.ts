@@ -131,6 +131,24 @@ describe("IMAGES /api/images/[imageID]/replace", () => {
     expect(updateImage).toHaveBeenCalled();
   });
 
+  it("deletes the new objects when the image row disappears before commit", async () => {
+    vi.mocked(getAuthUser).mockResolvedValue(MOCK_AUTH_USER as never);
+    vi.mocked(getImageById).mockResolvedValue(imageRow as never);
+    vi.mocked(updateImage).mockResolvedValue(null);
+
+    const formData = new FormData();
+    formData.append("file", new Blob(["x".repeat(100)], { type: "image/jpeg" }), "photo.jpg");
+    const res = await PUT(new Request("http://x", { method: "PUT", body: formData }), {
+      params: getParams({ imageID: "1" })
+    });
+
+    expect(res.status).toBe(500);
+    expect(revalidatePublicContent).not.toHaveBeenCalled();
+    const deleted = vi.mocked(deleteObjects).mock.calls[0]?.[0] ?? [];
+    expect(deleted.some((key) => key.endsWith("/thumb.jpg"))).toBe(true);
+    expect(deleted).not.toContain(imageRow.s3Key);
+  });
+
   it("keeps the committed replacement when old-object cleanup fails", async () => {
     vi.mocked(getAuthUser).mockResolvedValue(MOCK_AUTH_USER as never);
     vi.mocked(getImageById).mockResolvedValue(imageRow as never);
