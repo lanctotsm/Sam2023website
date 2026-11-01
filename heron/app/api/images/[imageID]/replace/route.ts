@@ -62,6 +62,8 @@ export async function PUT(
     }
   }
 
+  const newKeys = [keyThumb, keyLarge, keyOriginal];
+  let committed = false;
   try {
     await putObject({
       key: keyThumb,
@@ -88,19 +90,25 @@ export async function PUT(
       height: processed.large.height,
       lqip: processed.lqip
     });
+    committed = true;
+    revalidatePublicContent();
 
     if (oldKeys.length > 0) {
-      await deleteObjects(oldKeys);
+      try {
+        await deleteObjects(oldKeys);
+      } catch (cleanupError) {
+        console.error("Failed to delete replaced image objects:", cleanupError);
+      }
     }
 
-    revalidatePublicContent();
     return NextResponse.json(serializeImage(updated!));
   } catch (err) {
-    const newKeys = [keyThumb, keyLarge, keyOriginal];
-    try {
-      await deleteObjects(newKeys);
-    } catch {
-      // best effort
+    if (!committed) {
+      try {
+        await deleteObjects(newKeys);
+      } catch {
+        // best effort — the replacement was not committed
+      }
     }
     const message = err instanceof Error ? err.message : "replace failed";
     return errorResponse(message, 500);

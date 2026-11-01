@@ -46,10 +46,10 @@ export async function POST(request: Request) {
       metadata: payload.metadata || null,
       createdBy: user.id
     });
+    revalidatePublicContent();
     if (inlineImageIds) {
       await replacePostInlineImages(created.id, inlineImageIds);
     }
-    revalidatePublicContent();
     return NextResponse.json(
       serializePost(created, inlineImageIds ? { inlineImageIds } : undefined),
       { status: 201 }
