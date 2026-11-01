@@ -4,15 +4,12 @@ import { useCallback } from "react";
 import type { NavStyleConfig } from "@/lib/frontPageDefaults";
 import { AVAILABLE_FONTS } from "@/lib/fonts";
 import NavStylePreview from "@/components/NavStylePreview";
+import { adminCompactInputClass as inputClass, adminCompactLabelClass as labelClass } from "@/lib/admin-ui";
 
 type Props = {
     value: NavStyleConfig;
     onChange: (patch: Partial<NavStyleConfig>) => void;
 };
-
-const inputClass =
-    "w-full rounded-lg border border-desert-tan-dark bg-white px-3 py-2 text-sm outline-none focus:border-chestnut dark:border-dark-muted dark:bg-dark-bg dark:text-dark-text dark:focus:border-caramel";
-const labelClass = "block text-sm font-semibold text-chestnut-dark dark:text-dark-text mb-1";
 
 function ColorField({ label, value, onChange, placeholder }: { label: string; value: string; onChange: (v: string) => void; placeholder?: string }) {
     return (

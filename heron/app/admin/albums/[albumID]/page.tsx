@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useRef, useState, useCallback } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { useParams } from "next/navigation";
@@ -11,32 +11,33 @@ import type { SortableImage } from "@/components/SortableImageGrid";
 import SortableImageGrid from "@/components/SortableImageGrid";
 import ImageEditModal, { type ImageEditMetadata } from "@/components/ImageEditModal";
 import { apiFetch, getImages, linkAlbumImage } from "@/lib/api";
+import { postFormDataWithProgress } from "@/lib/upload-with-progress";
 import {
   extractImagesFromZip,
   isZipFile,
   isFileWithinSizeLimit,
   MAX_UPLOAD_BYTES
 } from "@/lib/upload-utils";
+import { parseId } from "@/lib/parse-id";
+import {
+  adminCardClass as cardClass,
+  adminInputClass as inputClass,
+  adminLabelClass as labelClass
+} from "@/lib/admin-ui";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || "/api";
 
 type PendingFile = { id: string; file: File; preview: string };
 type UploadingFile = { id: string; file: File; progress: number };
 
-const inputClass =
-  "w-full rounded-lg border border-desert-tan-dark bg-white px-3 py-2.5 text-chestnut-dark outline-none transition focus:border-chestnut focus:ring-2 focus:ring-chestnut/10 dark:border-dark-muted dark:bg-dark-bg dark:text-dark-text dark:placeholder:text-dark-muted";
-const labelClass = "text-sm font-medium text-chestnut-dark dark:text-dark-text";
-const cardClass =
-  "rounded-xl border border-desert-tan-dark bg-surface p-4 shadow-[0_2px_8px_rgba(72,9,3,0.08)] dark:border-dark-muted dark:bg-dark-surface";
-
 export default function AdminAlbumEditorPage() {
   const { confirm } = useDialog();
   const params = useParams();
-  const id = typeof params.albumID === "string" ? parseInt(params.albumID, 10) : NaN;
+  const id = typeof params.albumID === "string" ? parseId(params.albumID) : null;
   const [album, setAlbum] = useState<Album | null>(null);
   const [images, setImages] = useState<SortableImage[]>([]);
   const [form, setForm] = useState({ title: "", slug: "", description: "" });
-  const [loading, setLoading] = useState(true);
+  const [initialLoading, setInitialLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [pendingFiles, setPendingFiles] = useState<PendingFile[]>([]);
@@ -52,9 +53,11 @@ export default function AdminAlbumEditorPage() {
   const [selectedImage, setSelectedImage] = useState<number | null>(null);
   const [sortOrder, setSortOrder] = useState(0);
   const [linkSectionOpen, setLinkSectionOpen] = useState(false);
+  const [linking, setLinking] = useState(false);
+  const linkingRef = useRef(false);
 
   const fetchData = useCallback(async () => {
-    if (Number.isNaN(id)) return;
+    if (!id) return;
     try {
       const [albumList, imagesData, allImagesData] = await Promise.all([
         apiFetch<Album[]>("/albums"),
@@ -76,7 +79,7 @@ export default function AdminAlbumEditorPage() {
       setAlbum(null);
       setImages([]);
     } finally {
-      setLoading(false);
+      setInitialLoading(false);
     }
   }, [id]);
 
@@ -303,34 +306,17 @@ export default function AdminAlbumEditorPage() {
       const uploadingId = `${pendingId}-uploading`;
       setUploadingFiles((prev) => [...prev, { id: uploadingId, file, progress: 0 }]);
       try {
-        const result = await new Promise<{ images: ImageMeta[] }>((resolve, reject) => {
-          const formData = new FormData();
-          formData.append("album_id", String(id));
-          formData.append("files", file);
-          const xhr = new XMLHttpRequest();
-          xhr.upload.addEventListener("progress", (e) => {
-            if (e.lengthComputable) {
-              const pct = Math.round((e.loaded / e.total) * 100);
-              setUploadingFiles((prev) =>
-                prev.map((u) => (u.id === uploadingId ? { ...u, progress: pct } : u))
-              );
-            }
-          });
-          xhr.addEventListener("load", () => {
-            if (xhr.status >= 200 && xhr.status < 300) {
-              try {
-                resolve(JSON.parse(xhr.responseText));
-              } catch {
-                reject(new Error("Invalid response"));
-              }
-            } else {
-              reject(new Error(xhr.responseText || `Upload failed (${xhr.status})`));
-            }
-          });
-          xhr.addEventListener("error", () => reject(new Error("Upload failed")));
-          xhr.open("POST", `${API_BASE}/images/upload`);
-          xhr.withCredentials = true;
-          xhr.send(formData);
+        const formData = new FormData();
+        formData.append("album_id", String(id));
+        formData.append("files", file);
+        const result = await postFormDataWithProgress<{ images: ImageMeta[] }>({
+          url: `${API_BASE}/images/upload`,
+          formData,
+          onProgress: (pct) => {
+            setUploadingFiles((prev) =>
+              prev.map((u) => (u.id === uploadingId ? { ...u, progress: pct } : u))
+            );
+          }
         });
         setUploadingFiles((prev) => prev.filter((u) => u.id !== uploadingId));
         URL.revokeObjectURL(toUpload.find((x) => x.id === pendingId)?.preview ?? "");
@@ -348,9 +334,10 @@ export default function AdminAlbumEditorPage() {
   };
 
   const linkImage = async () => {
-    if (!selectedImage) return;
+    if (!id || !selectedImage || linkingRef.current) return;
+    linkingRef.current = true;
+    setLinking(true);
 
-    setLoading(true);
     try {
       await linkAlbumImage(id, selectedImage, sortOrder);
       setSelectedImage(null);
@@ -361,7 +348,8 @@ export default function AdminAlbumEditorPage() {
       const msg = err instanceof Error ? err.message : "Failed to link image";
       toast.error(msg);
     } finally {
-      setLoading(false);
+      linkingRef.current = false;
+      setLinking(false);
     }
   };
 
@@ -388,7 +376,7 @@ export default function AdminAlbumEditorPage() {
     e.stopPropagation();
   };
 
-  if (Number.isNaN(id)) {
+  if (!id) {
     return (
       <article className={cardClass}>
         <p className="text-copper">Invalid album id.</p>
@@ -399,7 +387,7 @@ export default function AdminAlbumEditorPage() {
     );
   }
 
-  if (loading) {
+  if (initialLoading) {
     return (
       <article className={cardClass}>
         <p className="text-olive dark:text-dark-muted">Loading...</p>
@@ -626,9 +614,9 @@ export default function AdminAlbumEditorPage() {
                 type="button"
                 className="rounded-lg bg-chestnut px-4 py-2.5 font-semibold text-desert-tan transition hover:bg-chestnut-dark disabled:opacity-60 dark:text-dark-text"
                 onClick={linkImage}
-                disabled={!selectedImage || loading}
+                disabled={!selectedImage || linking}
               >
-                Link Image to Album
+                {linking ? "Linking..." : "Link Image to Album"}
               </button>
             </div>
           </div>

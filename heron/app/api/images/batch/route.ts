@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { errorResponse, getAuthUser } from "@/lib/api-utils";
 import { serializeImage } from "@/lib/serializers";
+import { isAllowedObjectKey } from "@/lib/object-key";
 import { createImage } from "@/services/images";
 
 type ImagePayload = {
@@ -24,13 +25,20 @@ export async function POST(request: Request) {
     return errorResponse("images array is required", 400);
   }
 
+  for (const img of images) {
+    const s3Key = (img?.s3_key || "").trim();
+    if (!s3Key) {
+      return errorResponse("s3_key is required for all images", 400);
+    }
+    if (!isAllowedObjectKey(s3Key)) {
+      return errorResponse("s3_key is not allowed", 400);
+    }
+  }
+
   try {
     const createdImages = await Promise.all(
       images.map(async (img) => {
         const s3Key = (img.s3_key || "").trim();
-        if (!s3Key) {
-          throw new Error("s3_key is required for all images");
-        }
 
         return await createImage({
           s3Key,

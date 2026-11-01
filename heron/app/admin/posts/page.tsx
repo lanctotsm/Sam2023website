@@ -2,29 +2,21 @@
 
 import { useEffect, useState, useRef } from "react";
 import { useSearchParams } from "next/navigation";
-import Link from "next/link";
 import { toast } from "sonner";
-import ReactMarkdown from "react-markdown";
-import remarkGfm from "remark-gfm";
 import type { Post } from "@/lib/api";
 import { apiFetch, createPost, uploadImages } from "@/lib/api";
 import { slugify } from "@/lib/slug";
+import { POST_SEO_META_KEYS } from "@/lib/post-seo";
+import { parseId } from "@/lib/parse-id";
+import {
+  adminCardClass as cardClass,
+  adminInputClass as inputClass,
+  adminLabelClass as labelClass
+} from "@/lib/admin-ui";
 import { buildImageUrl } from "@/lib/images";
 import AlbumSelectModal from "@/components/AlbumSelectModal";
 import MarkdownPreview from "@/components/MarkdownPreview";
-
-const COMMON_META_KEYS = [
-  "seo_title",
-  "seo_description",
-  "og_image",
-  "og_title",
-  "og_description",
-  "author",
-  "canonical_url",
-  "twitter_card",
-  "keywords",
-  "robots"
-];
+import AdminPostsList from "@/components/admin/AdminPostsList";
 
 const emptyPost = {
   title: "",
@@ -86,8 +78,9 @@ export default function AdminPostsPage() {
   useEffect(() => {
     const editId = searchParams.get("edit");
     if (editId && posts.length > 0 && appliedEditRef.current !== editId) {
+      const id = parseId(editId);
+      if (!id) return;
       appliedEditRef.current = editId;
-      const id = parseInt(editId, 10);
       const post = posts.find((p) => p.id === id);
       if (post) {
         handleEdit(post);
@@ -268,18 +261,6 @@ export default function AdminPostsPage() {
     }
   };
 
-  const getPostDisplayStatus = (post: Post) => {
-    if (post.status !== "published") return post.status;
-    if (post.published_at && new Date(post.published_at) > new Date()) return "scheduled";
-    return "published";
-  };
-
-  const inputClass =
-    "w-full rounded-lg border border-desert-tan-dark bg-white px-3 py-2.5 text-chestnut-dark outline-none transition focus:border-chestnut focus:ring-2 focus:ring-chestnut/10 dark:border-dark-muted dark:bg-dark-bg dark:text-dark-text dark:placeholder:text-dark-muted/60";
-  const labelClass = "text-sm font-medium text-chestnut-dark dark:text-dark-text";
-  const cardClass =
-    "rounded-xl border border-desert-tan-dark bg-surface p-4 shadow-[0_2px_8px_rgba(72,9,3,0.08)] dark:border-dark-muted dark:bg-dark-surface";
-
   return (
     <div className="flex flex-col gap-6">
       <section className={`${cardClass} flex flex-col gap-4`}>
@@ -407,7 +388,7 @@ export default function AdminPostsPage() {
             ))}
             <div className="flex items-center gap-2 mt-2">
               <datalist id="meta-key-suggestions">
-                {COMMON_META_KEYS.map((k) => (
+                {POST_SEO_META_KEYS.map((k) => (
                   <option key={k} value={k} />
                 ))}
               </datalist>
@@ -455,59 +436,14 @@ export default function AdminPostsPage() {
         </div>
       </section>
 
-      <section className="flex flex-col gap-4">
-        <h2 className="text-chestnut dark:text-dark-text">All Posts ({posts.length})</h2>
-        {posts.length === 0 ? (
-          <p className={`${cardClass} text-olive dark:text-dark-muted`}>No posts yet. Create your first post above.</p>
-        ) : (
-          <div className="flex flex-col gap-3">
-            {posts.map((post) => {
-              const displayStatus = getPostDisplayStatus(post);
-              return (
-                <article
-                  className={`${cardClass} flex flex-wrap items-center justify-between gap-4`}
-                  key={post.id}
-                >
-                  <div className="min-w-0 flex-1">
-                    <h3 className="m-0 text-chestnut dark:text-dark-text">{post.title}</h3>
-                    <p className="text-olive dark:text-dark-muted">{post.summary || "No summary"}</p>
-                    <div className="flex flex-wrap items-center gap-2 text-sm">
-                      <span
-                        className={`rounded-full px-2.5 py-0.5 font-medium uppercase text-xs tracking-wider ${displayStatus === "published"
-                          ? "bg-olive/20 text-olive-dark dark:bg-olive/30 dark:text-olive-light"
-                          : displayStatus === "scheduled"
-                            ? "bg-blue-500/20 text-blue-700 dark:bg-blue-500/30 dark:text-blue-300"
-                            : displayStatus === "draft"
-                              ? "bg-desert-tan-dark/50 text-chestnut-dark dark:bg-dark-muted/50 dark:text-dark-muted"
-                              : "bg-copper/15 text-copper dark:bg-copper/25 dark:text-copper-light"
-                          }`}
-                      >
-                        {displayStatus}
-                      </span>
-                      <span className="text-olive dark:text-dark-muted">/{post.slug}</span>
-                    </div>
-                  </div>
-                  <div className="flex flex-wrap gap-2">
-                    <button
-                      className="rounded-lg border border-chestnut bg-transparent px-3 py-2 text-chestnut transition hover:bg-chestnut/5 dark:border-dark-text dark:text-dark-text dark:hover:bg-dark-bg"
-                      onClick={() => handleEdit(post)}
-                      disabled={loadingEdit}
-                    >
-                      {loadingEdit && editingId === post.id ? "Loading..." : "Edit"}
-                    </button>
-                    <button
-                      className="rounded-lg border border-copper bg-transparent px-3 py-2 text-copper transition hover:bg-copper/10 dark:border-copper dark:text-copper-light dark:hover:bg-copper/20"
-                      onClick={() => handleDelete(post.id)}
-                    >
-                      Delete
-                    </button>
-                  </div>
-                </article>
-              );
-            })}
-          </div>
-        )}
-      </section>
+      <AdminPostsList
+        posts={posts}
+        editingId={editingId}
+        loadingEdit={loadingEdit}
+        cardClass={cardClass}
+        onEdit={handleEdit}
+        onDelete={handleDelete}
+      />
 
       <AlbumSelectModal
         isOpen={isAlbumModalOpen}

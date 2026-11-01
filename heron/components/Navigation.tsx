@@ -27,7 +27,8 @@ export default function Navigation() {
   const pathname = usePathname();
   const router = useRouter();
   const { data: session, status } = useSession();
-  const user = session?.user || null;
+  const user =
+    session?.user?.email && session.user.id != null ? session.user : null;
   // Stores the pathname the drawer was opened on, so any navigation closes it
   const [openedOnPath, setOpenedOnPath] = useState<string | null>(null);
   const mobileOpen = openedOnPath === pathname;

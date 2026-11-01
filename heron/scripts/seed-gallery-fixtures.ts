@@ -10,6 +10,7 @@
 
 import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
+import { randomUUID } from "node:crypto";
 import { eq } from "drizzle-orm";
 import sharp from "sharp";
 import { getDb } from "../lib/db";
@@ -85,10 +86,23 @@ async function main() {
     const largeMeta = await sharp(large).metadata();
     const lqip = await generateLqip(thumb);
 
+    const uuid = randomUUID();
+    const keyThumb = `uploads/${uuid}/thumb.jpg`;
+    const keyLarge = `uploads/${uuid}/large.jpg`;
+    const keyOriginal = `uploads/${uuid}/original.jpg`;
+
+    await mkdir(path.join(outRoot, "uploads", uuid), { recursive: true });
+    await writeFile(path.join(outRoot, keyThumb), thumb);
+    await writeFile(path.join(outRoot, keyLarge), large);
+    await writeFile(path.join(outRoot, keyOriginal), original);
+
     const inserted = await db
       .insert(images)
       .values({
-        s3Key: "pending",
+        s3Key: keyLarge,
+        s3KeyThumb: keyThumb,
+        s3KeyLarge: keyLarge,
+        s3KeyOriginal: keyOriginal,
         width: largeMeta.width ?? fixture.w,
         height: largeMeta.height ?? fixture.h,
         name: fixture.caption,
@@ -98,24 +112,6 @@ async function main() {
       })
       .returning();
     const id = inserted[0].id;
-
-    const keyThumb = `uploads/${id}-thumb.jpg`;
-    const keyLarge = `uploads/${id}-large.jpg`;
-    const keyOriginal = `uploads/${id}-original.jpg`;
-
-    await writeFile(path.join(outRoot, keyThumb), thumb);
-    await writeFile(path.join(outRoot, keyLarge), large);
-    await writeFile(path.join(outRoot, keyOriginal), original);
-
-    await db
-      .update(images)
-      .set({
-        s3Key: keyLarge,
-        s3KeyThumb: keyThumb,
-        s3KeyLarge: keyLarge,
-        s3KeyOriginal: keyOriginal
-      })
-      .where(eq(images.id, id));
 
     await db.insert(albumImages).values({
       albumId: album.id,

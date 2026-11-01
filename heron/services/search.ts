@@ -1,12 +1,15 @@
 import { getRawDb } from "@/lib/db";
+import { isPubliclyVisible } from "@/lib/posts-visibility";
 import { getPostById } from "@/services/posts";
 import { getAlbumById } from "@/services/albums";
 import { serializePost } from "@/lib/serializers";
 import { serializeAlbum } from "@/lib/serializers";
 
+const MAX_SEARCH_QUERY_LENGTH = 100;
+
 /** Search posts and albums by full-text. Returns only published posts. */
 export async function searchFts(query: string) {
-  const q = query.trim();
+  const q = query.trim().slice(0, MAX_SEARCH_QUERY_LENGTH);
   if (!q) {
     return { posts: [], albums: [] };
   }
@@ -39,7 +42,7 @@ export async function searchFts(query: string) {
   ]);
 
   const posts = postRows
-    .filter((p): p is NonNullable<typeof p> => p != null && p.status === "published")
+    .filter((p): p is NonNullable<typeof p> => p != null && isPubliclyVisible(p))
     .map((row) => serializePost(row));
   const albums = albumRows.filter((a): a is NonNullable<typeof a> => a != null).map(serializeAlbum);
 

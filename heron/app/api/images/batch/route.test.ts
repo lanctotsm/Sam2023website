@@ -47,12 +47,22 @@ describe("BATCH /api/images/batch", () => {
     expect(res.status).toBe(400);
   });
 
-  it("returns 500 when s3_key is missing", async () => {
+  it("returns 400 when s3_key is missing", async () => {
     vi.mocked(getAuthUser).mockResolvedValue(MOCK_AUTH_USER as never);
     const res = await POST(jsonRequest("POST", "http://x", {
       images: [{ caption: "Test" }]
     }));
-    expect(res.status).toBe(500);
+    expect(res.status).toBe(400);
+    expect(createImage).not.toHaveBeenCalled();
+  });
+
+  it("returns 400 when s3_key is outside the allowed prefixes", async () => {
+    vi.mocked(getAuthUser).mockResolvedValue(MOCK_AUTH_USER as never);
+    const res = await POST(jsonRequest("POST", "http://x", {
+      images: [{ s3_key: "uploads/../secret.jpg" }]
+    }));
+    expect(res.status).toBe(400);
+    expect(createImage).not.toHaveBeenCalled();
   });
 
   it("returns 201 with created images for valid single image", async () => {

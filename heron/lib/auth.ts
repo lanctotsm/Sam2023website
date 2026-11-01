@@ -4,11 +4,17 @@ import CredentialsProvider from "next-auth/providers/credentials";
 import { eq } from "drizzle-orm";
 
 import { getDb } from "@/lib/db";
-import { adminUsers, users } from "@/lib/db/schema";
+import { users } from "@/lib/db/schema";
+import {
+  getAllowedAdminUser,
+  isAllowedUserEmail,
+  jwtIfStillAllowed,
+  sessionUserFromToken,
+  normalizeEmail
+} from "@/lib/admin-allowlist";
+import { assertProductionAuthConfig, isDevCredentialsEnabled } from "@/lib/security-env";
 
-function normalizeEmail(email?: string | null) {
-  return email?.trim().toLowerCase() || "";
-}
+assertProductionAuthConfig();
 
 async function ensureUserRecord(params: { email: string; googleId: string }) {
   const db = getDb();
@@ -38,37 +44,6 @@ async function ensureUserRecord(params: { email: string; googleId: string }) {
   return inserted[0]?.id ?? null;
 }
 
-async function getAllowedAdminUser(email: string) {
-  const baseAdmin = normalizeEmail(process.env.BASE_ADMIN_EMAIL);
-  if (baseAdmin && baseAdmin === email) {
-    const db = getDb();
-    await db
-      .insert(adminUsers)
-      .values({ email, isBaseAdmin: true, name: "Base Admin" })
-      .onConflictDoUpdate({
-        target: adminUsers.email,
-        set: { isBaseAdmin: true }
-      });
-    return { name: "Base Admin" };
-  }
-
-  const db = getDb();
-  const [allowed] = await db
-    .select({ id: adminUsers.id, name: adminUsers.name })
-    .from(adminUsers)
-    .where(eq(adminUsers.email, email))
-    .limit(1);
-  return allowed || null;
-}
-
-async function isAllowedUserEmail(email: string) {
-  const allowed = await getAllowedAdminUser(email);
-  return Boolean(allowed);
-}
-
-const isDevAuthEnabled =
-  process.env.NODE_ENV === "development" || process.env.DEV_AUTH_BYPASS === "true";
-
 export const authOptions: NextAuthOptions = {
   secret: process.env.NEXTAUTH_SECRET,
   session: {
@@ -82,7 +57,7 @@ export const authOptions: NextAuthOptions = {
       clientId: process.env.GOOGLE_CLIENT_ID || "",
       clientSecret: process.env.GOOGLE_CLIENT_SECRET || ""
     }),
-    ...(isDevAuthEnabled
+    ...(isDevCredentialsEnabled()
       ? [
         CredentialsProvider({
           name: "Dev Login",
@@ -121,28 +96,33 @@ export const authOptions: NextAuthOptions = {
     async jwt({ token, user, account }) {
       if (user?.email) {
         const email = normalizeEmail(user.email);
-        if (!email) {
-          return token;
-        }
-        const googleId = account?.providerAccountId || `local:${email}`;
-        const userId = await ensureUserRecord({ email, googleId });
-        const adminInvite = await getAllowedAdminUser(email);
-        if (userId) {
-          token.userId = userId;
-          token.email = email;
-          token.role = "admin";
-          token.name = adminInvite?.name || user.name || token.name;
+        if (email) {
+          const googleId = account?.providerAccountId || `local:${email}`;
+          const userId = await ensureUserRecord({ email, googleId });
+          const adminInvite = await getAllowedAdminUser(email);
+          if (userId) {
+            token.userId = userId;
+            token.email = email;
+            token.role = "admin";
+            token.name = adminInvite?.name || user.name || token.name;
+          }
         }
       }
-      return token;
+      return jwtIfStillAllowed(token);
     },
     async session({ session, token }) {
-      if (session.user) {
-        session.user.id = token.userId as number | undefined;
-        session.user.email = (token.email as string) || session.user.email;
-        session.user.role = (token.role as string) || "admin";
-        session.user.name = (token.name as string) || session.user.name;
+      const user = sessionUserFromToken(token);
+      if (!user) {
+        const { user: _cleared, ...unsigned } = session;
+        return unsigned;
       }
+      session.user = {
+        ...session.user,
+        id: user.id,
+        email: user.email,
+        role: user.role,
+        name: user.name ?? session.user?.name
+      };
       return session;
     }
   }

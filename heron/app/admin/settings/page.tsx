@@ -24,21 +24,18 @@ import PageStyleEditor from "@/components/PageStyleEditor";
 import NavStyleEditor from "@/components/NavStyleEditor";
 import HomePageSettingsTab from "@/components/admin/HomePageSettingsTab";
 import PostsPageSettingsTab from "@/components/admin/PostsPageSettingsTab";
+import {
+  adminBtnAdd as btnAdd,
+  adminBtnDanger as btnDanger,
+  adminCompactInputClass as inputClass,
+  adminCompactLabelClass as labelClass,
+  adminSectionClass as sectionClass
+} from "@/lib/admin-ui";
 
 type Toast = { message: string; type: "success" | "error" };
 type Tab = "general" | "homepage" | "postspage" | "styles";
 
-// ─── Styles ────────────────────────────────────────────────────────────────────
-const sectionClass =
-    "rounded-xl border border-desert-tan-dark bg-surface p-5 shadow-[0_2px_8px_rgba(72,9,3,0.08)] dark:border-dark-muted dark:bg-dark-surface";
-const labelClass = "block text-sm font-semibold text-chestnut-dark dark:text-dark-text mb-1";
-const inputClass =
-    "w-full rounded-lg border border-desert-tan-dark bg-white px-3 py-2 text-sm outline-none focus:border-chestnut dark:border-dark-muted dark:bg-dark-bg dark:text-dark-text dark:focus:border-caramel";
 const textareaClass = `${inputClass} min-h-[80px] resize-y`;
-const btnDanger =
-    "rounded-lg border border-red-300 bg-red-50 px-3 py-1.5 text-sm text-red-700 transition-colors hover:bg-red-100 dark:border-red-800 dark:bg-red-900/30 dark:text-red-300 dark:hover:bg-red-900/50";
-const btnAdd =
-    "rounded-lg border border-desert-tan-dark bg-white px-4 py-2 text-sm font-medium text-chestnut transition-colors hover:bg-desert-tan dark:border-dark-muted dark:bg-dark-bg dark:text-dark-text dark:hover:bg-dark-surface";
 
 // ─── Upload helper ──────────────────────────────────────────────────────────────
 async function uploadBackgroundImage(file: File): Promise<string> {
@@ -130,6 +127,8 @@ export default function AdminSettingsPage() {
                 newPageStylesJson !== savedStylesRef.current.pageStyles ||
                 newNavStylesJson !== savedStylesRef.current.navStyles;
 
+            const normalizedPostsPage = parsePostsPageConfig(JSON.stringify(postsPageConfig));
+
             await apiFetch("/settings", {
                 method: "PUT",
                 body: JSON.stringify({
@@ -138,13 +137,14 @@ export default function AdminSettingsPage() {
                         footer_text: footerText,
                         ai_alt_text_enabled: aiAltTextEnabled ? "true" : "false",
                         front_page: JSON.stringify(config),
-                        posts_page: JSON.stringify(postsPageConfig),
+                        posts_page: JSON.stringify(normalizedPostsPage),
                         page_styles: newPageStylesJson,
                         nav_styles: newNavStylesJson,
                     },
                 }),
             });
 
+            setPostsPageConfig(normalizedPostsPage);
             savedStylesRef.current = { pageStyles: newPageStylesJson, navStyles: newNavStylesJson };
 
             const savedAt = new Date().toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });

@@ -20,7 +20,7 @@ export function getDb() {
     fs.mkdirSync(dbDir, { recursive: true });
   }
 
-  const sqlite = new Database(dbPath);
+  const sqlite = new Database(dbPath, { timeout: 8000 });
   sqlite.pragma("journal_mode = WAL");
   sqlite.pragma("foreign_keys = ON");
 

@@ -4,6 +4,10 @@ import { MOCK_AUTH_USER } from "../../__tests__/helpers";
 
 vi.mock("@/lib/api-utils", () => ({
   getAuthUser: vi.fn(),
+  parseId: (v: string) => {
+    const n = Number(v);
+    return Number.isInteger(n) && n > 0 ? n : null;
+  },
   errorResponse: (msg: string, status: number) =>
     new Response(JSON.stringify({ error: msg }), { status })
 }));
@@ -70,19 +74,19 @@ describe("POST /api/images/upload", () => {
       createdBy: 1,
       createdAt: "2024-01-01T00:00:00Z"
     } as never);
-    vi.mocked(updateImage).mockResolvedValue({
-      id: 42,
-      s3Key: "uploads/42-large.jpg",
-      s3KeyThumb: "uploads/42-thumb.jpg",
-      s3KeyLarge: "uploads/42-large.jpg",
-      s3KeyOriginal: "uploads/42-original.jpg",
+    vi.mocked(updateImage).mockImplementation(async (id, data) => ({
+      id,
+      s3Key: data.s3Key ?? "pending/uuid/placeholder.jpg",
+      s3KeyThumb: data.s3KeyThumb ?? null,
+      s3KeyLarge: data.s3KeyLarge ?? null,
+      s3KeyOriginal: data.s3KeyOriginal ?? null,
       width: 800,
       height: 600,
       caption: null,
       altText: null,
       createdBy: 1,
       createdAt: "2024-01-01T00:00:00Z"
-    } as never);
+    } as never));
     vi.mocked(addAlbumImage).mockResolvedValue(undefined);
   });
 
@@ -133,15 +137,22 @@ describe("POST /api/images/upload", () => {
         createdBy: 1
       })
     );
-    expect(updateImage).toHaveBeenCalledWith(
-      42,
-      expect.objectContaining({
-        s3Key: "uploads/42-large.jpg",
-        s3KeyThumb: "uploads/42-thumb.jpg",
-        s3KeyLarge: "uploads/42-large.jpg",
-        s3KeyOriginal: "uploads/42-original.jpg"
-      })
-    );
+    const updateArg = vi.mocked(updateImage).mock.calls[0][1] as {
+      s3Key: string;
+      s3KeyThumb: string;
+      s3KeyLarge: string;
+      s3KeyOriginal: string;
+    };
+    const uuidMatch = updateArg.s3Key.match(/^uploads\/([0-9a-f-]{36})\/large\.jpg$/);
+    expect(uuidMatch).not.toBeNull();
+    const uuid = uuidMatch![1];
+    expect(updateArg.s3KeyThumb).toBe(`uploads/${uuid}/thumb.jpg`);
+    expect(updateArg.s3KeyLarge).toBe(`uploads/${uuid}/large.jpg`);
+    expect(updateArg.s3KeyOriginal).toBe(`uploads/${uuid}/original.jpg`);
+    expect(putObject).toHaveBeenCalledWith(expect.objectContaining({ key: `uploads/${uuid}/thumb.jpg` }));
+    expect(putObject).toHaveBeenCalledWith(expect.objectContaining({ key: `uploads/${uuid}/large.jpg` }));
+    expect(putObject).toHaveBeenCalledWith(expect.objectContaining({ key: `uploads/${uuid}/original.jpg` }));
+    expect(data.images[0].s3Key).toBe(`uploads/${uuid}/large.jpg`);
     expect(addAlbumImage).not.toHaveBeenCalled();
   });
 
@@ -151,6 +162,14 @@ describe("POST /api/images/upload", () => {
     const res = await POST(formRequestWithFiles([file], { album_id: "5" }));
     expect(res.status).toBe(201);
     expect(addAlbumImage).toHaveBeenCalledWith(5, 42, 0);
+  });
+
+  it("does not link to an album when album_id is a prefixed numeric string", async () => {
+    vi.mocked(getAuthUser).mockResolvedValue(MOCK_AUTH_USER as never);
+    const file = new File([new Blob(["\xff\xd8\xff"])], "a.jpg", { type: "image/jpeg" });
+    const res = await POST(formRequestWithFiles([file], { album_id: "1abc" }));
+    expect(res.status).toBe(201);
+    expect(addAlbumImage).not.toHaveBeenCalled();
   });
 
   it("passes caption and alt_text to createImage", async () => {

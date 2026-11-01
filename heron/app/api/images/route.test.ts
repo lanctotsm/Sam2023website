@@ -42,11 +42,18 @@ describe("IMAGES /api/images", () => {
     expect(res.status).toBe(400);
   });
 
+  it("POST returns 400 when s3_key is outside the allowed prefixes", async () => {
+    vi.mocked(getAuthUser).mockResolvedValue(MOCK_AUTH_USER as never);
+    const res = await POST(jsonRequest("POST", "http://x", { s3_key: "../secret" }));
+    expect(res.status).toBe(400);
+    expect(createImage).not.toHaveBeenCalled();
+  });
+
   it("POST returns 201 when valid", async () => {
     vi.mocked(getAuthUser).mockResolvedValue(MOCK_AUTH_USER as never);
-    vi.mocked(createImage).mockResolvedValue({ id: 1, s3Key: "k", width: null, height: null, caption: null, altText: null, createdBy: 1, createdAt: "" } as never);
-    const res = await POST(jsonRequest("POST", "http://x", { s3_key: "k" }));
+    vi.mocked(createImage).mockResolvedValue({ id: 1, s3Key: "uploads/k.jpg", width: null, height: null, caption: null, altText: null, createdBy: 1, createdAt: "" } as never);
+    const res = await POST(jsonRequest("POST", "http://x", { s3_key: "uploads/k.jpg" }));
     expect(res.status).toBe(201);
-    expect(createImage).toHaveBeenCalledWith(expect.objectContaining({ s3Key: "k", createdBy: 1 }));
+    expect(createImage).toHaveBeenCalledWith(expect.objectContaining({ s3Key: "uploads/k.jpg", createdBy: 1 }));
   });
 });

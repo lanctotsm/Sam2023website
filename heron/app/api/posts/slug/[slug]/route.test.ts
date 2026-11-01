@@ -63,6 +63,25 @@ describe("POSTS /api/posts/slug/[slug]", () => {
       expect(data.slug).toBe("my-post");
     });
 
+    it("returns 404 for a published post scheduled in the future when unauthenticated", async () => {
+      vi.mocked(getPostBySlug).mockResolvedValue({
+        ...post,
+        publishedAt: "2099-01-01T00:00:00.000Z"
+      } as never);
+      const res = await GET(getRequest("http://x"), { params: getParams({ slug: "my-post" }) });
+      expect(res.status).toBe(404);
+    });
+
+    it("returns 200 for a published post scheduled in the future when authenticated", async () => {
+      vi.mocked(getAuthUser).mockResolvedValue(MOCK_AUTH_USER as never);
+      vi.mocked(getPostBySlug).mockResolvedValue({
+        ...post,
+        publishedAt: "2099-01-01T00:00:00.000Z"
+      } as never);
+      const res = await GET(getRequest("http://x"), { params: getParams({ slug: "my-post" }) });
+      expect(res.status).toBe(200);
+    });
+
     it("returns 200 for draft when authenticated", async () => {
       vi.mocked(getAuthUser).mockResolvedValue(MOCK_AUTH_USER as never);
       vi.mocked(getPostBySlug).mockResolvedValue({ ...post, status: "draft" } as never);

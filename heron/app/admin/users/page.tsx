@@ -4,6 +4,10 @@ import { useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
 import { useDialog } from "@/components/ui/DialogProvider";
 import { apiFetch } from "@/lib/api";
+import {
+  adminCardClass as cardClass,
+  adminInputClass as inputClass
+} from "@/lib/admin-ui";
 
 type AdminUser = {
   id: number;
@@ -12,11 +16,6 @@ type AdminUser = {
   is_base_admin: boolean;
   created_at: string;
 };
-
-const inputClass =
-  "w-full rounded-lg border border-desert-tan-dark bg-white px-3 py-2.5 text-chestnut-dark outline-none transition focus:border-chestnut focus:ring-2 focus:ring-chestnut/10 dark:border-dark-muted dark:bg-dark-bg dark:text-dark-text dark:placeholder:text-dark-muted/60";
-const cardClass =
-  "rounded-xl border border-desert-tan-dark bg-surface p-4 shadow-[0_2px_8px_rgba(72,9,3,0.08)] dark:border-dark-muted dark:bg-dark-surface";
 
 export default function AdminUsersPage() {
   const { confirm } = useDialog();

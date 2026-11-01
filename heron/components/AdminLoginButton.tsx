@@ -5,7 +5,8 @@ import Image from "next/image";
 import { signIn, useSession } from "next-auth/react";
 import { toast } from "sonner";
 
-// Official Google "G" logo from Google's CDN (Firebase Auth / Identity)
+// Official Google "G" from Firebase Auth UI. Next does not proxy this SVG,
+// so img-src allows this exact file and nothing else on gstatic.com.
 const GOOGLE_LOGO_SRC =
   "https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg";
 
@@ -50,7 +51,7 @@ export default function AdminLoginButton() {
     return <span className="text-olive dark:text-dark-muted">...</span>;
   }
 
-  if (session?.user) {
+  if (session?.user?.email && session.user.id != null) {
     return (
       <span className="text-sm text-olive-dark dark:text-dark-muted" title={userEmail}>
         {userEmail}
@@ -71,6 +72,7 @@ export default function AdminLoginButton() {
           alt=""
           width={20}
           height={20}
+          unoptimized
           className="h-5 w-5 shrink-0"
         />
         {loading ? "Signing in…" : "Sign in with Google"}

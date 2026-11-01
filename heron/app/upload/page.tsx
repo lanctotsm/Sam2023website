@@ -1,9 +1,9 @@
 import { notFound } from "next/navigation";
-import { getServerUser } from "@/lib/server";
+import { getAuthUser } from "@/lib/api-utils";
 import UploadForm from "./UploadForm";
 
 export default async function UploadPage() {
-  const user = await getServerUser();
+  const user = await getAuthUser();
   if (!user) {
     notFound();
   }

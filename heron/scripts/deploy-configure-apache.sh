@@ -20,8 +20,9 @@ if [ "$DEPLOY_VENDOR" != bitnami ]; then
     sudo apt-get update -qq -y
     sudo DEBIAN_FRONTEND=noninteractive apt-get install -y -qq apache2
   fi
-  sudo a2enmod proxy proxy_http ssl rewrite headers 2>/dev/null || true
+  sudo a2enmod proxy proxy_http ssl rewrite headers deflate 2>/dev/null || true
 fi
+deploy_runtime_enable_deflate
 
 sudo mkdir -p "$WEBROOT/.well-known/acme-challenge"
 sudo chown -R "$DEPLOY_USER:$DEPLOY_USER" "$WEBROOT"
@@ -65,6 +66,15 @@ sudo tee "$DEPLOY_VHOST_PATH" > /dev/null <<APACHE
   SSLCertificateFile "${CERT_FILE}"
   SSLCertificateKeyFile "${KEY_FILE}"
   ProxyPreserveHost On
+  # TLS ends here. Without this, Node sees http:// and rejects the browser's https Origin.
+  RequestHeader set X-Forwarded-Proto "https"
+  # Compress text on the way out. mod_deflate skips a response that already
+  # has Content-Encoding, so this does not double-gzip when Next compresses.
+  <IfModule mod_deflate.c>
+    AddOutputFilterByType DEFLATE text/html text/plain text/css text/javascript text/xml
+    AddOutputFilterByType DEFLATE application/javascript application/json application/xml application/rss+xml
+    AddOutputFilterByType DEFLATE image/svg+xml
+  </IfModule>
   ProxyPass / http://127.0.0.1:3000/
   ProxyPassReverse / http://127.0.0.1:3000/
 </VirtualHost>

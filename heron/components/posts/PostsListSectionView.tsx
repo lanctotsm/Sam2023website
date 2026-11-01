@@ -1,16 +1,7 @@
 import Link from "next/link";
 import type { Post } from "@/lib/api";
+import { formatPostDate } from "@/lib/format-post-date";
 import type { PostsListSectionData } from "@/lib/postsPage";
-
-function formatPostDate(dateStr: string | null | undefined): string {
-    if (!dateStr) return "";
-    const d = new Date(dateStr);
-    return d.toLocaleDateString("en-US", {
-        year: "numeric",
-        month: "short",
-        day: "numeric",
-    });
-}
 
 type Props = {
     data: PostsListSectionData;
@@ -22,12 +13,12 @@ export default function PostsListSectionView({ data, posts }: Props) {
 
     return (
         <section className="grid gap-6">
-            <h2
+            <h1
                 className="heading-rule m-0 font-bold text-[var(--page-h1-color,var(--color-chestnut))] dark:text-[var(--page-h1-color-dark,var(--color-dark-text))]"
                 style={{ fontFamily: "var(--page-heading-font, var(--font-display))" }}
             >
                 {heading}
-            </h2>
+            </h1>
             {posts.length === 0 ? (
                 <div className="surface-card text-center">
                     <p
