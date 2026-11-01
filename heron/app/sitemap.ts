@@ -1,4 +1,5 @@
 import type { MetadataRoute } from "next";
+import { connection } from "next/server";
 import { getAllPosts } from "@/services/posts";
 import { getAllAlbums } from "@/services/albums";
 
@@ -8,6 +9,7 @@ const baseUrl =
   "http://localhost:3000";
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
+  await connection();
   const root = baseUrl.replace(/\/+$/, "");
 
   const [postRows, albumRows] = await Promise.all([

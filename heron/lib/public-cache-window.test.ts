@@ -3,12 +3,6 @@ import os from "node:os";
 import path from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import {
-  PUBLIC_CACHE_MAX_SECONDS,
-  publicCacheRevalidateSeconds,
-  publicationWindowId
-} from "./public-cache-window";
-
 const tempDirs: string[] = [];
 const originalDbPath = process.env.CMS_DB_PATH;
 
@@ -18,36 +12,6 @@ afterEach(() => {
   for (const dir of tempDirs.splice(0)) {
     fs.rmSync(dir, { recursive: true, force: true });
   }
-});
-
-describe("publicCacheRevalidateSeconds", () => {
-  const now = Date.parse("2026-10-31T12:00:00.000Z");
-
-  it("keeps the hour-long cache when nothing is scheduled", () => {
-    expect(publicCacheRevalidateSeconds(null, now)).toBe(PUBLIC_CACHE_MAX_SECONDS);
-    expect(publicCacheRevalidateSeconds(now - 1000, now)).toBe(PUBLIC_CACHE_MAX_SECONDS);
-  });
-
-  it("expires the cache when a scheduled post becomes visible", () => {
-    const inTenMinutes = now + 10 * 60 * 1000;
-    expect(publicCacheRevalidateSeconds(inTenMinutes, now)).toBe(600);
-  });
-
-  it("does not cache longer than an hour when publication is further out", () => {
-    const inTwoHours = now + 2 * 60 * 60 * 1000;
-    expect(publicCacheRevalidateSeconds(inTwoHours, now)).toBe(PUBLIC_CACHE_MAX_SECONDS);
-  });
-});
-
-describe("publicationWindowId", () => {
-  const now = Date.parse("2026-10-31T12:00:00.000Z");
-
-  it("changes when the scheduled publication time passes", () => {
-    const deadline = now + 10 * 60 * 1000;
-    expect(publicationWindowId(deadline, now)).toBe(String(deadline));
-    expect(publicationWindowId(deadline, deadline)).toBe("open");
-    expect(publicationWindowId(null, deadline + 1000)).toBe("open");
-  });
 });
 
 describe("nextScheduledPublicationMs", () => {

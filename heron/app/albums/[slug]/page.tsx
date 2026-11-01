@@ -2,17 +2,13 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import AlbumViewer from "@/components/AlbumViewer";
 import ManageAlbumLink from "@/components/ManageAlbumLink";
-import { skipEmptyProductionBuild } from "@/lib/skip-empty-build";
 import { getCachedAlbumImages, getCachedPublicAlbum } from "@/services/public-content";
 
 type PageProps = {
   params: Promise<{ slug: string }>;
 };
 
-export const revalidate = 3600;
-
 export default async function AlbumDetailPage({ params }: PageProps) {
-  await skipEmptyProductionBuild();
   const { slug } = await params;
   const album = await getCachedPublicAlbum(slug);
   if (!album) notFound();

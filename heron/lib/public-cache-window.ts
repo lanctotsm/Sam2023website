@@ -3,39 +3,6 @@ import { and, asc, eq, sql } from "drizzle-orm";
 import { getDb } from "@/lib/db";
 import { posts } from "@/lib/db/schema";
 
-/** Upper bound for public post and album caches. Matches the page `revalidate` exports. */
-export const PUBLIC_CACHE_MAX_SECONDS = 3600;
-
-/**
- * How long a public cache entry may live without hiding a scheduled publication.
- * A one-hour TTL filled just before `published_at` would keep the post off the
- * list and the detail page empty until that hour elapsed. The page ISR window
- * follows this value because `unstable_cache` shrinks the render revalidate.
- */
-export function publicCacheRevalidateSeconds(
-  nextChangeAtMs: number | null,
-  nowMs: number = Date.now()
-): number {
-  if (nextChangeAtMs == null || Number.isNaN(nextChangeAtMs)) {
-    return PUBLIC_CACHE_MAX_SECONDS;
-  }
-  const deltaSeconds = Math.ceil((nextChangeAtMs - nowMs) / 1000);
-  if (deltaSeconds <= 0) return PUBLIC_CACHE_MAX_SECONDS;
-  return Math.min(PUBLIC_CACHE_MAX_SECONDS, deltaSeconds);
-}
-
-/**
- * Cache-key identity for the current publication window.
- * A later read must not reuse a pre-publication entry just because the new
- * `revalidate` is longer. Crossing `published_at` changes this id.
- */
-export function publicationWindowId(nextChangeAtMs: number | null, nowMs: number = Date.now()): string {
-  if (nextChangeAtMs == null || Number.isNaN(nextChangeAtMs) || nextChangeAtMs <= nowMs) {
-    return "open";
-  }
-  return String(nextChangeAtMs);
-}
-
 /** Soonest future `published_at` among published posts, optionally for one slug. */
 export async function nextScheduledPublicationMs(slug?: string): Promise<number | null> {
   const now = new Date().toISOString();

@@ -92,6 +92,15 @@ function securityHeaders() {
 const nextConfig = {
   reactStrictMode: true,
   output: "standalone",
+  cacheComponents: true,
+  partialPrefetching: true,
+  agentRules: false,
+  // Lightsail nano_3_0 has 512MB, shared with the OS, Apache, and this one
+  // Node process. The option caps each of the two production memory caches
+  // (prerendered routes and images, and `use cache`). Next's default is
+  // 50MB per cache. This is a ceiling, not memory reserved up front.
+  // `next dev` ignores it.
+  cacheMaxMemorySize: 16 * 1024 * 1024,
   // sharp needs its platform packages (@img/*) for native image processing;
   // compiled binaries are also required beyond what JS tracing usually picks up.
   serverExternalPackages: ["sharp"],

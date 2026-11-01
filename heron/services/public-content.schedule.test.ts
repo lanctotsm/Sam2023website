@@ -3,17 +3,13 @@ import os from "node:os";
 import path from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-const recorded = vi.hoisted(() => ({ keys: [] as string[][] }));
+const recorded = vi.hoisted(() => ({ lives: [] as unknown[] }));
 
 vi.mock("next/cache", () => ({
-  unstable_cache: (fn: () => Promise<unknown>, key: string[]) => {
-    return async () => {
-      recorded.keys.push([...key]);
-      return fn();
-    };
+  cacheLife: (profile: unknown) => {
+    recorded.lives.push(profile);
   },
-  revalidatePath: vi.fn(),
-  revalidateTag: vi.fn()
+  cacheTag: vi.fn()
 }));
 
 const tempDirs: string[] = [];
@@ -21,7 +17,7 @@ const originalDbPath = process.env.CMS_DB_PATH;
 
 afterEach(() => {
   process.env.CMS_DB_PATH = originalDbPath;
-  recorded.keys = [];
+  recorded.lives = [];
   vi.resetModules();
   for (const dir of tempDirs.splice(0)) {
     fs.rmSync(dir, { recursive: true, force: true });
@@ -29,7 +25,7 @@ afterEach(() => {
 });
 
 describe("scheduled public post cache", () => {
-  it("reads the post only after its publication window changes", async () => {
+  it("hides a scheduled post until it is public and shortens the cache until then", async () => {
     const dir = fs.mkdtempSync(path.join(os.tmpdir(), "heron-public-schedule-"));
     tempDirs.push(dir);
     process.env.CMS_DB_PATH = path.join(dir, "cms.db");
@@ -47,7 +43,6 @@ describe("scheduled public post cache", () => {
     const { getCachedPublicPosts, getCachedPublicPost } = await import("./public-content");
     const beforeList = await getCachedPublicPosts();
     const beforePost = await getCachedPublicPost("soon");
-    const beforeKeys = recorded.keys.map((key) => key.join("|"));
 
     await new Promise((resolve) => setTimeout(resolve, 1000));
 
@@ -60,10 +55,12 @@ describe("scheduled public post cache", () => {
     expect(afterList.map((post) => post.slug)).toContain("soon");
     expect(afterPost?.slug).toBe("soon");
 
-    const afterKeys = recorded.keys.map((key) => key.join("|"));
-    expect(beforeKeys[0]).not.toBe(afterKeys[2]);
-    expect(beforeKeys[1]).not.toBe(afterKeys[3]);
-    expect(afterKeys[2]).toMatch(/open$/);
-    expect(afterKeys[3]).toMatch(/open$/);
+    const [listBefore, postBefore, listAfter, postAfter] = recorded.lives;
+    expect(listBefore).toMatchObject({ expire: expect.any(Number) });
+    expect((listBefore as { expire: number }).expire).toBeLessThan(3600);
+    expect(postBefore).toMatchObject({ expire: expect.any(Number) });
+    expect((postBefore as { expire: number }).expire).toBeLessThan(3600);
+    expect(listAfter).toBe("hours");
+    expect(postAfter).toBe("hours");
   });
 });
