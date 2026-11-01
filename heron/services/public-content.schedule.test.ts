@@ -16,6 +16,7 @@ const tempDirs: string[] = [];
 const originalDbPath = process.env.CMS_DB_PATH;
 
 afterEach(() => {
+  vi.useRealTimers();
   process.env.CMS_DB_PATH = originalDbPath;
   recorded.lives = [];
   vi.resetModules();
@@ -31,24 +32,30 @@ describe("scheduled public post cache", () => {
     process.env.CMS_DB_PATH = path.join(dir, "cms.db");
     vi.resetModules();
 
-    const publishedAt = new Date(Date.now() + 800).toISOString();
     const { getRawDb } = await import("@/lib/db");
     const sqlite = getRawDb();
+    const { getCachedPublicPosts, getCachedPublicPost } = await import("./public-content");
+
+    // Importing the db can take longer than a short wall-clock delay on CI,
+    // which used to publish the post before the first read. Freeze Date and
+    // step it past publication instead.
+    vi.useFakeTimers({ toFake: ["Date"] });
+    const publishedAt = new Date(Date.now() + 60_000).toISOString();
     sqlite.exec(`
       INSERT INTO users (google_id, email) VALUES ('g1', 'a@example.com');
       INSERT INTO posts (title, slug, markdown, status, published_at, created_by)
       VALUES ('Soon', 'soon', 'body', 'published', '${publishedAt}', 1);
     `);
 
-    const { getCachedPublicPosts, getCachedPublicPost } = await import("./public-content");
     const beforeList = await getCachedPublicPosts();
     const beforePost = await getCachedPublicPost("soon");
 
-    await new Promise((resolve) => setTimeout(resolve, 1000));
+    vi.setSystemTime(Date.now() + 61_000);
 
     const afterList = await getCachedPublicPosts();
     const afterPost = await getCachedPublicPost("soon");
     sqlite.close();
+    vi.useRealTimers();
 
     expect(beforeList.map((post) => post.slug)).not.toContain("soon");
     expect(beforePost).toBeNull();
