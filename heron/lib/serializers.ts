@@ -4,7 +4,8 @@ type PostRow = typeof posts.$inferSelect;
 type AlbumRow = typeof albums.$inferSelect;
 type ImageRow = typeof images.$inferSelect;
 
-type PostInput = Omit<PostRow, "coverImageId" | "html"> & {
+type PostInput = Omit<PostRow, "coverImageId" | "html" | "markdown"> & {
+  markdown?: string | null;
   coverImageId?: number | null;
   html?: string | null;
 };
@@ -17,29 +18,62 @@ type AlbumInput = Omit<AlbumRow, "status" | "coverImageId" | "displayDate"> & {
   photoCount?: number | null;
 };
 
-export function serializePost(row: PostInput, options?: { inlineImageIds?: number[] }) {
+type PostCard = {
+  id: number;
+  title: string;
+  slug: string;
+  summary: string;
+  status: string;
+  published_at: string | null;
+  metadata: Record<string, string> | null;
+  cover_image_id: number | null;
+  created_by: number | null;
+  created_at: string;
+  updated_at: string;
+};
+
+type PostBody = PostCard & {
+  markdown: string;
+  html: string | null;
+  inline_image_ids?: number[];
+};
+
+type SerializePostOptions = {
+  inlineImageIds?: number[];
+  /** Public lists and search only need the card fields. */
+  includeBody?: boolean;
+};
+
+export function serializePost(row: PostInput, options: { includeBody: false }): PostCard;
+export function serializePost(row: PostInput, options?: { inlineImageIds?: number[]; includeBody?: boolean }): PostBody;
+export function serializePost(row: PostInput, options?: SerializePostOptions): PostCard | PostBody {
   const base = {
     id: row.id,
     title: row.title,
     slug: row.slug,
     summary: row.summary || "",
-    markdown: row.markdown,
     status: row.status,
     published_at: row.publishedAt ?? null,
     metadata: row.metadata ?? null,
     cover_image_id: row.coverImageId ?? null,
-    html: row.html ?? null,
     created_by: row.createdBy ?? null,
     created_at: row.createdAt,
     updated_at: row.updatedAt
   };
+  if (options?.includeBody === false) return base;
+
+  const withBody = {
+    ...base,
+    markdown: row.markdown ?? "",
+    html: row.html ?? null
+  };
   if (options?.inlineImageIds) {
     return {
-      ...base,
+      ...withBody,
       inline_image_ids: options.inlineImageIds
     };
   }
-  return base;
+  return withBody;
 }
 
 export function serializeAlbum(row: AlbumInput) {

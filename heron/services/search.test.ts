@@ -75,6 +75,15 @@ describe("searchFts", () => {
     expect(mockPrepareAll).toHaveBeenCalledWith(expect.stringContaining("posts_fts"), "a".repeat(100));
   });
 
+  it("requires visible posts in the SQL before the result limit", async () => {
+    await searchFts("hello");
+    const postSql = mockPrepareAll.mock.calls.map((call) => String(call[0])).find((sql) => sql.includes("posts_fts"));
+    expect(postSql).toContain("posts.status = 'published'");
+    expect(postSql).toContain("posts.published_at <=");
+    expect(postSql?.indexOf("posts.status")).toBeLessThan(postSql?.indexOf("LIMIT") ?? -1);
+    expect(postSql?.indexOf("published_at <=")).toBeLessThan(postSql?.indexOf("LIMIT") ?? -1);
+  });
+
   it("requires published albums in the SQL before the result limit", async () => {
     await searchFts("harbor");
     const albumSql = mockPrepareAll.mock.calls.map((call) => String(call[0])).find((sql) => sql.includes("albums_fts"));

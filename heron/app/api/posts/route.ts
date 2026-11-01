@@ -12,7 +12,9 @@ export async function GET(request: Request) {
   const statusParam = searchParams.get("status") || undefined;
 
   const rows = await getAllPosts({ user, status: statusParam });
-  return NextResponse.json(rows.map((row) => serializePost(row)));
+  return NextResponse.json(
+    rows.map((row) => serializePost(row, user ? undefined : { includeBody: false }))
+  );
 }
 
 export async function POST(request: Request) {

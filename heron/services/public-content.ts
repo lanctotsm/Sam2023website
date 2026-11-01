@@ -23,7 +23,7 @@ export async function getCachedPublicPosts() {
   const revalidate = publicCacheRevalidateSeconds(nextChangeAtMs);
   return unstable_cache(async () => {
     const rows = await getAllPosts({});
-    return rows.map((row) => serializePost(row));
+    return rows.map((row) => serializePost(row, { includeBody: false }));
   }, ["public-posts", publicationWindowId(nextChangeAtMs)], { ...publicCache, revalidate })();
 }
 
