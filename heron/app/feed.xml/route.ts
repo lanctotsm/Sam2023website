@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 import { connection } from "next/server";
-import { getAllPosts } from "@/services/posts";
-import { serializePost } from "@/lib/serializers";
+import { getCachedPublicPosts } from "@/services/public-content";
 
 const baseUrl =
   process.env.NEXTAUTH_URL?.trim() ||
@@ -27,8 +26,7 @@ const siteTitle =
 
 export async function GET() {
   await connection();
-  const rows = await getAllPosts({});
-  const posts = Array.isArray(rows) ? rows.map((row) => serializePost(row)) : [];
+  const posts = await getCachedPublicPosts();
 
   const xml = `<?xml version="1.0" encoding="UTF-8"?>
 <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
@@ -57,7 +55,7 @@ export async function GET() {
   return new NextResponse(xml, {
     headers: {
       "Content-Type": "application/rss+xml; charset=utf-8",
-      "Cache-Control": "public, max-age=3600"
+      "Cache-Control": "no-cache, must-revalidate"
     }
   });
 }

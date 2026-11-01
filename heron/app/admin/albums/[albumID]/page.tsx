@@ -13,10 +13,9 @@ import ImageEditModal, { type ImageEditMetadata } from "@/components/ImageEditMo
 import { apiFetch, getImages, linkAlbumImage } from "@/lib/api";
 import { postFormDataWithProgress } from "@/lib/upload-with-progress";
 import {
-  extractImagesFromZip,
   isZipFile,
-  isFileWithinSizeLimit,
-  MAX_UPLOAD_BYTES
+  maxUploadMegabytes,
+  prepareUploadFiles
 } from "@/lib/upload-utils";
 import { parseId } from "@/lib/parse-id";
 import {
@@ -59,20 +58,19 @@ export default function AdminAlbumEditorPage() {
   const fetchData = useCallback(async () => {
     if (!id) return;
     try {
-      const [albumList, imagesData, allImagesData] = await Promise.all([
-        apiFetch<Album[]>("/albums"),
+      const [albumData, imagesData, allImagesData] = await Promise.all([
+        apiFetch<Album>(`/albums/${id}`),
         apiFetch<SortableImage[]>(`/albums/${id}/images`),
         getImages()
       ]);
-      const a = albumList?.find((x) => x.id === id) ?? null;
-      setAlbum(a);
+      setAlbum(albumData);
       setImages(Array.isArray(imagesData) ? imagesData : []);
       setAllImages(allImagesData || []);
-      if (a) {
+      if (albumData) {
         setForm({
-          title: a.title,
-          slug: a.slug,
-          description: a.description ?? ""
+          title: albumData.title,
+          slug: albumData.slug,
+          description: albumData.description ?? ""
         });
       }
     } catch {
@@ -255,38 +253,35 @@ export default function AdminAlbumEditorPage() {
   const processSelectedFiles = useCallback(async (selectedFiles: File[]) => {
     if (selectedFiles.length === 0) return;
     setUploadError("");
-    const zipFiles = selectedFiles.filter(isZipFile);
-    const imageFiles = selectedFiles.filter((f) => !isZipFile(f));
-    let allFiles = [...imageFiles];
-    if (zipFiles.length > 0) {
+    if (selectedFiles.some(isZipFile)) {
       setExtracting(true);
-      try {
-        for (const zipFile of zipFiles) {
-          const extracted = await extractImagesFromZip(zipFile);
-          allFiles = [...allFiles, ...extracted];
+    }
+    try {
+      const result = await prepareUploadFiles(selectedFiles);
+      if (!result.ok) {
+        if (result.reason === "zip") {
+          setUploadError("Failed to extract images from zip");
+          toast.error("Failed to extract images from zip");
+        } else {
+          const maxMB = maxUploadMegabytes();
+          setUploadError(`Some files exceed ${maxMB}MB limit`);
+          toast.error(`Max file size is ${maxMB}MB`);
         }
-        toast.success(`Extracted ${allFiles.length - imageFiles.length} images from zip`);
-      } catch {
-        setUploadError("Failed to extract images from zip");
-        toast.error("Failed to extract images from zip");
-      } finally {
-        setExtracting(false);
+        return;
       }
+      if (result.extractedCount > 0) {
+        toast.success(`Extracted ${result.extractedCount} images from zip`);
+      }
+      const pending: PendingFile[] = result.files.map((file) => ({
+        id: `${Date.now()}-${Math.random().toString(36).slice(2)}`,
+        file,
+        preview: URL.createObjectURL(file)
+      }));
+      setPendingFiles((prev) => [...prev, ...pending]);
+      setAddPhotosOpen(true);
+    } finally {
+      setExtracting(false);
     }
-    const oversized = allFiles.filter((f) => !isFileWithinSizeLimit(f));
-    if (oversized.length > 0) {
-      const maxMB = Math.round(MAX_UPLOAD_BYTES / (1024 * 1024));
-      setUploadError(`Some files exceed ${maxMB}MB limit`);
-      toast.error(`Max file size is ${maxMB}MB`);
-      return;
-    }
-    const pending: PendingFile[] = allFiles.map((file) => ({
-      id: `${Date.now()}-${Math.random().toString(36).slice(2)}`,
-      file,
-      preview: URL.createObjectURL(file)
-    }));
-    setPendingFiles((prev) => [...prev, ...pending]);
-    setAddPhotosOpen(true);
   }, []);
 
   const removePending = (pendingId: string) => {

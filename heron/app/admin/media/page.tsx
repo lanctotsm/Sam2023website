@@ -8,7 +8,12 @@ import type { Image as ImageMeta } from "@/lib/api";
 import { apiFetch } from "@/lib/api";
 import { buildThumbUrl } from "@/lib/images";
 import { MediaItemSkeleton } from "@/components/Skeleton";
-import { extractImagesFromZip, isZipFile, isFileWithinSizeLimit, MAX_UPLOAD_BYTES } from "@/lib/upload-utils";
+import {
+  isZipFile,
+  isFileWithinSizeLimit,
+  maxUploadMegabytes,
+  prepareUploadFiles,
+} from "@/lib/upload-utils";
 import { postFormDataWithProgress } from "@/lib/upload-with-progress";
 import {
   adminCardClass as cardClass,
@@ -64,37 +69,28 @@ export default function AdminMediaPage() {
     if (selectedFiles.length === 0) return;
 
     setError("");
-
-    const zipFiles = selectedFiles.filter(isZipFile);
-    const imageFiles = selectedFiles.filter((f) => !isZipFile(f));
-    let allFiles = [...imageFiles];
-
-    if (zipFiles.length > 0) {
+    if (selectedFiles.some(isZipFile)) {
       setStatus("Extracting images from zip...");
-      try {
-        for (const zipFile of zipFiles) {
-          const extracted = await extractImagesFromZip(zipFile);
-          allFiles = [...allFiles, ...extracted];
-        }
-        toast.success(`Extracted ${allFiles.length - imageFiles.length} images from zip file(s)`);
-      } catch (err) {
-        setError("Failed to extract images from zip file");
-        toast.error("Failed to extract images from zip file");
-        setStatus("");
-        return;
-      }
     }
 
-    const oversized = allFiles.filter((f) => !isFileWithinSizeLimit(f));
-    if (oversized.length > 0) {
-      const maxMB = Math.round(MAX_UPLOAD_BYTES / (1024 * 1024));
-      setError(`Some files exceed ${maxMB}MB limit: ${oversized.map((f) => f.name).join(", ")}`);
-      toast.error(`Max file size is ${maxMB}MB. Remove or resize the oversized file(s).`);
+    const result = await prepareUploadFiles(selectedFiles);
+    if (!result.ok) {
+      if (result.reason === "zip") {
+        setError("Failed to extract images from zip file");
+        toast.error("Failed to extract images from zip file");
+      } else {
+        const maxMB = maxUploadMegabytes();
+        setError(`Some files exceed ${maxMB}MB limit: ${result.oversizedNames.join(", ")}`);
+        toast.error(`Max file size is ${maxMB}MB. Remove or resize the oversized file(s).`);
+      }
       setStatus("");
       return;
     }
 
-    setFiles(allFiles);
+    if (result.extractedCount > 0) {
+      toast.success(`Extracted ${result.extractedCount} images from zip file(s)`);
+    }
+    setFiles(result.files);
     setStatus("");
   };
 
@@ -137,7 +133,7 @@ export default function AdminMediaPage() {
 
     const oversized = files.filter((f) => !isFileWithinSizeLimit(f));
     if (oversized.length > 0) {
-      const maxMB = Math.round(MAX_UPLOAD_BYTES / (1024 * 1024));
+      const maxMB = maxUploadMegabytes();
       setError(`Some files exceed ${maxMB}MB limit.`);
       toast.error(`Max file size is ${maxMB}MB.`);
       return;

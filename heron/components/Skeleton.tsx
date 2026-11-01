@@ -8,16 +8,6 @@ export function Skeleton({
   return <div className={`${baseClass} ${className}`} {...props} />;
 }
 
-export function StatCardSkeleton() {
-  return (
-    <div className="rounded-xl border border-desert-tan-dark bg-surface p-4 shadow-[0_2px_8px_rgba(72,9,3,0.08)] dark:border-dark-muted dark:bg-dark-surface">
-      <Skeleton className="mb-2 h-4 w-20" />
-      <Skeleton className="mb-3 h-10 w-16" />
-      <Skeleton className="h-4 w-24" />
-    </div>
-  );
-}
-
 export function PostCardSkeleton() {
   return (
     <article className="rounded-xl border border-desert-tan-dark bg-surface p-4 shadow-[0_2px_8px_rgba(72,9,3,0.08)] dark:border-dark-muted dark:bg-dark-surface">

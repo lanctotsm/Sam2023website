@@ -1,15 +1,49 @@
 import JSZip from "jszip";
+import { MAX_UPLOAD_BYTES } from "@/lib/upload-limits";
 
-/**
- * Max file size for upload (client-side check, must match or be under server
- * MAX_UPLOAD_BYTES). 25MB - kept in sync with the server-side default in
- * app/api/images/upload/route.ts; see docs/ARCHITECTURE_PROPOSAL.md,
- * "Raise the memory ceiling on uploads".
- */
-export const MAX_UPLOAD_BYTES = 25 * 1024 * 1024;
+export function maxUploadMegabytes(): number {
+  return Math.round(MAX_UPLOAD_BYTES / (1024 * 1024));
+}
 
 export function isFileWithinSizeLimit(file: File): boolean {
   return file.size <= MAX_UPLOAD_BYTES;
+}
+
+export type PrepareUploadFilesResult =
+  | { ok: true; files: File[]; extractedCount: number }
+  | { ok: false; reason: "zip" }
+  | { ok: false; reason: "oversized"; oversizedNames: string[] };
+
+/**
+ * Expand zips and reject files over MAX_UPLOAD_BYTES. Callers own toasts
+ * and the upload target.
+ */
+export async function prepareUploadFiles(selectedFiles: File[]): Promise<PrepareUploadFilesResult> {
+  const zipFiles = selectedFiles.filter(isZipFile);
+  const imageFiles = selectedFiles.filter((file) => !isZipFile(file));
+  let files = [...imageFiles];
+
+  if (zipFiles.length > 0) {
+    try {
+      for (const zipFile of zipFiles) {
+        const extracted = await extractImagesFromZip(zipFile);
+        files = [...files, ...extracted];
+      }
+    } catch {
+      return { ok: false, reason: "zip" };
+    }
+  }
+
+  const oversized = files.filter((file) => !isFileWithinSizeLimit(file));
+  if (oversized.length > 0) {
+    return {
+      ok: false,
+      reason: "oversized",
+      oversizedNames: oversized.map((file) => file.name),
+    };
+  }
+
+  return { ok: true, files, extractedCount: files.length - imageFiles.length };
 }
 
 /**
@@ -70,23 +104,4 @@ export function isZipFile(file: File): boolean {
   return file.type === "application/zip" || 
          file.type === "application/x-zip-compressed" ||
          file.name.toLowerCase().endsWith(".zip");
-}
-
-/**
- * Get image dimensions from a File object
- */
-export function getImageDimensions(file: File): Promise<{ width: number; height: number } | null> {
-  return new Promise((resolve) => {
-    const img = new window.Image();
-    const url = URL.createObjectURL(file);
-    img.onload = () => {
-      resolve({ width: img.width, height: img.height });
-      URL.revokeObjectURL(url);
-    };
-    img.onerror = () => {
-      resolve(null);
-      URL.revokeObjectURL(url);
-    };
-    img.src = url;
-  });
 }
