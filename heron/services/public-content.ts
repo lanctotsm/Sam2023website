@@ -60,7 +60,7 @@ export async function getCachedPublicPosts() {
   return unstable_cache(async () => {
     const rows = await getAllPosts({});
     const art = await coverArtById(rows.map((row) => row.coverImageId));
-    return rows.map((row) => withCover(serializePost(row), art));
+    return rows.map((row) => withCover(serializePost(row, { includeBody: false }), art));
   }, ["public-posts-with-cover", publicationWindowId(nextChangeAtMs)], { ...publicCache, revalidate })();
 }
 
