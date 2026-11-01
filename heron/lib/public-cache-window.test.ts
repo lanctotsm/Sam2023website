@@ -3,7 +3,11 @@ import os from "node:os";
 import path from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { PUBLIC_CACHE_MAX_SECONDS, publicCacheRevalidateSeconds } from "./public-cache-window";
+import {
+  PUBLIC_CACHE_MAX_SECONDS,
+  publicCacheRevalidateSeconds,
+  publicationWindowId
+} from "./public-cache-window";
 
 const tempDirs: string[] = [];
 const originalDbPath = process.env.CMS_DB_PATH;
@@ -32,6 +36,17 @@ describe("publicCacheRevalidateSeconds", () => {
   it("does not cache longer than an hour when publication is further out", () => {
     const inTwoHours = now + 2 * 60 * 60 * 1000;
     expect(publicCacheRevalidateSeconds(inTwoHours, now)).toBe(PUBLIC_CACHE_MAX_SECONDS);
+  });
+});
+
+describe("publicationWindowId", () => {
+  const now = Date.parse("2026-10-31T12:00:00.000Z");
+
+  it("changes when the scheduled publication time passes", () => {
+    const deadline = now + 10 * 60 * 1000;
+    expect(publicationWindowId(deadline, now)).toBe(String(deadline));
+    expect(publicationWindowId(deadline, deadline)).toBe("open");
+    expect(publicationWindowId(null, deadline + 1000)).toBe("open");
   });
 });
 

@@ -24,6 +24,18 @@ export function publicCacheRevalidateSeconds(
   return Math.min(PUBLIC_CACHE_MAX_SECONDS, deltaSeconds);
 }
 
+/**
+ * Cache-key identity for the current publication window.
+ * A later read must not reuse a pre-publication entry just because the new
+ * `revalidate` is longer. Crossing `published_at` changes this id.
+ */
+export function publicationWindowId(nextChangeAtMs: number | null, nowMs: number = Date.now()): string {
+  if (nextChangeAtMs == null || Number.isNaN(nextChangeAtMs) || nextChangeAtMs <= nowMs) {
+    return "open";
+  }
+  return String(nextChangeAtMs);
+}
+
 /** Soonest future `published_at` among published posts, optionally for one slug. */
 export async function nextScheduledPublicationMs(slug?: string): Promise<number | null> {
   const now = new Date().toISOString();
