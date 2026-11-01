@@ -55,13 +55,28 @@ deploy_runtime_node_ready() {
   return 1
 }
 
+# mod_deflate is built into both Apache builds. Ubuntu exposes it through a2enmod.
+# Bitnami ships the module commented out in some blueprints; uncomment the LoadModule
+# line when that is how this image disabled it.
+deploy_runtime_enable_deflate() {
+  if [ "${DEPLOY_VENDOR:-}" = bitnami ]; then
+    local httpd_conf="/opt/bitnami/apache/conf/httpd.conf"
+    if [ -f "$httpd_conf" ] && grep -qE '^#[[:space:]]*LoadModule deflate_module' "$httpd_conf"; then
+      sudo sed -i -E 's/^#[[:space:]]*(LoadModule deflate_module)/\1/' "$httpd_conf"
+    fi
+    return
+  fi
+  sudo a2enmod deflate 2>/dev/null || true
+}
+
 deploy_runtime_restart_apache() {
+  deploy_runtime_enable_deflate
   if [ "$DEPLOY_VENDOR" = bitnami ] && [ -x /opt/bitnami/ctlscript.sh ]; then
     sudo /opt/bitnami/ctlscript.sh restart apache
     return
   fi
   # ubuntu / custom runtime image
-  sudo a2enmod proxy proxy_http ssl rewrite headers 2>/dev/null || true
+  sudo a2enmod proxy proxy_http ssl rewrite headers deflate 2>/dev/null || true
   sudo a2ensite heron-cms-proxy.conf 2>/dev/null || true
   sudo "${DEPLOY_APACHE_CTL}" configtest
   sudo systemctl reload apache2

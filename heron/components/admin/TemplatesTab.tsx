@@ -12,6 +12,10 @@ type Props = {
     frontPage: SiteTemplateSnapshot["front_page"];
     pageStyles: SiteTemplateSnapshot["page_styles"];
     navStyles: SiteTemplateSnapshot["nav_styles"];
+    persistedSnapshot: SiteTemplateSnapshot;
+    writing: boolean;
+    beginWrite: () => boolean;
+    endWrite: () => void;
     activeTemplate: string;
     savedTemplates: SavedSiteTemplate[];
     onApplied: (snapshot: SiteTemplateSnapshot, templateId: string) => void;
@@ -28,6 +32,10 @@ export default function TemplatesTab({
     frontPage,
     pageStyles,
     navStyles,
+    persistedSnapshot,
+    writing,
+    beginWrite,
+    endWrite,
     activeTemplate,
     savedTemplates,
     onApplied,
@@ -36,11 +44,10 @@ export default function TemplatesTab({
 }: Props) {
     const router = useRouter();
     const { confirm } = useDialog();
-    const [busy, setBusy] = useState(false);
     const [saveName, setSaveName] = useState("");
     const presets = getSiteTemplatePresets();
-    const live: SiteTemplateSnapshot = { front_page: frontPage, page_styles: pageStyles, nav_styles: navStyles };
-    const status = describeLiveTemplate(activeTemplate, live, presets, savedTemplates);
+    const draft: SiteTemplateSnapshot = { front_page: frontPage, page_styles: pageStyles, nav_styles: navStyles };
+    const status = describeLiveTemplate(activeTemplate, persistedSnapshot, presets, savedTemplates);
 
     async function applySnapshot(templateId: string, name: string, snapshot: SiteTemplateSnapshot) {
         const ok = await confirm({
@@ -50,8 +57,11 @@ export default function TemplatesTab({
             cancelLabel: "Cancel",
         });
         if (!ok) return;
+        if (!beginWrite()) {
+            showToast("Wait for the current save to finish.", "error");
+            return;
+        }
 
-        setBusy(true);
         try {
             const next = structuredClone(snapshot);
             await apiFetch("/settings", {
@@ -71,7 +81,7 @@ export default function TemplatesTab({
         } catch {
             showToast(`Could not apply ${name}`, "error");
         } finally {
-            setBusy(false);
+            endWrite();
         }
     }
 
@@ -81,11 +91,14 @@ export default function TemplatesTab({
             showToast("Name the setup before saving it.", "error");
             return;
         }
-        setBusy(true);
+        if (!beginWrite()) {
+            showToast("Wait for the current save to finish.", "error");
+            return;
+        }
         try {
             await apiFetch("/site-templates", {
                 method: "POST",
-                body: JSON.stringify({ name, snapshot: structuredClone(live) }),
+                body: JSON.stringify({ name, snapshot: structuredClone(draft) }),
             });
             const listed = await apiFetch<{ templates: SavedSiteTemplate[] }>("/site-templates");
             onSavedTemplates(listed.templates);
@@ -94,7 +107,7 @@ export default function TemplatesTab({
         } catch {
             showToast("Could not save this setup", "error");
         } finally {
-            setBusy(false);
+            endWrite();
         }
     }
 
@@ -107,7 +120,10 @@ export default function TemplatesTab({
             variant: "danger",
         });
         if (!ok) return;
-        setBusy(true);
+        if (!beginWrite()) {
+            showToast("Wait for the current save to finish.", "error");
+            return;
+        }
         try {
             await apiFetch(`/site-templates/${template.id}`, { method: "DELETE" });
             onSavedTemplates(savedTemplates.filter((item) => item.id !== template.id));
@@ -115,7 +131,7 @@ export default function TemplatesTab({
         } catch {
             showToast("Could not delete that setup", "error");
         } finally {
-            setBusy(false);
+            endWrite();
         }
     }
 
@@ -156,7 +172,7 @@ export default function TemplatesTab({
                                 id={`template-apply-${preset.id}`}
                                 type="button"
                                 className={applyClass}
-                                disabled={busy}
+                                disabled={writing}
                                 onClick={() => applySnapshot(preset.id, preset.name, preset.snapshot)}
                             >
                                 Apply
@@ -180,7 +196,7 @@ export default function TemplatesTab({
                         placeholder="Name this setup"
                         maxLength={80}
                     />
-                    <button id="template-save-btn" type="button" className={secondaryClass} disabled={busy} onClick={saveCurrent}>
+                    <button id="template-save-btn" type="button" className={secondaryClass} disabled={writing} onClick={saveCurrent}>
                         Save current setup
                     </button>
                 </div>
@@ -202,7 +218,7 @@ export default function TemplatesTab({
                                 <button
                                     type="button"
                                     className={applyClass}
-                                    disabled={busy}
+                                    disabled={writing}
                                     onClick={() =>
                                         applySnapshot(savedTemplateKey(template.id), template.name, template.snapshot)
                                     }
@@ -212,7 +228,7 @@ export default function TemplatesTab({
                                 <button
                                     type="button"
                                     className={secondaryClass}
-                                    disabled={busy}
+                                    disabled={writing}
                                     onClick={() => removeSaved(template)}
                                 >
                                     Delete

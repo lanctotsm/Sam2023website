@@ -95,7 +95,15 @@ export async function createAlbum(data: {
     })
     .returning();
 
-  return created[0];
+  const saved = created[0];
+  if (saved?.slug) {
+    try {
+      await refreshPostsEmbeddingAlbum(saved.slug);
+    } catch (error) {
+      console.error("Failed to refresh posts embedding new album", saved.id, error);
+    }
+  }
+  return saved;
 }
 
 export async function updateAlbum(
@@ -138,5 +146,12 @@ export async function updateAlbum(
 }
 
 export async function deleteAlbum(id: number) {
+  const existing = await getAlbumById(id);
   await getDb().delete(albums).where(eq(albums.id, id));
+  if (!existing?.slug) return;
+  try {
+    await refreshPostsEmbeddingAlbum(existing.slug);
+  } catch (error) {
+    console.error("Failed to refresh posts embedding deleted album", id, error);
+  }
 }

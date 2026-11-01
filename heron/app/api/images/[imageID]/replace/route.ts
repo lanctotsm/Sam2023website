@@ -90,6 +90,9 @@ export async function PUT(
       height: processed.large.height,
       lqip: processed.lqip
     });
+    if (!updated) {
+      throw new Error("image not found");
+    }
     committed = true;
     revalidatePublicContent();
 
@@ -101,7 +104,7 @@ export async function PUT(
       }
     }
 
-    return NextResponse.json(serializeImage(updated!));
+    return NextResponse.json(serializeImage(updated));
   } catch (err) {
     if (!committed) {
       try {

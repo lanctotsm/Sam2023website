@@ -6,14 +6,51 @@ import remarkRehype from "remark-rehype";
 import { unified } from "unified";
 import { getDb } from "@/lib/db";
 import { albumImages, albums, images } from "@/lib/db/schema";
+import { isAlbumPubliclyVisible } from "@/lib/album-visibility";
 import { buildThumbUrl } from "@/lib/images";
 
-const SHORTCODE_REGEX = /\[\[(\w+):([\w-]+)\]\]/g;
+const SHORTCODE_PATTERN = /\[\[(\w+):([\w-]+)\]\]/g;
+
+type HastNode = {
+  type: string;
+  properties?: Record<string, unknown>;
+  children?: HastNode[];
+};
+
+/** Allow http(s), mailto, in-page hashes, and site-relative paths. */
+export function isSafeRenderedUrl(value: string): boolean {
+  const trimmed = value.trim();
+  if (!trimmed || trimmed.startsWith("//") || trimmed.startsWith("/\\")) return false;
+  if (trimmed.startsWith("#") || trimmed.startsWith("/")) return true;
+  if (/^[a-z][a-z0-9+.-]*:/i.test(trimmed)) {
+    return /^(https?:|mailto:)/i.test(trimmed);
+  }
+  return !trimmed.includes(":");
+}
+
+function sanitizeUrls() {
+  const walk = (node: HastNode) => {
+    const properties = node.properties;
+    if (properties) {
+      for (const key of ["href", "src"] as const) {
+        const value = properties[key];
+        if (typeof value === "string" && !isSafeRenderedUrl(value)) {
+          delete properties[key];
+        }
+      }
+    }
+    for (const child of node.children ?? []) walk(child);
+  };
+  return (tree: HastNode) => {
+    walk(tree);
+  };
+}
 
 const markdownToHtml = unified()
   .use(remarkParse)
   .use(remarkGfm)
   .use(remarkRehype)
+  .use(sanitizeUrls)
   .use(rehypeStringify);
 
 function escapeHtml(value: string): string {
@@ -33,7 +70,7 @@ async function renderAlbumEmbedHtml(slug: string): Promise<string> {
   const db = getDb();
   const albumRows = await db.select().from(albums).where(eq(albums.slug, slug)).limit(1);
   const album = albumRows[0];
-  if (!album) {
+  if (!album || !isAlbumPubliclyVisible(album)) {
     return `<div class="rounded-xl border border-copper bg-copper/5 p-4 text-center text-copper">[Album not found: ${escapeHtml(slug)}]</div>`;
   }
 
@@ -76,10 +113,10 @@ async function renderAlbumEmbedHtml(slug: string): Promise<string> {
 export async function renderPostHtml(markdown: string): Promise<string> {
   const parts: string[] = [];
   let lastIndex = 0;
-  SHORTCODE_REGEX.lastIndex = 0;
+  const shortcodeRegex = new RegExp(SHORTCODE_PATTERN.source, "g");
 
   let match: RegExpExecArray | null;
-  while ((match = SHORTCODE_REGEX.exec(markdown)) !== null) {
+  while ((match = shortcodeRegex.exec(markdown)) !== null) {
     const textBefore = markdown.slice(lastIndex, match.index);
     if (textBefore.trim()) {
       parts.push(await renderMarkdown(textBefore));

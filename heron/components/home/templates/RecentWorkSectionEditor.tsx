@@ -3,18 +3,29 @@
 import type { RecentWorkSectionData } from "@/lib/frontPageDefaults";
 import type { SectionEditorProps } from "@/components/home/sectionEditorTypes";
 
-export function RecentWorkSectionEditor({ data, onChange, ui }: SectionEditorProps<RecentWorkSectionData>) {
+export function RecentWorkSectionEditor({
+    sectionId,
+    data,
+    onChange,
+    ui,
+}: SectionEditorProps<RecentWorkSectionData>) {
     const { labelClass, inputClass } = ui;
     return (
         <div className="grid gap-4">
             <div>
-                <label className={labelClass}>Heading</label>
-                <input className={inputClass} value={data.heading} onChange={(e) => onChange({ heading: e.target.value })} />
+                <label className={labelClass} htmlFor={`${sectionId}-heading`}>Heading</label>
+                <input
+                    id={`${sectionId}-heading`}
+                    className={inputClass}
+                    value={data.heading}
+                    onChange={(e) => onChange({ heading: e.target.value })}
+                />
             </div>
             <div className="grid gap-4 sm:grid-cols-2">
                 <div>
-                    <label className={labelClass}>Albums to show</label>
+                    <label className={labelClass} htmlFor={`${sectionId}-album-limit`}>Albums to show</label>
                     <input
+                        id={`${sectionId}-album-limit`}
                         className={inputClass}
                         type="number"
                         min={1}
@@ -24,8 +35,9 @@ export function RecentWorkSectionEditor({ data, onChange, ui }: SectionEditorPro
                     />
                 </div>
                 <div>
-                    <label className={labelClass}>Posts to show</label>
+                    <label className={labelClass} htmlFor={`${sectionId}-post-limit`}>Posts to show</label>
                     <input
+                        id={`${sectionId}-post-limit`}
                         className={inputClass}
                         type="number"
                         min={1}

@@ -129,7 +129,7 @@ function journalSnapshot(): SiteTemplateSnapshot {
             h2ColorDark: "#ece2c8",
             bodyColor: CHESTNUT_DARK,
             bodyColorDark: "#ece2c8",
-            linkColor: CARAMEL,
+            linkColor: "#b64b12",
             linkColorDark: DESERT_TAN,
             cardBg: CANVAS,
             cardBgDark: "#171513",
