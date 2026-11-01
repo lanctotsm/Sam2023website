@@ -75,11 +75,11 @@ export async function PUT(request: Request, { params }: { params: Promise<{ post
     return errorResponse("post not found", 404);
   }
 
+  revalidatePublicContent();
   if (inlineImageIds) {
     await replacePostInlineImages(id, inlineImageIds);
   }
   const persistedInlineImageIds = await getPostInlineImageIds(id);
-  revalidatePublicContent();
   return NextResponse.json(serializePost(updated, { inlineImageIds: persistedInlineImageIds }));
 }
 
@@ -97,28 +97,32 @@ export async function DELETE(_: Request, { params }: { params: Promise<{ postID:
 
   const ownedImageIds = await getPostInlineImageIds(id);
   await deletePost(id);
-
-  for (const imageId of ownedImageIds) {
-    const stillUsedByPosts = await isImageReferencedByAnyPost(imageId);
-    if (stillUsedByPosts) continue;
-
-    const linkedToAlbum = await isImageLinkedToAnyAlbum(imageId);
-    if (linkedToAlbum) continue;
-
-    const row = await getImageById(imageId);
-    if (!row) continue;
-
-    const keys: string[] = [];
-    for (const key of [row.s3Key, row.s3KeyThumb, row.s3KeyLarge, row.s3KeyOriginal]) {
-      if (key && typeof key === "string") {
-        keys.push(key.replace(/^\//, ""));
-      }
-    }
-    if (keys.length > 0) {
-      await deleteObjects(keys);
-    }
-    await deleteImage(imageId);
-  }
   revalidatePublicContent();
+
+  try {
+    for (const imageId of ownedImageIds) {
+      const stillUsedByPosts = await isImageReferencedByAnyPost(imageId);
+      if (stillUsedByPosts) continue;
+
+      const linkedToAlbum = await isImageLinkedToAnyAlbum(imageId);
+      if (linkedToAlbum) continue;
+
+      const row = await getImageById(imageId);
+      if (!row) continue;
+
+      const keys: string[] = [];
+      for (const key of [row.s3Key, row.s3KeyThumb, row.s3KeyLarge, row.s3KeyOriginal]) {
+        if (key && typeof key === "string") {
+          keys.push(key.replace(/^\//, ""));
+        }
+      }
+      if (keys.length > 0) {
+        await deleteObjects(keys);
+      }
+      await deleteImage(imageId);
+    }
+  } catch (err) {
+    console.error("Failed to clean up images for deleted post:", err);
+  }
   return NextResponse.json({ status: "deleted" });
 }
