@@ -86,6 +86,7 @@ export async function searchFts(query: string) {
          FROM albums_fts
          INNER JOIN albums ON albums.id = albums_fts.rowid
          WHERE albums_fts MATCH ?
+           AND albums.status = 'published'
          LIMIT 20`
       )
       .all(q) as AlbumHit[];

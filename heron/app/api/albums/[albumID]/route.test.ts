@@ -52,6 +52,12 @@ describe("ALBUMS /api/albums/[albumID]", () => {
       expect(res.status).toBe(404);
     });
 
+    it("hides a draft album from anonymous readers", async () => {
+      vi.mocked(getAlbumById).mockResolvedValue({ ...album, status: "draft" } as never);
+      const res = await GET(getRequest("http://x"), { params: getParams({ albumID: "1" }) });
+      expect(res.status).toBe(404);
+    });
+
     it("returns 200 and album when found", async () => {
       vi.mocked(getAlbumById).mockResolvedValue(album as never);
       const res = await GET(getRequest("http://x"), { params: getParams({ albumID: "1" }) });
