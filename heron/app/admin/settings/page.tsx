@@ -273,7 +273,7 @@ export default function AdminSettingsPage() {
                             />
                         </div>
                         <div>
-                            <label className={labelClass}>Site description</label>
+                            <label className={labelClass} htmlFor="settings-site-description">Site description</label>
                             <textarea
                                 id="settings-site-description"
                                 className={textareaClass}
@@ -283,7 +283,7 @@ export default function AdminSettingsPage() {
                             />
                         </div>
                         <div>
-                            <label className={labelClass}>Share image URL</label>
+                            <label className={labelClass} htmlFor="settings-og-image">Share image URL</label>
                             <input
                                 id="settings-og-image"
                                 className={inputClass}

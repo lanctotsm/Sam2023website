@@ -2,11 +2,20 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { buildImageUrl } from "@/lib/images";
+import { ogImageUrl } from "@/lib/siteShare";
+import { getSettings } from "@/services/settings";
 import { renderWithShortcodes } from "@/lib/shortcodes";
 import { formatPostDate } from "@/lib/format-post-date";
 import { POST_SEO_META_KEY_SET } from "@/lib/post-seo";
 import { skipEmptyProductionBuild } from "@/lib/skip-empty-build";
-import { getCachedPublicPost } from "@/services/public-content";
+import { getCachedPublicAlbums, getCachedPublicPost } from "@/services/public-content";
+
+async function siteShareImage(): Promise<string | null> {
+  const settings = await getSettings(["og_image", "front_page"]);
+  const albums = await getCachedPublicAlbums();
+  const coverKey = albums.find((album) => album.cover_image_s3_key)?.cover_image_s3_key ?? null;
+  return ogImageUrl(settings.og_image, coverKey ? buildImageUrl(coverKey) : null);
+}
 
 type PageProps = {
   params: Promise<{ slug: string }>;
@@ -28,9 +37,10 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 
   const ogTitle = meta.og_title || title;
   const ogDescription = meta.og_description || description;
+  const shareImage = meta.og_image || (await siteShareImage());
   metadata.openGraph = { title: ogTitle, description: ogDescription };
-  if (meta.og_image) {
-    metadata.openGraph.images = [{ url: meta.og_image }];
+  if (shareImage) {
+    metadata.openGraph.images = [{ url: shareImage }];
   }
 
   if (meta.twitter_card) {
@@ -39,8 +49,8 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
       title: ogTitle,
       description: ogDescription
     };
-    if (meta.og_image && metadata.twitter) {
-      metadata.twitter.images = [meta.og_image];
+    if (shareImage && metadata.twitter) {
+      metadata.twitter.images = [shareImage];
     }
   }
 

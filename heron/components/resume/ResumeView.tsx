@@ -105,7 +105,7 @@ export default function ResumeView({ doc }: { doc: ResumeDocument }) {
     );
 
     return (
-        <article className="mx-auto flex max-w-[42rem] flex-col">
+        <article className="resume-section mx-auto flex max-w-[42rem] flex-col">
             <BasicsHeader doc={doc} />
             {doc.meta.heron.sectionOrder.map((id) => {
                 if (hidden.has(id)) return null;

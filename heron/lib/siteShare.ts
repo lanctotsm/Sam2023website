@@ -5,6 +5,7 @@ import {
     type ContactSectionData,
     type FrontPageSettings,
 } from "@/lib/frontPageDefaults";
+import { safeHttpUrl } from "@/lib/safe-url";
 
 /** Link-preview description. A saved description wins; otherwise the banner subtitle. */
 export function siteDescription(descriptionSetting: string | null | undefined, frontRaw: string | null | undefined): string {
@@ -36,7 +37,13 @@ export function contactLinksFromFrontPage(frontRaw: string | null | undefined): 
     for (const id of config.sectionOrder) {
         const section = config.sections.find((item) => item.id === id);
         if (section?.templateId !== "contact") continue;
-        return (section.data as ContactSectionData).links.filter((link) => link.label.trim() && link.url.trim());
+        const data = section.data as ContactSectionData;
+        if (!data.showSocials) return [];
+        return data.links.flatMap((link) => {
+            const url = safeHttpUrl(link.url);
+            if (!link.label.trim() || !url) return [];
+            return [{ ...link, url }];
+        });
     }
     return [];
 }

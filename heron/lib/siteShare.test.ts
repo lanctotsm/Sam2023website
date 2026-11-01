@@ -26,4 +26,21 @@ describe("site share metadata", () => {
         const legacy = contactLinksFromFrontPage(JSON.stringify(legacyBuiltInFrontPage));
         expect(legacy.some((link) => link.icon === "Briefcase")).toBe(true);
     });
+
+    it("hides contact links when socials are off and drops unsafe URLs", () => {
+        const front = createDefaultFrontPageConfig();
+        const contact = front.sections.find((section) => section.templateId === "contact");
+        if (!contact || contact.templateId !== "contact") throw new Error("missing contact section");
+        contact.data.showSocials = false;
+        expect(contactLinksFromFrontPage(JSON.stringify(front))).toEqual([]);
+
+        contact.data.showSocials = true;
+        contact.data.links = [
+            { label: "Bad", url: "javascript:alert(1)", icon: "Mail" },
+            { label: "Site", url: "https://example.com", icon: "Link" },
+        ];
+        expect(contactLinksFromFrontPage(JSON.stringify(front)).map((link) => link.url)).toEqual([
+            "https://example.com",
+        ]);
+    });
 });

@@ -7,7 +7,7 @@ import type { ReactNode } from "react";
  */
 export default function WideColumn({ children }: { children: ReactNode }) {
     return (
-        <div className="relative left-1/2 w-[min(1440px,calc(100vw-2rem))] max-w-[1440px] -translate-x-1/2">
+        <div className="relative left-1/2 w-[min(1440px,calc(100vw-2rem))] max-w-[1440px] -ml-[min(720px,calc(50vw-1rem))]">
             {children}
         </div>
     );

@@ -29,7 +29,7 @@ export default async function PostsPage() {
                 className="surface-card group overflow-hidden !p-0 transition-all hover:-translate-y-0.5 hover:shadow-card-hover dark:hover:shadow-none"
               >
                 {post.cover_image_s3_key ? (
-                  <Link href={`/posts/${post.slug}`} className="block">
+                  <Link href={`/posts/${post.slug}`} className="block" aria-label={post.title}>
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img
                       src={buildImageUrl(post.cover_image_s3_key)}
