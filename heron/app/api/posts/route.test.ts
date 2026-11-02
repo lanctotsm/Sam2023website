@@ -12,9 +12,6 @@ vi.mock("@/services/posts", () => ({
   getAllPosts: vi.fn(),
   createPost: vi.fn()
 }));
-vi.mock("@/services/postInlineImages", () => ({
-  replacePostInlineImages: vi.fn()
-}));
 
 vi.mock("@/lib/revalidate-public", () => ({
   revalidatePublicContent: vi.fn()
@@ -26,14 +23,13 @@ vi.mock("@/lib/serializers", () => ({
 
 const { getAuthUser } = await import("@/lib/api-utils");
 const { getAllPosts, createPost } = await import("@/services/posts");
-const { replacePostInlineImages } = await import("@/services/postInlineImages");
 const { revalidatePublicContent } = await import("@/lib/revalidate-public");
 
 describe("POSTS /api/posts", () => {
   beforeEach(() => {
+    vi.resetAllMocks();
     vi.mocked(getAuthUser).mockResolvedValue(null);
     vi.mocked(getAllPosts).mockResolvedValue([]);
-    vi.mocked(replacePostInlineImages).mockResolvedValue(undefined);
   });
 
   describe("GET", () => {
@@ -112,37 +108,19 @@ describe("POSTS /api/posts", () => {
       const data = await res.json();
       expect(data.title).toBe("New Post");
       expect(createPost).toHaveBeenCalledWith(
-        expect.objectContaining({ title: "New Post", slug: "new-post", markdown: "M", createdBy: 1 })
+        expect.objectContaining({ title: "New Post", slug: "new-post", markdown: "M", createdBy: 1, inlineImageIds: [101, 102] })
       );
-      expect(replacePostInlineImages).toHaveBeenCalledWith(1, [101, 102]);
+      expect(revalidatePublicContent).toHaveBeenCalledOnce();
     });
 
-    it("invalidates public pages even when inline image association fails", async () => {
-      vi.mocked(getAuthUser).mockResolvedValue(MOCK_AUTH_USER as never);
-      vi.mocked(createPost).mockResolvedValue({
-        id: 1,
-        title: "New Post",
-        slug: "new-post",
-        summary: "",
-        markdown: "M",
-        status: "published",
-        publishedAt: null,
-        createdBy: 1,
-        createdAt: "",
-        updatedAt: ""
-      } as never);
-      vi.mocked(replacePostInlineImages).mockRejectedValue(new Error("missing image"));
-
-      const res = await POST(
-        jsonRequest("POST", "http://localhost:3000/api/posts", {
-          title: "New Post",
-          slug: "new-post",
-          markdown: "M",
-          inline_image_ids: [404]
-        })
-      );
+    it("does not invalidate public pages when the save transaction fails", async () => {
+      vi.mocked(getAuthUser).mockResolvedValue(MOCK_AUTH_USER);
+      vi.mocked(createPost).mockRejectedValue(new Error("image insert failed"));
+      const res = await POST(jsonRequest("POST", "http://x", {
+        title: "New Post", slug: "new-post", markdown: "M", inline_image_ids: [404]
+      }));
       expect(res.status).toBe(500);
-      expect(revalidatePublicContent).toHaveBeenCalled();
+      expect(revalidatePublicContent).not.toHaveBeenCalled();
     });
 
     it("passes published status and published_at through to createPost", async () => {

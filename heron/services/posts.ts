@@ -1,7 +1,8 @@
 import { desc, eq, sql } from "drizzle-orm";
 import { getDb } from "@/lib/db";
 import { posts } from "@/lib/db/schema";
-import { normalizeStatus } from "@/lib/api-utils";
+import type { PostWriteData } from "@/lib/post-input";
+import { replacePostInlineImagesInTransaction } from "./postInlineImages";
 
 export async function getAllPosts(options: { user?: { id: number } | null; status?: string } = {}) {
   const db = getDb();
@@ -35,56 +36,32 @@ export async function getPostById(id: number) {
   return rows[0] || null;
 }
 
-export async function createPost(data: {
-  title: string;
-  slug: string;
-  summary?: string;
-  markdown: string;
-  status?: string;
-  publishedAt?: string | null;
-  metadata?: Record<string, string> | null;
-  createdBy: number;
-}) {
-  const created = await getDb()
-    .insert(posts)
-    .values({
-      title: data.title,
-      slug: data.slug,
-      summary: data.summary,
-      markdown: data.markdown,
-      status: normalizeStatus(data.status),
-      publishedAt: data.publishedAt,
-      metadata: data.metadata || {},
-      createdBy: data.createdBy
-    })
-    .returning();
-
-  return created[0];
+export async function createPost(data: PostWriteData & { createdBy: number }) {
+  const { inlineImageIds, ...postData } = data;
+  return getDb().transaction((tx) => {
+    const created = tx.insert(posts).values({ ...postData, metadata: data.metadata || {} }).returning().get();
+    if (inlineImageIds !== undefined) {
+      replacePostInlineImagesInTransaction(tx, created.id, inlineImageIds);
+    }
+    return created;
+  });
 }
 
 export async function updatePost(
   id: number,
-  data: {
-    title: string;
-    slug: string;
-    summary?: string;
-    markdown: string;
-    status?: string;
-    publishedAt?: string | null;
-    metadata?: Record<string, string> | null;
-  }
+  data: PostWriteData
 ) {
-  const updated = await getDb()
-    .update(posts)
-    .set({
-      ...data,
-      status: normalizeStatus(data.status),
-      updatedAt: sql`CURRENT_TIMESTAMP`
-    })
-    .where(eq(posts.id, id))
-    .returning();
-
-  return updated[0] || null;
+  const { inlineImageIds, ...postData } = data;
+  return getDb().transaction((tx) => {
+    const updated = tx.update(posts)
+      .set({ ...postData, updatedAt: sql`CURRENT_TIMESTAMP` })
+      .where(eq(posts.id, id)).returning().get();
+    if (!updated) return null;
+    if (inlineImageIds !== undefined) {
+      replacePostInlineImagesInTransaction(tx, id, inlineImageIds);
+    }
+    return updated;
+  });
 }
 
 export async function deletePost(id: number) {
