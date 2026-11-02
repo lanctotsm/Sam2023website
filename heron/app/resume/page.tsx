@@ -1,17 +1,15 @@
+import { Suspense } from "react";
 import type { Metadata } from "next";
+import { connection } from "next/server";
 import PageStyleProvider from "@/components/PageStyleProvider";
 import ResumeView, { isResumeEmpty } from "@/components/resume/ResumeView";
 import { getResume } from "@/services/resume";
 import { toPersonJsonLd } from "@/lib/resume/jsonLd";
 
-// @next-codemod-ignore Cache Components adoption: this segment temporarily allows blocking.
-// Remove this opt-out after verifying the segment passes validation without it.
-// See: https://nextjs.org/docs/app/guides/migrating-to-cache-components
-export const instant = false;
-
 const baseUrl = (process.env.NEXTAUTH_URL?.trim() || "http://localhost:3000").replace(/\/+$/, "");
 
 export async function generateMetadata(): Promise<Metadata> {
+    await connection();
     const doc = await getResume();
     const title = doc.basics.name ? `Resume — ${doc.basics.name}` : "Resume";
     const description =
@@ -27,7 +25,16 @@ export async function generateMetadata(): Promise<Metadata> {
     };
 }
 
-export default async function ResumePage() {
+export default function ResumePage() {
+    return (
+        <Suspense fallback={null}>
+            <ResumeContent />
+        </Suspense>
+    );
+}
+
+async function ResumeContent() {
+    await connection();
     const doc = await getResume();
     const jsonLd = toPersonJsonLd(doc, baseUrl);
 
