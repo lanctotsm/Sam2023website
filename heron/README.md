@@ -43,7 +43,7 @@ npm run test:e2e:docker
 
 ## Technology Stack
 
-- **Framework**: Next.js 14 (App Router)
+- **Framework**: Next.js 16 (App Router)
 - **Database**: SQLite with Drizzle ORM
 - **Authentication**: NextAuth.js
 - **Media**: S3-compatible storage

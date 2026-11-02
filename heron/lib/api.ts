@@ -40,14 +40,6 @@ export type Image = {
   created_at: string;
 };
 
-export type User = {
-  id: number;
-  email: string;
-  role: string;
-  google_id?: string;
-  created_at?: string;
-};
-
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || "/api";
 
 export async function apiFetch<T>(path: string, options?: RequestInit): Promise<T> {
@@ -81,10 +73,6 @@ async function errorMessageFromResponse(response: Response): Promise<string> {
     // keep raw body
   }
   return text;
-}
-
-export async function getAlbums(): Promise<Album[]> {
-  return apiFetch<Album[]>("/albums");
 }
 
 export async function getImages(): Promise<Image[]> {

@@ -2,7 +2,6 @@ import {
   S3Client,
   PutObjectCommand,
   GetObjectCommand,
-  DeleteObjectCommand,
   DeleteObjectsCommand,
   ListObjectsV2Command
 } from "@aws-sdk/client-s3";
@@ -73,24 +72,6 @@ export async function getObject(key: string): Promise<Buffer> {
     chunks.push(chunk);
   }
   return Buffer.concat(chunks);
-}
-
-/** Delete a single object from S3. Ignores 404. */
-export async function deleteObject(key: string): Promise<void> {
-  const client = getS3Client();
-  try {
-    await client.send(
-      new DeleteObjectCommand({
-        Bucket: getBucket(),
-        Key: key
-      })
-    );
-  } catch (err: unknown) {
-    if (err && typeof err === "object" && "name" in err && err.name === "NoSuchKey") {
-      return;
-    }
-    throw err;
-  }
 }
 
 /** Delete up to 1000 keys in one request. Ignores 404 for individual keys. */

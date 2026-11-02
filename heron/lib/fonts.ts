@@ -75,17 +75,3 @@ export function fontFamilyValue(font: string): string | null {
     const generic = SERIF_FONTS.has(font) ? "serif" : "sans-serif";
     return `var(${cssVar}), ${generic}`;
 }
-
-/**
- * @deprecated Prefer self-hosted next/font via `fontFamilyValue` / `lib/siteFonts.ts`.
- * Kept for any remaining Google Fonts link fallbacks.
- */
-export function buildGoogleFontsUrl(fonts: string[]): string | null {
-    const valid = fonts.filter((f) => f && isAvailableFont(f));
-    if (valid.length === 0) return null;
-
-    const families = valid
-        .map((f) => `family=${encodeURIComponent(f)}:wght@400;500;600;700`)
-        .join("&");
-    return `https://fonts.googleapis.com/css2?${families}&display=swap`;
-}

@@ -77,22 +77,3 @@ export async function updateImage(
 export async function deleteImage(id: number) {
   await getDb().delete(images).where(eq(images.id, id));
 }
-
-/** Return all S3 keys referenced in the images table (for orphan cleanup). */
-export async function getAllImageS3Keys(): Promise<Set<string>> {
-  const rows = await getDb().select({
-    s3Key: images.s3Key,
-    s3KeyThumb: images.s3KeyThumb,
-    s3KeyLarge: images.s3KeyLarge,
-    s3KeyOriginal: images.s3KeyOriginal
-  }).from(images);
-  const set = new Set<string>();
-  for (const row of rows) {
-    for (const key of [row.s3Key, row.s3KeyThumb, row.s3KeyLarge, row.s3KeyOriginal]) {
-      if (key && typeof key === "string") {
-        set.add(key.replace(/^\//, ""));
-      }
-    }
-  }
-  return set;
-}

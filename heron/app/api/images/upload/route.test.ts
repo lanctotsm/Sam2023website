@@ -188,7 +188,7 @@ describe("POST /api/images/upload", () => {
     form.append("files", file);
 
     // Create request with oversized Content-Length header
-    const maxBytes = Number(process.env.MAX_UPLOAD_BYTES) || 100 * 1024 * 1024;
+    const maxBytes = Number(process.env.MAX_UPLOAD_BYTES) || 25 * 1024 * 1024;
     const req = new Request("http://x/api/images/upload", {
       method: "POST",
       body: form,
@@ -206,7 +206,7 @@ describe("POST /api/images/upload", () => {
 
   it("returns 400 when individual file size exceeds MAX_FILE_BYTES", async () => {
     vi.mocked(getAuthUser).mockResolvedValue(MOCK_AUTH_USER as never);
-    const maxBytes = Number(process.env.MAX_UPLOAD_BYTES) || 100 * 1024 * 1024;
+    const maxBytes = Number(process.env.MAX_UPLOAD_BYTES) || 25 * 1024 * 1024;
     // Create a file with actual large content
     const largeBuffer = Buffer.alloc(maxBytes + 1024); // slightly over limit
     const largeFile = new File([largeBuffer], "large.jpg", { type: "image/jpeg" });

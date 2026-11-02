@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { GET, PUT, DELETE, PATCH } from "./route";
+import { DELETE, PATCH } from "./route";
 import { jsonRequest, getRequest, getParams, MOCK_AUTH_USER } from "../../__tests__/helpers";
 
 vi.mock("@/lib/api-utils", () => ({
@@ -48,85 +48,6 @@ describe("IMAGES /api/images/[imageID]", () => {
     vi.clearAllMocks();
     vi.mocked(getAuthUser).mockResolvedValue(null);
     vi.mocked(getImageById).mockResolvedValue(null);
-  });
-
-  describe("GET (Read)", () => {
-    it("returns 401 when unauthenticated", async () => {
-      const res = await GET(getRequest("http://x"), { params: getParams({ imageID: "1" }) });
-      expect(res.status).toBe(401);
-      expect(getImageById).not.toHaveBeenCalled();
-    });
-
-    it("returns 400 for invalid id", async () => {
-      vi.mocked(getAuthUser).mockResolvedValue(MOCK_AUTH_USER as never);
-      const res = await GET(getRequest("http://x"), { params: getParams({ imageID: "x" }) });
-      expect(res.status).toBe(400);
-    });
-
-    it("returns 404 when image not found", async () => {
-      vi.mocked(getAuthUser).mockResolvedValue(MOCK_AUTH_USER as never);
-      const res = await GET(getRequest("http://x"), { params: getParams({ imageID: "999" }) });
-      expect(res.status).toBe(404);
-    });
-
-    it("returns 200 and image when found", async () => {
-      vi.mocked(getAuthUser).mockResolvedValue(MOCK_AUTH_USER as never);
-      vi.mocked(getImageById).mockResolvedValue(image as never);
-      const res = await GET(getRequest("http://x"), { params: getParams({ imageID: "1" }) });
-      expect(res.status).toBe(200);
-      const data = await res.json();
-      expect(data.id).toBe(1);
-    });
-  });
-
-  describe("PUT (Update)", () => {
-    it("returns 401 when unauthenticated", async () => {
-      const res = await PUT(
-        jsonRequest("PUT", "http://x", { s3_key: "k" }),
-        { params: getParams({ imageID: "1" }) }
-      );
-      expect(res.status).toBe(401);
-    });
-
-    it("returns 400 when s3_key missing", async () => {
-      vi.mocked(getAuthUser).mockResolvedValue(MOCK_AUTH_USER as never);
-      const res = await PUT(
-        jsonRequest("PUT", "http://x", {}),
-        { params: getParams({ imageID: "1" }) }
-      );
-      expect(res.status).toBe(400);
-    });
-
-    it("returns 400 when s3_key is outside the allowed prefixes", async () => {
-      vi.mocked(getAuthUser).mockResolvedValue(MOCK_AUTH_USER as never);
-      const res = await PUT(
-        jsonRequest("PUT", "http://x", { s3_key: "k" }),
-        { params: getParams({ imageID: "1" }) }
-      );
-      expect(res.status).toBe(400);
-      expect(updateImage).not.toHaveBeenCalled();
-    });
-
-    it("returns 404 when updateImage returns null", async () => {
-      vi.mocked(getAuthUser).mockResolvedValue(MOCK_AUTH_USER as never);
-      vi.mocked(updateImage).mockResolvedValue(null);
-      const res = await PUT(
-        jsonRequest("PUT", "http://x", { s3_key: "uploads/k.jpg" }),
-        { params: getParams({ imageID: "1" }) }
-      );
-      expect(res.status).toBe(404);
-    });
-
-    it("returns 200 and updated image when valid", async () => {
-      vi.mocked(getAuthUser).mockResolvedValue(MOCK_AUTH_USER as never);
-      vi.mocked(updateImage).mockResolvedValue({ ...image, caption: "New" } as never);
-      const res = await PUT(
-        jsonRequest("PUT", "http://x", { s3_key: "uploads/k.jpg", caption: "New" }),
-        { params: getParams({ imageID: "1" }) }
-      );
-      expect(res.status).toBe(200);
-      expect(updateImage).toHaveBeenCalledWith(1, expect.objectContaining({ s3Key: "uploads/k.jpg" }));
-    });
   });
 
   describe("PATCH (Metadata)", () => {
