@@ -8,6 +8,13 @@ source "$SCRIPT_DIR/deploy-runtime.sh"
 deploy_runtime_detect
 
 APP_DIR="/opt/heron-cms"
+# Refuse to install a cron entry that would target public media storage.
+cd "$APP_DIR"
+set -a
+. ./.env
+set +a
+"${DEPLOY_NODE_BIN_DIR}/node" scripts/backup-cms-db.cjs --validate-config
+
 LOG_FILE="/var/log/heron-cms-db-backup.log"
 CRON_MARK="# heron-cms-db-backup"
 CRON_LINE="15 3 * * 0 cd ${APP_DIR} && set -a && [ -f .env ] && . ./.env && set +a && export PATH=\"${DEPLOY_NODE_BIN_DIR}:/usr/local/bin:/usr/bin:\$HOME/.local/bin:\$PATH\" && /usr/bin/env node scripts/backup-cms-db.cjs >> ${LOG_FILE} 2>&1 ${CRON_MARK}"

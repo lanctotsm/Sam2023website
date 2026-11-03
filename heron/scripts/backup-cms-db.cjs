@@ -1,6 +1,6 @@
 /**
  * Backup CMS SQLite DB to S3 (gzip), prune backups older than retention window.
- * Requires: CMS_DB_PATH, S3_BUCKET, S3_REGION, AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY
+ * Requires: CMS_DB_BACKUP_BUCKET (private), S3_BUCKET (public media), AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY
  * Optional: CMS_DB_BACKUP_PREFIX (default backups/cms-db/), CMS_DB_BACKUP_RETAIN_WEEKS (default 8)
  */
 const Database = require("better-sqlite3");
@@ -16,10 +16,7 @@ const zlib = require("zlib");
 const { pipeline } = require("stream/promises");
 
 const dbPath = process.env.CMS_DB_PATH || path.join(process.cwd(), "data", "cms.db");
-const bucket = process.env.S3_BUCKET;
 const region = process.env.S3_REGION || "us-east-1";
-const prefix = (process.env.CMS_DB_BACKUP_PREFIX || "backups/cms-db/").replace(/\/?$/, "/");
-const retainWeeks = Math.max(1, parseInt(process.env.CMS_DB_BACKUP_RETAIN_WEEKS || "8", 10));
 
 function requireEnv(name) {
   const v = process.env[name];
@@ -30,7 +27,25 @@ function requireEnv(name) {
   return v;
 }
 
-function backupKeyForDate(dateStr) {
+/** Refuse any fallback to the bucket served by the public media CDN. */
+function readBackupConfig(env = process.env) {
+  const bucket = (env.CMS_DB_BACKUP_BUCKET || "").trim();
+  const mediaBucket = (env.S3_BUCKET || "").trim();
+  if (!bucket) throw new Error("CMS_DB_BACKUP_BUCKET is required; backups must use a private bucket.");
+  if (!mediaBucket) throw new Error("S3_BUCKET is required to verify backup/media separation.");
+  if (bucket === mediaBucket) throw new Error("CMS_DB_BACKUP_BUCKET must differ from the public S3_BUCKET.");
+  const prefix = (env.CMS_DB_BACKUP_PREFIX || "backups/cms-db/").replace(/\/?$/, "/");
+  if (!prefix.startsWith("backups/") || /[\\\s]/.test(prefix) || prefix.split("/").some((part) => part === "." || part === "..")) {
+    throw new Error("CMS_DB_BACKUP_PREFIX must be a path under backups/.");
+  }
+  const retainWeeks = Number(env.CMS_DB_BACKUP_RETAIN_WEEKS || "8");
+  if (!Number.isSafeInteger(retainWeeks) || retainWeeks < 1) {
+    throw new Error("CMS_DB_BACKUP_RETAIN_WEEKS must be a positive integer.");
+  }
+  return { bucket, prefix, retainWeeks };
+}
+
+function backupKeyForDate(prefix, dateStr) {
   return `${prefix}cms-${dateStr}.db.gz`;
 }
 
@@ -73,29 +88,29 @@ function createS3Client() {
   });
 }
 
-async function uploadBackup(client, localGzPath, key) {
+async function uploadBackup(client, config, localGzPath, key) {
   const stat = fs.statSync(localGzPath);
   await client.send(
     new PutObjectCommand({
-      Bucket: bucket,
+      Bucket: config.bucket,
       Key: key,
       Body: fs.createReadStream(localGzPath),
       ContentType: "application/gzip",
       ContentLength: stat.size,
+      CacheControl: "private, no-store",
       Metadata: {
-        source: "heron-cms",
-        "db-path": dbPath
+        source: "heron-cms"
       }
     })
   );
-  console.log(`Uploaded s3://${bucket}/${key} (${stat.size} bytes)`);
+  console.log(`Uploaded s3://${config.bucket}/${key} (${stat.size} bytes)`);
 }
 
-async function pruneOldBackups(client) {
+async function pruneOldBackups(client, config) {
   const listed = await client.send(
     new ListObjectsV2Command({
-      Bucket: bucket,
-      Prefix: prefix
+      Bucket: config.bucket,
+      Prefix: config.prefix
     })
   );
   const objects = (listed.Contents || [])
@@ -103,7 +118,7 @@ async function pruneOldBackups(client) {
     .filter((o) => o.date)
     .sort((a, b) => (a.date < b.date ? 1 : -1));
 
-  const cutoff = new Date(Date.now() - retainWeeks * 7 * 24 * 60 * 60 * 1000)
+  const cutoff = new Date(Date.now() - config.retainWeeks * 7 * 24 * 60 * 60 * 1000)
     .toISOString()
     .slice(0, 10);
 
@@ -115,7 +130,7 @@ async function pruneOldBackups(client) {
 
   await client.send(
     new DeleteObjectsCommand({
-      Bucket: bucket,
+      Bucket: config.bucket,
       Delete: {
         Objects: toDelete.map((o) => ({ Key: o.key })),
         Quiet: true
@@ -129,27 +144,32 @@ async function pruneOldBackups(client) {
 }
 
 async function main() {
-  requireEnv("S3_BUCKET");
+  const config = readBackupConfig();
+  if (process.argv.includes("--validate-config")) return;
   const dateStr = new Date().toISOString().slice(0, 10);
   const tmpDir = fs.mkdtempSync(path.join("/tmp", "heron-cms-backup-"));
   const rawBackup = path.join(tmpDir, "cms.db");
   const gzBackup = path.join(tmpDir, "cms.db.gz");
-  const s3Key = backupKeyForDate(dateStr);
+  const s3Key = backupKeyForDate(config.prefix, dateStr);
 
   try {
     console.log("Backing up DB:", dbPath);
     await createSqliteBackup(dbPath, rawBackup);
     await gzipFile(rawBackup, gzBackup);
     const client = createS3Client();
-    await uploadBackup(client, gzBackup, s3Key);
-    await pruneOldBackups(client);
+    await uploadBackup(client, config, gzBackup, s3Key);
+    await pruneOldBackups(client, config);
     console.log("backup-cms-db complete.");
   } finally {
     fs.rmSync(tmpDir, { recursive: true, force: true });
   }
 }
 
-main().catch((err) => {
-  console.error("backup-cms-db failed:", err);
-  process.exit(1);
-});
+module.exports = { readBackupConfig, uploadBackup, pruneOldBackups };
+
+if (require.main === module) {
+  main().catch((err) => {
+    console.error("backup-cms-db failed:", err);
+    process.exitCode = 1;
+  });
+}
