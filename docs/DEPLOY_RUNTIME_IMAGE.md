@@ -10,10 +10,10 @@ SQLite lives on the attached Lightsail disk `heron-cms-data` at `/var/lib/heron-
 
 | Piece | Role |
 | --- | --- |
-| Runtime snapshot (`heron-runtime-YYYYMMDD-<sha>`) | Ubuntu + Node 24 + Apache + pm2 + app dirs |
+| Runtime snapshot (`heron-runtime-YYYYMMDD-<sha>`) | Newest Ubuntu LTS ≥ 26.04 + Node 24 + Apache + pm2 + CVE-2026-98432 iptables rule |
 | Data disk (`heron-cms-data`) | Persistent SQLite at `/var/lib/heron-cms/data` |
 | Deploy Lightsail CMS workflow | Build app → mount disk → rsync → migrate → pm2 → Apache/Let’s Encrypt |
-| Build Lightsail runtime workflow | Monthly / on-demand: provision Ubuntu nano → snapshot → delete builder |
+| Build Lightsail runtime workflow | Monthly / on-demand: provision Ubuntu nano (LTS ≥ 26.04) → snapshot → delete builder |
 | CloudFormation (`infra/lightsail-cms.yaml`) | S3, CloudFront, static IP, data disk — **do not** change live `BlueprintId` to swap VMs |
 
 ## One-time cutover (Bitnami → custom runtime)
@@ -68,7 +68,7 @@ Until cutover is complete, keep `LIGHTSAIL_SSH_USER=bitnami` so deploys still re
 
 ## Monthly security rebuild
 
-1. **Build Lightsail runtime** → new `heron-runtime-*` snapshot.
+1. **Build Lightsail runtime** → new `heron-runtime-*` snapshot. The workflow selects the newest active Ubuntu LTS at or above 26.04 and bakes in the CVE-2026-98432 guest firewall rule. **Deploy Lightsail CMS** applies that same rule to the host already serving traffic, so the mitigation does not wait on this cutover.
 2. Create a replacement nano from that snapshot.
 3. Detach `heron-cms-data` from current prod → attach to the new nano.
 4. Swap static IP → run **Deploy Lightsail CMS** → retire previous nano.

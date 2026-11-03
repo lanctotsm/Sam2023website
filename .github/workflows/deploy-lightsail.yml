@@ -272,6 +272,9 @@ jobs:
           rsync -az --delete -e "ssh $SSH_OPTS" heron/node_modules/@img/ lightsail:/opt/heron-cms/node_modules/@img/
           echo "✓ Files synced"
 
+      - name: Apply CVE-2026-98432 guest firewall rule
+        run: ssh -F ssh_config lightsail "cd /opt/heron-cms && bash scripts/deploy-mitigate-cve-2026-98432.sh"
+
       - name: Prepare instance
         run: ssh -F ssh_config lightsail "cd /opt/heron-cms && bash scripts/deploy-prepare-instance.sh"
 

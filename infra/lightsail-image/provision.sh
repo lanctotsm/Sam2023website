@@ -133,6 +133,24 @@ chown "${RUNTIME_USER}:${RUNTIME_USER}" "$MARKER"
 touch /var/lib/heron-cms/.startup-done
 chown "${RUNTIME_USER}:${RUNTIME_USER}" /var/lib/heron-cms/.startup-done
 
+echo "[provision] Install CVE-2026-98432 IPv4 TCP options drop..."
+MITIGATE=""
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+for candidate in \
+  "${SCRIPT_DIR}/../../heron/scripts/deploy-mitigate-cve-2026-98432.sh" \
+  "/tmp/deploy-mitigate-cve-2026-98432.sh"
+do
+  if [ -f "$candidate" ]; then
+    MITIGATE="$candidate"
+    break
+  fi
+done
+if [ -z "$MITIGATE" ]; then
+  echo "[provision] ERROR: CVE-2026-98432 mitigation script not found." >&2
+  exit 1
+fi
+bash "$MITIGATE"
+
 # Drop installer caches so the snapshot stays small
 apt-get clean
 rm -rf /var/lib/apt/lists/*

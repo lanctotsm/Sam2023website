@@ -1,10 +1,16 @@
 name: Build Lightsail runtime
 
-# Creates a runtime-only Lightsail snapshot (Ubuntu + Node 24 + Apache + pm2).
+# Creates a runtime-only Lightsail snapshot (Ubuntu LTS >= 26.04 + Node 24 + Apache + pm2).
 # App code is deployed separately via Deploy Lightsail CMS (rsync).
 
 on:
   workflow_dispatch:
+    inputs:
+      ubuntu_min_version:
+        description: Minimum Ubuntu release (major.minor). Newest active LTS at or above this is used.
+        required: false
+        default: "26.04"
+        type: string
   schedule:
     # Monthly security rebuild (1st of month 06:00 UTC)
     - cron: "0 6 1 * *"
@@ -35,22 +41,17 @@ jobs:
 
       - name: Resolve Ubuntu blueprint and AZ
         id: meta
+        env:
+          # schedule events have no inputs; the selector also defaults to 26.04.
+          UBUNTU_MIN_VERSION: "${{ github.event.inputs.ubuntu_min_version || '26.04' }}"
         run: |
           set -euo pipefail
           REGION="${{ secrets.AWS_REGION }}"
-          # Prefer Ubuntu 24.04 OS blueprint; fall back to newest active Ubuntu OS blueprint
-          BLUEPRINT=$(aws lightsail get-blueprints --region "$REGION" --query \
-            "blueprints[?platform=='LINUX_UNIX' && type=='os' && contains(name, 'Ubuntu') && contains(name, '24') && isActive].blueprintId | [0]" \
-            --output text)
-          if [ -z "$BLUEPRINT" ] || [ "$BLUEPRINT" = "None" ]; then
-            BLUEPRINT=$(aws lightsail get-blueprints --region "$REGION" --query \
-              "blueprints[?platform=='LINUX_UNIX' && type=='os' && contains(name, 'Ubuntu') && isActive] | sort_by(@, &name) | [-1].blueprintId" \
-              --output text)
-          fi
-          if [ -z "$BLUEPRINT" ] || [ "$BLUEPRINT" = "None" ]; then
-            echo "✗ Could not find an active Ubuntu OS Lightsail blueprint" >&2
-            exit 1
-          fi
+          # version lives on the blueprint ("26.04 LTS"); name is just "Ubuntu".
+          # get-blueprints is paginated — omit --query so the CLI merges pages,
+          # then select locally. See infra/lightsail-image/select-ubuntu-blueprint.sh.
+          aws lightsail get-blueprints --region "$REGION" --output json > blueprints.json
+          BLUEPRINT=$(bash infra/lightsail-image/select-ubuntu-blueprint.sh blueprints.json "$UBUNTU_MIN_VERSION")
           AZ=$(aws lightsail get-regions --include-availability-zones --query \
             "regions[?name=='${REGION}'].availabilityZones[0].zoneName" --output text)
           if [ -z "$AZ" ] || [ "$AZ" = "None" ]; then
@@ -192,7 +193,10 @@ jobs:
 
           scp_ok=0
           for attempt in 1 2 3 4 5 6 7 8; do
-            if scp -F ssh_config infra/lightsail-image/provision.sh builder:/tmp/provision.sh; then
+            if scp -F ssh_config \
+              infra/lightsail-image/provision.sh \
+              heron/scripts/deploy-mitigate-cve-2026-98432.sh \
+              builder:/tmp/; then
               echo "scp succeeded on attempt ${attempt}"
               echo "scp_attempts=${attempt}" >> "$GITHUB_OUTPUT"
               scp_ok=1
