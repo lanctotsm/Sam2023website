@@ -1,7 +1,6 @@
 import sharp from "sharp";
 
-// The deploy target is a memory-constrained instance (see
-// docs/ARCHITECTURE_PROPOSAL.md, "Raise the memory ceiling on uploads").
+// The deploy target is a memory-constrained instance.
 // libvips defaults to caching decoded pixel buffers across operations and
 // will happily spin up one worker thread per CPU core; on a small box a
 // single large upload processed with several concurrent requests can exceed

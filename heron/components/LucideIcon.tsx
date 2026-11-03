@@ -1,5 +1,3 @@
-"use client";
-
 import { icons, type LucideProps } from "lucide-react";
 
 type LucideIconProps = LucideProps & {
@@ -9,6 +7,9 @@ type LucideIconProps = LucideProps & {
 /**
  * Renders a Lucide icon by its name string (e.g. "Camera", "Mail").
  * Falls back to a placeholder square if the name isn't found.
+ * Keep this module without a client boundary: public server views resolve the
+ * catalog here and send only the selected icon data to Lucide's SVG renderer.
+ * Admin client components can still import it for the complete icon picker.
  */
 export default function LucideIcon({ name, ...props }: LucideIconProps) {
     const IconComponent = icons[name as keyof typeof icons];

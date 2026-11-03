@@ -60,11 +60,6 @@ export const defaultPageStyle: PageStyleConfig = {
     cardBorderDark: "",
 };
 
-export const defaultPageStyleEntry: PageStyleEntry = {
-    background: { ...defaultPageBackground },
-    style: { ...defaultPageStyle },
-};
-
 export const defaultPageStyles: PageStyles = {
     home: { background: { ...defaultPageBackground }, style: { ...defaultPageStyle } },
     albums: { background: { ...defaultPageBackground }, style: { ...defaultPageStyle } },

@@ -12,27 +12,11 @@ import { join } from "path";
 const BASE_URL = process.env.BASE_URL || "http://localhost:3000";
 const SAMPLES_DIR = join(process.cwd(), ".samples");
 
-// Minimal valid 100x100 PNG (red square)
+// Minimal valid PNG (1x1 red square)
 const MINIMAL_PNG = Buffer.from(
   "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==",
   "base64"
 );
-
-// Slightly larger 200x200 PNG (placeholder pattern)
-function createPlaceholderPng(width, height, name) {
-  const size = Math.min(width, height, 400);
-  const header = Buffer.alloc(8);
-  header.write("\x89PNG\r\n\x1a\n");
-  const ihdr = Buffer.alloc(25);
-  ihdr.writeUInt32BE(13, 0);
-  ihdr.write("IHDR", 4);
-  ihdr.writeUInt32BE(size, 8);
-  ihdr.writeUInt32BE(size, 12);
-  ihdr.writeUInt8(8, 16);
-  ihdr.writeUInt8(2, 17);
-  ihdr.writeUInt8(0, 18);
-  return MINIMAL_PNG;
-}
 
 function ensureSamplesDir() {
   if (!existsSync(SAMPLES_DIR)) {
@@ -187,25 +171,52 @@ async function main() {
       console.log("Created post:", post.title);
     }
 
-    // 4. Upload images to an album
+    // 4. Upload images through the album editor
     console.log("Uploading images...");
-    await page.goto("/upload");
+    await page.goto("/admin/albums");
     await page.waitForLoadState("networkidle");
 
-    const albumSelectEl = page.getByLabel(/album/i).or(page.locator('select').first());
-    await albumSelectEl.selectOption({ index: 1 });
-    await page.waitForTimeout(500);
+    const sampleAlbum = page.locator("article").filter({ hasText: "Sample Album" });
+    await sampleAlbum.getByRole("link", { name: /manage/i }).click();
+    await page.waitForLoadState("networkidle");
 
-    const fileInput = page.getByLabel(/select photos/i).or(page.locator('input[type="file"]').first());
+    await page.getByRole("heading", { name: /add photos/i }).click();
+    const fileInput = page.getByLabel(/select photos or zip file/i);
     await fileInput.setInputFiles(imagePaths);
 
-    await page.waitForTimeout(1500);
-
-    const uploadBtn = page.getByRole("button", { name: /upload.*photo/i });
-    await page.waitForTimeout(500);
-    if (await uploadBtn.isEnabled()) {
+    const uploadBtn = page.getByRole("button", { name: /upload \d+ photo/i });
+    const buttonReady = await uploadBtn
+      .waitFor({ state: "visible", timeout: 10000 })
+      .then(() => true)
+      .catch(() => false);
+    if (buttonReady) {
+      let completedUploads = 0;
+      const uploadFailures = [];
+      page.on("response", (res) => {
+        if (res.url().includes("/api/images/upload") && res.request().method() === "POST") {
+          if (res.ok()) {
+            completedUploads += 1;
+          } else {
+            uploadFailures.push(`${res.status()} ${res.statusText()}`);
+          }
+        }
+      });
       await uploadBtn.click();
-      await page.waitForSelector('text=Upload complete', { timeout: 20000 }).catch(() => {});
+      const deadline = Date.now() + 60000;
+      while (
+        completedUploads + uploadFailures.length < imagePaths.length &&
+        Date.now() < deadline
+      ) {
+        await page.waitForTimeout(250);
+      }
+      if (uploadFailures.length > 0) {
+        throw new Error(`Image upload failed: ${uploadFailures.join(", ")}`);
+      }
+      if (completedUploads < imagePaths.length) {
+        throw new Error(
+          `Timed out waiting for image uploads (${completedUploads}/${imagePaths.length} succeeded).`
+        );
+      }
       console.log("Uploaded", imagePaths.length, "images to album.");
     } else {
       console.log("Upload button not ready; skipping upload.");
@@ -214,6 +225,7 @@ async function main() {
     console.log("\nDone! Visit", BASE_URL, "to see the populated site.");
   } catch (err) {
     console.error("Error:", err.message);
+    process.exitCode = 1;
   } finally {
     await browser.close();
   }

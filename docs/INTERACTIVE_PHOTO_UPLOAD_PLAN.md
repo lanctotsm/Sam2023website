@@ -1,5 +1,7 @@
 # Interactive Photo Upload Plan (eBay-Style)
 
+> Historical planning doc. The standalone `/upload` page, `POST /api/images` and the other flows described below no longer exist; uploads now happen in the admin album editor and Media page via `POST /api/images/upload`.
+
 A plan to make the album photo upload experience more engaging, with live previews, per-image interactions, and full delete semantics (album + database + S3).
 
 ---

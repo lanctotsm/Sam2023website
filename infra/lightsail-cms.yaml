@@ -69,10 +69,71 @@ Resources:
             Principal:
               Service: cloudfront.amazonaws.com
             Action: "s3:GetObject"
-            Resource: !Sub "${CmsBucket.Arn}/*"
+            Resource:
+              - !Sub "${CmsBucket.Arn}/uploads/*"
+              - !Sub "${CmsBucket.Arn}/backgrounds/*"
+              - !Sub "${CmsBucket.Arn}/resume/*"
             Condition:
               StringEquals:
                 AWS:SourceArn: !Sub "arn:aws:cloudfront::${AWS::AccountId}:distribution/${CmsDistribution}"
+          # Old database snapshots may still be present in the media bucket.
+          # Deny CDN reads even if another policy later grants broader access.
+          - Sid: DenyCloudFrontLegacyBackups
+            Effect: Deny
+            Principal:
+              Service: cloudfront.amazonaws.com
+            Action: "s3:GetObject"
+            Resource: !Sub "${CmsBucket.Arn}/backups/*"
+
+  CmsBackupBucket:
+    Type: AWS::S3::Bucket
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+    Properties:
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+      VersioningConfiguration:
+        Status: Enabled
+      LifecycleConfiguration:
+        Rules:
+          - Id: ExpirePreviousBackupVersions
+            Status: Enabled
+            NoncurrentVersionExpiration:
+              NoncurrentDays: 56
+            AbortIncompleteMultipartUpload:
+              DaysAfterInitiation: 1
+
+  CmsBackupBucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket: !Ref CmsBackupBucket
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Sid: DenyCloudFrontBackupReads
+            Effect: Deny
+            Principal:
+              Service: cloudfront.amazonaws.com
+            Action: "s3:GetObject"
+            Resource: !Sub "${CmsBackupBucket.Arn}/*"
+          - Sid: RequireTLS
+            Effect: Deny
+            Principal: "*"
+            Action: "s3:*"
+            Resource:
+              - !GetAtt CmsBackupBucket.Arn
+              - !Sub "${CmsBackupBucket.Arn}/*"
+            Condition:
+              Bool:
+                aws:SecureTransport: "false"
+
   CmsOAC:
     Type: AWS::CloudFront::OriginAccessControl
     Properties:
@@ -172,6 +233,20 @@ Resources:
             Effect: Allow
             Action: s3:ListBucket
             Resource: !Sub "arn:aws:s3:::${CmsBucket}"
+          - Sid: AllowPrivateBackupObjects
+            Effect: Allow
+            Action:
+              - s3:PutObject
+              - s3:GetObject
+              - s3:DeleteObject
+            Resource: !Sub "${CmsBackupBucket.Arn}/backups/*"
+          - Sid: AllowListPrivateBackups
+            Effect: Allow
+            Action: s3:ListBucket
+            Resource: !GetAtt CmsBackupBucket.Arn
+            Condition:
+              StringLike:
+                s3:prefix: "backups/*"
           - Sid: AllowBedrockInvokeNovaLite
             Effect: Allow
             Action:
@@ -180,6 +255,11 @@ Resources:
               - !Sub "arn:aws:bedrock:${AWS::Region}::foundation-model/amazon.nova-lite-v1:0"
 
 Outputs:
+  BackupBucket:
+    Description: Private database backup bucket; never use the public media bucket.
+    Value: !Ref CmsBackupBucket
+  CloudFrontDistributionId:
+    Value: !Ref CmsDistribution
   CloudFrontDomain:
     Value: !GetAtt CmsDistribution.DomainName
   S3PublicBaseURL:

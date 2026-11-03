@@ -1,8 +1,6 @@
-"use client";
-
 import type { FrontPageSettings } from "@/lib/frontPageDefaults";
 import { findSection } from "@/lib/frontPageDefaults";
-import { HomeSectionView } from "@/components/home/sectionRegistry";
+import { HomeSectionView } from "@/components/home/HomeSectionView";
 
 type Props = {
     config: FrontPageSettings;
