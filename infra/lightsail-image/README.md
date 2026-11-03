@@ -2,12 +2,13 @@
 
 Builds a **runtime-only** Lightsail instance snapshot for the Heron CMS nano VM:
 
-- Ubuntu OS blueprint (seed)
+- Newest active Ubuntu LTS at or above 26.04 (newer non-LTS only if no LTS qualifies)
 - Node.js 24
 - Apache (`proxy` / `ssl` modules; vhost written at app deploy)
 - pm2 (per `ubuntu` user)
 - App dirs: `/opt/heron-cms`, `/var/lib/heron-cms/data`
 - apt-daily / unattended upgrades **disabled** (OS updates via runtime bake + host rebuild only)
+- CVE-2026-98432 guest rule, reapplied on boot (`heron/scripts/deploy-mitigate-cve-2026-98432.sh`): the [AWS Lightsail iptables rule](https://docs.aws.amazon.com/lightsail/latest/userguide/address-cve-2026-98432.html) that drops IPv4 TCP packets carrying IP options, or the AWS nftables `ip hdrlength > 5` rule when the kernel has no `u32` match. Deploy applies the same rule to the current host. A patched `linux-aws` package is still the complete fix.
 
 The Next.js app is **not** baked into the image. App releases use the existing **Deploy Lightsail CMS** workflow (rsync + migrate + pm2). Host OS package updates land when you rebuild the runtime image / host — not via apt-daily on the live nano.
 
