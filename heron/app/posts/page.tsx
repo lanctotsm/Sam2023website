@@ -5,6 +5,13 @@ import { parsePostsPageConfig } from "@/lib/postsPage";
 import PageStyleProvider from "@/components/PageStyleProvider";
 import PostsPageContent from "@/components/posts/PostsPageContent";
 import { getCachedPublicPosts } from "@/services/public-content";
+import { publicPageMetadata } from "@/lib/site-metadata";
+
+export const metadata = publicPageMetadata({
+    title: "Posts — Samuel Lanctot",
+    description: "Writing about software engineering, creative projects, and photography by Samuel Lanctot.",
+    path: "/posts"
+});
 
 export default function PostsPage() {
     return (

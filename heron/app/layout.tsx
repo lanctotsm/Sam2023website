@@ -6,26 +6,38 @@ import Footer from "@/components/Footer";
 import Providers from "@/app/providers";
 import { getSetting } from "@/services/settings";
 import { siteFontsClassName } from "@/lib/siteFonts";
+import { DEFAULT_SITE_TITLE, SITE_DESCRIPTION, SITE_NAME, SOCIAL_IMAGE, siteUrl } from "@/lib/site-metadata";
 
 // @next-codemod-ignore Cache Components adoption: this segment temporarily allows blocking.
 // Remove this opt-out after verifying the segment passes validation without it.
 // See: https://nextjs.org/docs/app/guides/migrating-to-cache-components
 export const instant = false;
 
-const baseUrl =
-  process.env.NEXTAUTH_URL?.trim() ||
-  (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "http://localhost:3000") ||
-  "http://localhost:3000";
+const baseUrl = siteUrl();
 
 const defaultTitle =
-  (typeof process !== "undefined" && process.env.SITE_TITLE?.trim()) || "Sam's website";
+  process.env.SITE_TITLE?.trim() || DEFAULT_SITE_TITLE;
 
 export async function generateMetadata() {
   const dbTitle = await getSetting("site_title");
+  const title = dbTitle?.trim() || defaultTitle;
   return {
-    title: dbTitle || defaultTitle,
-    description: "Modern SQLite CMS",
+    title,
+    description: SITE_DESCRIPTION,
     metadataBase: new URL(baseUrl),
+    openGraph: {
+      title,
+      description: SITE_DESCRIPTION,
+      siteName: SITE_NAME,
+      type: "website",
+      images: [SOCIAL_IMAGE]
+    },
+    twitter: {
+      card: "summary_large_image",
+      title,
+      description: SITE_DESCRIPTION,
+      images: [SOCIAL_IMAGE.url]
+    },
     alternates: {
       types: {
         "application/rss+xml": "/feed.xml"

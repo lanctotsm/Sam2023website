@@ -3,7 +3,7 @@ import { test, expect } from "@playwright/test";
 test.describe("Public Routes", () => {
   test("Home page loads and shows navigation", async ({ page }) => {
     await page.goto("/");
-    await expect(page).toHaveTitle(/Sam's website/);
+    await expect(page).toHaveTitle(/Samuel Lanctot/);
     await expect(page.getByRole("navigation").first()).toBeVisible();
     await expect(page.getByRole("link", { name: /About/i }).first()).toBeVisible();
   });

@@ -5,6 +5,7 @@ import { renderWithShortcodes } from "@/lib/shortcodes";
 import { formatPostDate } from "@/lib/format-post-date";
 import { POST_SEO_META_KEY_SET } from "@/lib/post-seo";
 import { getCachedPublicPost } from "@/services/public-content";
+import { publicPageMetadata, SOCIAL_IMAGE } from "@/lib/site-metadata";
 
 type PageProps = {
   params: Promise<{ slug: string }>;
@@ -19,29 +20,22 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   const title = meta.seo_title || post.title;
   const description = meta.seo_description || post.summary || "";
 
-  const metadata: Metadata = { title, description };
-
   const ogTitle = meta.og_title || title;
   const ogDescription = meta.og_description || description;
-  metadata.openGraph = { title: ogTitle, description: ogDescription };
-  if (meta.og_image) {
-    metadata.openGraph.images = [{ url: meta.og_image }];
-  }
-
-  if (meta.twitter_card) {
-    metadata.twitter = {
-      card: meta.twitter_card as "summary" | "summary_large_image" | "player" | "app",
-      title: ogTitle,
-      description: ogDescription
-    };
-    if (meta.og_image && metadata.twitter) {
-      metadata.twitter.images = [meta.og_image];
-    }
-  }
-
-  if (meta.canonical_url) {
-    metadata.alternates = { canonical: meta.canonical_url };
-  }
+  const metadata = publicPageMetadata({
+    title,
+    description,
+    path: meta.canonical_url || `/posts/${encodeURIComponent(slug)}`,
+    image: meta.og_image,
+    type: "article"
+  });
+  metadata.openGraph = { ...metadata.openGraph, title: ogTitle, description: ogDescription };
+  metadata.twitter = {
+    card: (meta.twitter_card || "summary_large_image") as "summary" | "summary_large_image" | "player" | "app",
+    title: ogTitle,
+    description: ogDescription,
+    images: [meta.og_image || SOCIAL_IMAGE.url]
+  };
 
   if (meta.author) {
     metadata.authors = [{ name: meta.author }];
