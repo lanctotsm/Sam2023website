@@ -3,6 +3,8 @@ import { parseFrontPageConfig } from "@/lib/frontPageDefaults";
 import FrontPageContent from "@/components/FrontPageContent";
 import PageStyleProvider from "@/components/PageStyleProvider";
 
+export const metadata = { alternates: { canonical: "/" } };
+
 // @next-codemod-ignore Cache Components adoption: this segment temporarily allows blocking.
 // Remove this opt-out after verifying the segment passes validation without it.
 // See: https://nextjs.org/docs/app/guides/migrating-to-cache-components

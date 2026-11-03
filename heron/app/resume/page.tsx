@@ -5,8 +5,9 @@ import PageStyleProvider from "@/components/PageStyleProvider";
 import ResumeView, { isResumeEmpty } from "@/components/resume/ResumeView";
 import { getResume } from "@/services/resume";
 import { toPersonJsonLd } from "@/lib/resume/jsonLd";
+import { publicPageMetadata, siteUrl } from "@/lib/site-metadata";
 
-const baseUrl = (process.env.NEXTAUTH_URL?.trim() || "http://localhost:3000").replace(/\/+$/, "");
+const baseUrl = siteUrl();
 
 export async function generateMetadata(): Promise<Metadata> {
     await connection();
@@ -17,12 +18,7 @@ export async function generateMetadata(): Promise<Metadata> {
         (doc.basics.label && doc.basics.name
             ? `${doc.basics.name}, ${doc.basics.label}`
             : "Resume");
-    return {
-        title,
-        description,
-        alternates: { canonical: `${baseUrl}/resume` },
-        openGraph: { title, description, url: `${baseUrl}/resume`, type: "profile" }
-    };
+    return publicPageMetadata({ title, description, path: "/resume", type: "profile" });
 }
 
 export default function ResumePage() {

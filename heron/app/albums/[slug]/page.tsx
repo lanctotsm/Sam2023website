@@ -3,10 +3,22 @@ import { notFound } from "next/navigation";
 import AlbumViewer from "@/components/AlbumViewer";
 import ManageAlbumLink from "@/components/ManageAlbumLink";
 import { getCachedAlbumImages, getCachedPublicAlbum } from "@/services/public-content";
+import { publicPageMetadata } from "@/lib/site-metadata";
 
 type PageProps = {
   params: Promise<{ slug: string }>;
 };
+
+export async function generateMetadata({ params }: PageProps) {
+  const { slug } = await params;
+  const album = await getCachedPublicAlbum(slug);
+  if (!album) return {};
+  return publicPageMetadata({
+    title: `${album.title} — Samuel Lanctot`,
+    description: album.description || `A photo collection by Samuel Lanctot: ${album.title}.`,
+    path: `/albums/${encodeURIComponent(slug)}`
+  });
+}
 
 export default async function AlbumDetailPage({ params }: PageProps) {
   const { slug } = await params;

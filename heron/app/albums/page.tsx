@@ -4,6 +4,13 @@ import { connection } from "next/server";
 import { buildImageUrl } from "@/lib/images";
 import PageStyleProvider from "@/components/PageStyleProvider";
 import { getCachedPublicAlbums } from "@/services/public-content";
+import { publicPageMetadata } from "@/lib/site-metadata";
+
+export const metadata = publicPageMetadata({
+  title: "Photography — Samuel Lanctot",
+  description: "Photo collections from Samuel Lanctot's travels and everyday life.",
+  path: "/albums"
+});
 
 export default function AlbumsPage() {
   return (

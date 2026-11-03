@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { connection } from "next/server";
 import { getCachedPublicPosts } from "@/services/public-content";
+import { DEFAULT_SITE_TITLE } from "@/lib/site-metadata";
 
 const baseUrl =
   process.env.NEXTAUTH_URL?.trim() ||
@@ -22,7 +23,7 @@ function formatRfc822(dateStr: string): string {
 }
 
 const siteTitle =
-  (typeof process !== "undefined" && process.env.SITE_TITLE?.trim()) || "Sam's website";
+  process.env.SITE_TITLE?.trim() || DEFAULT_SITE_TITLE;
 
 export async function GET() {
   await connection();
