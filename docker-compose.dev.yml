@@ -20,6 +20,7 @@ services:
       MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minioadmin}
       MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-minioadmin}
       S3_BUCKET: ${S3_BUCKET:-cms}
+      CMS_DB_BACKUP_BUCKET: ${CMS_DB_BACKUP_BUCKET:-cms-backups}
     entrypoint:
       - /bin/sh
       - -c
@@ -29,6 +30,13 @@ services:
           sleep 1
         done
         BUCKET="$${S3_BUCKET:-cms}"
+        BACKUP_BUCKET="$${CMS_DB_BACKUP_BUCKET:-cms-backups}"
+        if [ "$${BUCKET}" = "$${BACKUP_BUCKET}" ]; then
+          echo "Backup bucket must differ from public media bucket" >&2
+          exit 1
+        fi
+        mc mb -p "local/$${BACKUP_BUCKET}" || exit 1
+        mc anonymous set none "local/$${BACKUP_BUCKET}" || exit 1
         echo "Ensuring bucket exists: $${BUCKET}"
         mc mb -p "local/$${BUCKET}" >/dev/null 2>&1 || true
         echo "Setting bucket policy (anonymous download)"
@@ -69,6 +77,7 @@ services:
       CMS_DB_PATH: ${CMS_DB_PATH:-/app/data/cms.db}
       S3_REGION: ${S3_REGION:-us-east-1}
       S3_BUCKET: ${S3_BUCKET:-cms}
+      CMS_DB_BACKUP_BUCKET: ${CMS_DB_BACKUP_BUCKET:-cms-backups}
       S3_PUBLIC_BASE_URL: ${S3_PUBLIC_BASE_URL:-http://localhost:9000/cms}
       S3_ENDPOINT_URL: ${S3_ENDPOINT_URL:-http://minio:9000}
       S3_PRESIGN_ENDPOINT_URL: ${S3_PRESIGN_ENDPOINT_URL:-http://localhost:9000}

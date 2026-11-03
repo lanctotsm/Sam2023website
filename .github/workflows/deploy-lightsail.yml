@@ -105,6 +105,30 @@ jobs:
               KeyPairName=${{ secrets.LIGHTSAIL_KEY_PAIR_NAME }} \
               CloudFrontPriceClass=$CF_PRICE
 
+      - name: Read private backup storage and evict legacy backups
+        id: storage-info
+        env:
+          STACK_NAME: ${{ secrets.LIGHTSAIL_STACK_NAME }}
+        run: |
+          set -euo pipefail
+          BACKUP_BUCKET=$(aws cloudformation describe-stacks --stack-name "$STACK_NAME" \
+            --query "Stacks[0].Outputs[?OutputKey=='BackupBucket'].OutputValue" --output text)
+          DISTRIBUTION_ID=$(aws cloudformation describe-stacks --stack-name "$STACK_NAME" \
+            --query "Stacks[0].Outputs[?OutputKey=='CloudFrontDistributionId'].OutputValue" --output text)
+          if [ -z "$BACKUP_BUCKET" ] || [ "$BACKUP_BUCKET" = "None" ] || \
+             [ -z "$DISTRIBUTION_ID" ] || [ "$DISTRIBUTION_ID" = "None" ]; then
+            echo "Private backup storage outputs are missing" >&2
+            exit 1
+          fi
+          echo "backup_bucket=$BACKUP_BUCKET" >> "$GITHUB_OUTPUT"
+          # Origin policy changes do not remove objects already in edge caches.
+          # Wait before continuing so old snapshots cannot remain cached publicly.
+          INVALIDATION_ID=$(aws cloudfront create-invalidation \
+            --distribution-id "$DISTRIBUTION_ID" --paths '/backups/*' \
+            --query Invalidation.Id --output text)
+          aws cloudfront wait invalidation-completed \
+            --distribution-id "$DISTRIBUTION_ID" --id "$INVALIDATION_ID"
+
       - name: Get Lightsail static IP
         id: lightsail-info
         run: |
@@ -210,12 +234,14 @@ jobs:
           sleep 2
           STOP
           # DR snapshot while DB is quiescent (best-effort if deps/env already on host)
-          ssh -F ssh_config lightsail "bash -s" <<'BAK'
+          ssh -F ssh_config lightsail "bash -s -- '${{ steps.storage-info.outputs.backup_bucket }}'" <<'BAK'
           set -euo pipefail
           if [ -f /opt/heron-cms/.env ] && [ -f /tmp/backup-cms-db.cjs ]; then
             cd /opt/heron-cms
             export PATH="/opt/bitnami/node/bin:/usr/local/bin:/usr/bin:$HOME/.local/bin:$PATH"
             set -a; . ./.env; set +a
+            # The existing .env may predate backup/media bucket separation.
+            export CMS_DB_BACKUP_BUCKET="$1"
             mkdir -p scripts
             cp /tmp/backup-cms-db.cjs scripts/backup-cms-db.cjs
             node scripts/backup-cms-db.cjs || echo "⚠ S3 backup failed (continuing with local migrate); check IAM/env" >&2
@@ -262,6 +288,7 @@ jobs:
           CMS_DB_PATH=/var/lib/heron-cms/data/cms.db
           S3_REGION=${{ secrets.AWS_REGION }}
           S3_BUCKET=${{ secrets.CMS_BUCKET_NAME }}
+          CMS_DB_BACKUP_BUCKET=${{ steps.storage-info.outputs.backup_bucket }}
           S3_PUBLIC_BASE_URL=${{ secrets.S3_PUBLIC_BASE_URL }}
           AWS_ACCESS_KEY_ID=${{ secrets.APP_AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY=${{ secrets.APP_AWS_SECRET_ACCESS_KEY }}
