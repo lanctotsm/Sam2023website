@@ -1,5 +1,5 @@
 import type { Post } from "@/lib/api";
-import { HomeSectionView } from "@/components/home/sectionRegistry";
+import { HomeSectionView } from "@/components/home/HomeSectionView";
 import type { HomeSection } from "@/lib/frontPageDefaults";
 import type {
     PostsListSectionData,
