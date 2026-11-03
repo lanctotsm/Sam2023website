@@ -19,7 +19,6 @@ vi.mock("@/services/posts", () => ({
 }));
 vi.mock("@/services/postInlineImages", () => ({
   getPostInlineImageIds: vi.fn(),
-  replacePostInlineImages: vi.fn(),
   isImageReferencedByAnyPost: vi.fn()
 }));
 vi.mock("@/services/albumImages", () => ({
@@ -43,7 +42,7 @@ vi.mock("@/lib/serializers", () => ({
 
 const { getAuthUser } = await import("@/lib/api-utils");
 const { getPostById, updatePost, deletePost } = await import("@/services/posts");
-const { getPostInlineImageIds, replacePostInlineImages, isImageReferencedByAnyPost } = await import("@/services/postInlineImages");
+const { getPostInlineImageIds, isImageReferencedByAnyPost } = await import("@/services/postInlineImages");
 const { isImageLinkedToAnyAlbum } = await import("@/services/albumImages");
 const { getImageById, deleteImage } = await import("@/services/images");
 const { deleteObjects } = await import("@/lib/s3");
@@ -64,11 +63,10 @@ describe("POSTS /api/posts/[postID]", () => {
   };
 
   beforeEach(() => {
-    vi.clearAllMocks();
+    vi.resetAllMocks();
     vi.mocked(getAuthUser).mockResolvedValue(null);
     vi.mocked(getPostById).mockResolvedValue(null);
     vi.mocked(getPostInlineImageIds).mockResolvedValue([]);
-    vi.mocked(replacePostInlineImages).mockResolvedValue(undefined);
     vi.mocked(isImageReferencedByAnyPost).mockResolvedValue(false);
     vi.mocked(isImageLinkedToAnyAlbum).mockResolvedValue(false);
     vi.mocked(getImageById).mockResolvedValue(null);
@@ -162,28 +160,18 @@ describe("POSTS /api/posts/[postID]", () => {
       expect(res.status).toBe(200);
       const data = await res.json();
       expect(data.title).toBe("Updated");
-      expect(updatePost).toHaveBeenCalledWith(1, expect.any(Object));
-      expect(replacePostInlineImages).toHaveBeenCalledWith(1, [5, 6]);
+      expect(updatePost).toHaveBeenCalledWith(1, expect.objectContaining({ inlineImageIds: [5, 6] }));
+      expect(revalidatePublicContent).toHaveBeenCalledOnce();
     });
 
-    it("invalidates public pages even when inline image association fails", async () => {
-      vi.mocked(getAuthUser).mockResolvedValue(MOCK_AUTH_USER as never);
-      vi.mocked(getPostById).mockResolvedValue(post as never);
-      vi.mocked(updatePost).mockResolvedValue(post as never);
-      vi.mocked(replacePostInlineImages).mockRejectedValue(new Error("missing image"));
-
-      await expect(
-        PUT(
-          jsonRequest("PUT", "http://x", {
-            title: "Updated",
-            slug: "post",
-            markdown: "m",
-            inline_image_ids: [5]
-          }),
-          { params: getParams({ postID: "1" }) }
-        )
-      ).rejects.toThrow("missing image");
-      expect(revalidatePublicContent).toHaveBeenCalled();
+    it("does not invalidate public pages when the save transaction fails", async () => {
+      vi.mocked(getAuthUser).mockResolvedValue(MOCK_AUTH_USER);
+      vi.mocked(updatePost).mockRejectedValue(new Error("image insert failed"));
+      const res = await PUT(jsonRequest("PUT", "http://x", {
+        title: "Updated", slug: "post", markdown: "M", inline_image_ids: [404]
+      }), { params: getParams({ postID: "1" }) });
+      expect(res.status).toBe(500);
+      expect(revalidatePublicContent).not.toHaveBeenCalled();
     });
 
     it("passes published status and published_at through to updatePost", async () => {
