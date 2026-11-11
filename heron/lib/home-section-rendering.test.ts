@@ -1,8 +1,10 @@
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
+import { icons } from "lucide-react";
 import { describe, expect, it } from "vitest";
 import FrontPageContent from "@/components/FrontPageContent";
 import LucideIcon from "@/components/LucideIcon";
+import { legacyIconAliases } from "@/lib/icon-aliases";
 import { parseFrontPageConfig, type FrontPageSettings } from "@/lib/frontPage";
 
 function render(config: FrontPageSettings) {
@@ -49,5 +51,31 @@ describe("public home section rendering", () => {
         const html = renderToStaticMarkup(createElement(LucideIcon, { name: "NotAnInstalledIcon", size: 20 }));
         expect(html).toContain("Unknown icon: NotAnInstalledIcon");
         expect(html).not.toContain("<svg");
+    });
+
+    it("renders the default home page without any unknown icon placeholder", () => {
+        const html = render(parseFrontPageConfig(null));
+        expect(html).not.toContain("Unknown icon");
+    });
+
+    it.each(["Github", "GitHub"])("renders the inline GitHub mark for saved name %s", (name) => {
+        const html = renderToStaticMarkup(createElement(LucideIcon, { name, size: 28 }));
+        expect(html).toContain("<svg");
+        expect(html).toContain('width="28"');
+        expect(html).toContain('height="28"');
+        expect(html).not.toContain("Unknown icon");
+    });
+
+    it("renders a replacement icon for the legacy Music name", () => {
+        const html = renderToStaticMarkup(createElement(LucideIcon, { name: "Music", size: 24 }));
+        expect(html).toContain("<svg");
+        expect(html).not.toContain("Unknown icon");
+    });
+
+    it("only maps aliases to icons that exist in the installed lucide-react", () => {
+        for (const [legacyName, target] of Object.entries(legacyIconAliases)) {
+            expect(target, `alias ${legacyName}`).toBeTypeOf("string");
+            expect(target in icons, `alias ${legacyName} -> ${target}`).toBe(true);
+        }
     });
 });

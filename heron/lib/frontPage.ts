@@ -139,7 +139,7 @@ function buildDefaultSections(): HomeSection[] {
                 items: [
                     { icon: "Mountain", label: "Hiking & Nature" },
                     { icon: "Coffee", label: "Coffee Culture" },
-                    { icon: "Music", label: "Music Discovery" },
+                    { icon: "Headphones", label: "Music Discovery" },
                     { icon: "BookOpen", label: "Science Fiction" },
                     { icon: "Gamepad2", label: "Indie Games" },
                     { icon: "Plane", label: "Travel" },
