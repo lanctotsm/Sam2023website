@@ -44,7 +44,7 @@ graph TD
 │   ├── lib/                # Library setup (ORM, auth, storage, helpers)
 │   ├── services/           # Data access layer (DB queries)
 │   ├── scripts/            # Database seeding and maintenance scripts
-│   └── public/             # Static assets (Robots.txt, icons)
+│   └── public/             # Static assets (favicon, touch icon)
 ├── infra/                  # AWS CloudFormation templates for Lightsail
 ├── .github/                # CI/CD Workflows (Deployments)
 ├── .cursor/                # Project-specific AI rules and instructions
