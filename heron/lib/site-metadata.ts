@@ -18,6 +18,26 @@ export function siteUrl(): string {
   ).replace(/\/+$/, "");
 }
 
+const ELLIPSIS = "…";
+// Punctuation and dashes that read badly when left dangling before the ellipsis.
+const TRAILING_NOISE = /[\s,.;:!?\-–—]+$/;
+
+/**
+ * Collapses whitespace and shortens text to fit search and link-preview limits.
+ * Cuts at a word boundary when one fits, so the result never ends mid-word.
+ */
+export function metaDescription(text: string, maxLength = 160): string {
+  const collapsed = text.replace(/\s+/g, " ").trim();
+  if (collapsed.length <= maxLength) return collapsed;
+
+  const budget = Math.max(0, maxLength - ELLIPSIS.length);
+  const boundary = collapsed.lastIndexOf(" ", budget);
+  const wordCut = boundary > 0 ? collapsed.slice(0, boundary).replace(TRAILING_NOISE, "") : "";
+  // A single unbroken word has no boundary to use, so cut it at the limit.
+  const cut = wordCut || collapsed.slice(0, budget).trimEnd();
+  return cut + ELLIPSIS;
+}
+
 /** Explicit nested metadata keeps page overrides from dropping the sharing image. */
 export function publicPageMetadata({ title, description, path, image, type = "website" }: {
   title: string;
@@ -27,13 +47,14 @@ export function publicPageMetadata({ title, description, path, image, type = "we
   type?: "website" | "article" | "profile";
 }): Metadata {
   const url = new URL(path, `${siteUrl()}/`).toString();
+  const shortDescription = metaDescription(description);
   return {
     title,
-    description,
+    description: shortDescription,
     alternates: { canonical: url },
     openGraph: {
       title,
-      description,
+      description: shortDescription,
       url,
       siteName: SITE_NAME,
       type,
@@ -42,7 +63,7 @@ export function publicPageMetadata({ title, description, path, image, type = "we
     twitter: {
       card: "summary_large_image",
       title,
-      description,
+      description: shortDescription,
       images: [image || SOCIAL_IMAGE.url]
     }
   };
