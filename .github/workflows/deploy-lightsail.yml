@@ -5,6 +5,15 @@ on:
   push:
     branches: [main]
 
+# Deploys rsync --delete the app directory, then rewrite .env. Two runs at
+# once delete that file out from under each other, and restart exits with
+# ".env file not found". One deploy runs at a time, and a running rsync is
+# left alone. A newer push replaces any deploy still waiting.
+concurrency:
+  group: deploy-lightsail-cms
+  cancel-in-progress: false
+  queue: single
+
 jobs:
   deploy:
     runs-on: ubuntu-latest
@@ -256,7 +265,9 @@ jobs:
       - name: Sync app to Lightsail
         run: |
           SSH_OPTS="-F ssh_config"
-          rsync -az --delete -e "ssh $SSH_OPTS" heron/.next/standalone/ lightsail:/opt/heron-cms
+          # /.env is not in the standalone tree. Without this exclude, --delete
+          # removes /opt/heron-cms/.env before the later step writes it back.
+          rsync -az --delete --exclude '/.env' -e "ssh $SSH_OPTS" heron/.next/standalone/ lightsail:/opt/heron-cms
           rsync -az --delete -e "ssh $SSH_OPTS" heron/.next/static/     lightsail:/opt/heron-cms/.next/static
           rsync -az --delete -e "ssh $SSH_OPTS" heron/public/            lightsail:/opt/heron-cms/public
           rsync -az --delete -e "ssh $SSH_OPTS" heron/drizzle/           lightsail:/opt/heron-cms/drizzle
