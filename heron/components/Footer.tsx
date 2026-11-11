@@ -1,4 +1,3 @@
-import { Suspense } from "react";
 import Link from "next/link";
 import FooterYear from "@/components/FooterYear";
 import { getSetting } from "@/services/settings";
@@ -32,9 +31,9 @@ export default async function Footer() {
         </nav>
         <p className="text-center text-sm text-olive dark:text-dark-muted">
           {customFooter || (
-            <Suspense fallback={<>© Samuel Lanctot. All rights reserved.</>}>
+            <>
               © <FooterYear /> Samuel Lanctot. All rights reserved.
-            </Suspense>
+            </>
           )}
         </p>
       </div>
