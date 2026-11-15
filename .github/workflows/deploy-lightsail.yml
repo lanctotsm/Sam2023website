@@ -308,8 +308,6 @@ jobs:
           AWS_SECRET_ACCESS_KEY=${{ secrets.APP_AWS_SECRET_ACCESS_KEY }}
           GOOGLE_CLIENT_ID=${{ secrets.GOOGLE_CLIENT_ID }}
           GOOGLE_CLIENT_SECRET=${{ secrets.GOOGLE_CLIENT_SECRET }}
-          CONTACT_TO_EMAIL=${{ secrets.CONTACT_TO_EMAIL }}
-          CONTACT_FROM_EMAIL=${{ secrets.CONTACT_FROM_EMAIL }}
           EOF
 
       - name: Run database migrations and seed

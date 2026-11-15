@@ -258,6 +258,14 @@ Resources:
             Action:
               - ses:SendEmail
             Resource: !Sub "arn:aws:ses:${AWS::Region}:${AWS::AccountId}:identity/*"
+          # Non-sending SES API actions use Resource "*" (SES access control guide).
+          - Sid: AllowSesManageContactIdentity
+            Effect: Allow
+            Action:
+              - ses:CreateEmailIdentity
+              - ses:GetEmailIdentity
+              - ses:DeleteEmailIdentity
+            Resource: "*"
 
 Outputs:
   BackupBucket:
@@ -276,5 +284,5 @@ Outputs:
   CmsDataDiskName:
     Value: !Ref DataDiskName
   CmsS3UploaderPolicyArn:
-    Description: "CMS app IAM managed policy (S3, AI alt text, and SES send)."
+    Description: "CMS app IAM managed policy (S3, AI alt text, and SES contact mail)."
     Value: !Ref CmsS3UploaderPolicy

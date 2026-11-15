@@ -7,12 +7,12 @@ vi.mock("@/services/contact-messages", () => ({
 }));
 
 vi.mock("@/lib/contact-mail", () => ({
-    readContactMailConfig: vi.fn(() => null),
+    loadContactMailConfig: vi.fn(async () => null),
     sendContactMail: vi.fn()
 }));
 
 const { createContactMessage } = await import("@/services/contact-messages");
-const { readContactMailConfig, sendContactMail } = await import("@/lib/contact-mail");
+const { loadContactMailConfig, sendContactMail } = await import("@/lib/contact-mail");
 
 const message = {
     name: "Ada Lovelace",
@@ -36,8 +36,8 @@ describe("POST /api/contact", () => {
         resetRateLimits();
         vi.mocked(createContactMessage).mockReset();
         vi.mocked(createContactMessage).mockResolvedValue({ id: 1 } as never);
-        vi.mocked(readContactMailConfig).mockReset();
-        vi.mocked(readContactMailConfig).mockReturnValue(null);
+        vi.mocked(loadContactMailConfig).mockReset();
+        vi.mocked(loadContactMailConfig).mockResolvedValue(null);
         vi.mocked(sendContactMail).mockReset();
         vi.mocked(sendContactMail).mockResolvedValue(undefined);
     });
@@ -53,7 +53,7 @@ describe("POST /api/contact", () => {
     });
 
     it("still returns success when notification mail fails", async () => {
-        vi.mocked(readContactMailConfig).mockReturnValue({
+        vi.mocked(loadContactMailConfig).mockResolvedValue({
             to: "inbox@example.com",
             from: "site@example.com",
             region: "us-east-1"

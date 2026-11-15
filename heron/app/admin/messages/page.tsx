@@ -1,6 +1,6 @@
 import AdminMessageList from "@/components/admin/AdminMessageList";
 import { getAuthUser } from "@/lib/api-utils";
-import { contactMailIsConfigured } from "@/lib/contact-mail";
+import { loadContactNotifyView } from "@/lib/contact-mail";
 import { listContactMessages } from "@/services/contact-messages";
 
 // @next-codemod-ignore Cache Components adoption: this segment temporarily allows blocking.
@@ -15,7 +15,7 @@ export default async function AdminMessagesPage() {
     const rows = await listContactMessages();
     return (
         <AdminMessageList
-            notifiesByEmail={contactMailIsConfigured()}
+            mail={await loadContactNotifyView()}
             messages={rows.map((row) => ({
                 id: row.id,
                 name: row.name,

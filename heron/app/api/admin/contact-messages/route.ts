@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { errorResponse, getAuthUser } from "@/lib/api-utils";
-import { contactMailIsConfigured } from "@/lib/contact-mail";
+import { loadContactMailConfig } from "@/lib/contact-mail";
 import { listContactMessages } from "@/services/contact-messages";
 
 export async function GET() {
@@ -11,7 +11,7 @@ export async function GET() {
 
     const rows = await listContactMessages();
     return NextResponse.json({
-        notifiesByEmail: contactMailIsConfigured(),
+        notifiesByEmail: (await loadContactMailConfig()) !== null,
         messages: rows.map((row) => ({
             id: row.id,
             name: row.name,

@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { errorResponse } from "@/lib/api-utils";
-import { readContactMailConfig, sendContactMail } from "@/lib/contact-mail";
+import { loadContactMailConfig, sendContactMail } from "@/lib/contact-mail";
 import { parseContactSubmission } from "@/lib/contact-submission";
 import { rateLimit } from "@/lib/rate-limit";
 import { clientAddress } from "@/lib/request-guards";
@@ -36,7 +36,7 @@ export async function POST(request: Request) {
         return errorResponse("Something went wrong. Please try again.", 500);
     }
 
-    const mail = readContactMailConfig();
+    const mail = await loadContactMailConfig();
     if (mail) {
         try {
             await sendContactMail(parsed.value, mail);

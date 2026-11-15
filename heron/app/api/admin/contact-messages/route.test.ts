@@ -13,18 +13,18 @@ vi.mock("@/services/contact-messages", () => ({
 }));
 
 vi.mock("@/lib/contact-mail", () => ({
-    contactMailIsConfigured: vi.fn(() => false)
+    loadContactMailConfig: vi.fn(async () => null)
 }));
 
 const { getAuthUser } = await import("@/lib/api-utils");
 const { listContactMessages } = await import("@/services/contact-messages");
-const { contactMailIsConfigured } = await import("@/lib/contact-mail");
+const { loadContactMailConfig } = await import("@/lib/contact-mail");
 
 describe("GET /api/admin/contact-messages", () => {
     beforeEach(() => {
         vi.mocked(getAuthUser).mockResolvedValue(null);
         vi.mocked(listContactMessages).mockResolvedValue([]);
-        vi.mocked(contactMailIsConfigured).mockReturnValue(false);
+        vi.mocked(loadContactMailConfig).mockResolvedValue(null);
     });
 
     it("returns 401 when unauthenticated", async () => {
