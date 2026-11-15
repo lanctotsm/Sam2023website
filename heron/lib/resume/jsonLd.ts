@@ -17,7 +17,8 @@ export function toPersonJsonLd(
     if (basics.name) person.name = basics.name;
     if (basics.label) person.jobTitle = basics.label;
     if (basics.summary) person.description = basics.summary;
-    if (basics.email) person.email = `mailto:${basics.email}`;
+    // The address stays in the admin document and the PDF. Publishing it here
+    // is what lets crawlers harvest it from the public resume page.
     if (basics.phone) person.telephone = basics.phone;
     if (basics.url) person.url = basics.url;
 

@@ -1,3 +1,4 @@
+import Link from "next/link";
 import type { ResumeDocument } from "@/lib/resume/types";
 import { isStandardSectionId } from "@/lib/resume/defaults";
 import { RESUME_SECTION_REGISTRY } from "./resumeSectionRegistry";
@@ -56,9 +57,9 @@ function BasicsHeader({ doc }: { doc: ResumeDocument }) {
             >
                 {locationText && <span>{locationText}</span>}
                 {basics.email && (
-                    <a href={`mailto:${basics.email}`} className={linkText}>
-                        {basics.email}
-                    </a>
+                    <Link href="/#contact" className={linkText}>
+                        Contact
+                    </Link>
                 )}
                 {basics.phone && (
                     <a href={`tel:${basics.phone.replace(/[^+\d]/g, "")}`} className={linkText}>

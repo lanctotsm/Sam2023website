@@ -111,4 +111,39 @@ describe("defaultFrontPage", () => {
         expect(top.templateId).toBe("banner");
         expect(top.label).toBe("Top banner");
     });
+
+    it("does not ship an email address in the default contact section", () => {
+        const json = JSON.stringify(defaultFrontPage);
+        expect(json).not.toContain("mailto:");
+        expect(json).not.toContain("@");
+    });
+});
+
+describe("parseFrontPageConfig contact privacy", () => {
+    it("strips mailto links and addresses from a saved contact section", () => {
+        const raw = JSON.stringify({
+            sections: [
+                {
+                    id: "c",
+                    templateId: "contact",
+                    label: "Contact",
+                    data: {
+                        heading: "Write owner@example.com",
+                        text: "reach me at owner@example.com please",
+                        showSocials: true,
+                        links: [
+                            { icon: "Mail", label: "Email", url: "mailto:owner@example.com" },
+                            { icon: "Github", label: "GitHub", url: "https://github.com/example" }
+                        ]
+                    }
+                }
+            ],
+            sectionOrder: ["c"]
+        });
+        const json = JSON.stringify(parseFrontPageConfig(raw));
+        expect(json).not.toContain("owner@example.com");
+        expect(json).not.toContain("mailto:");
+        expect(json).toContain("GitHub");
+        expect(json).toContain("Write");
+    });
 });

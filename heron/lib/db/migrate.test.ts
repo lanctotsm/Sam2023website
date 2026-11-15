@@ -56,4 +56,18 @@ describe("migrateIfNeeded", () => {
 
     expect(leftover).toEqual([]);
   });
+
+  it("creates the contact_messages table", () => {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), "heron-migrate-"));
+    tempDirs.push(dir);
+    const sqlite = new Database(path.join(dir, "cms.db"), { timeout: 8000 });
+    migrateIfNeeded(sqlite);
+
+    const table = sqlite
+      .prepare("SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'contact_messages'")
+      .get();
+    sqlite.close();
+
+    expect(table).toEqual({ name: "contact_messages" });
+  });
 });

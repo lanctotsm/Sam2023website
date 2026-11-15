@@ -41,4 +41,14 @@ describe("RESUME /api/resume/export", () => {
         expect(String(data.meta.canonical)).toMatch(/\/resume$/);
         expect(data.meta.heron).toBeDefined();
     });
+
+    it("omits the email address from the public download", async () => {
+        vi.mocked(getResume).mockResolvedValue(
+            sanitizeResumeDocument({ basics: { name: "Sam Lanctot", email: "owner@example.com" } })
+        );
+        const res = await GET();
+        const data = await res.json();
+        expect(data.basics.email).toBeUndefined();
+        expect(JSON.stringify(data)).not.toContain("owner@example.com");
+    });
 });

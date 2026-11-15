@@ -155,7 +155,6 @@ function buildDefaultSections(): HomeSection[] {
                 text: "I'm always open to interesting conversations, collaboration opportunities, or just saying hello. Whether you have a project in mind, want to discuss photography, or simply want to chat about the latest in tech—feel free to reach out.",
                 showSocials: true,
                 links: [
-                    { icon: "Mail", label: "Email", url: "mailto:lanctotsm@gmail.com" },
                     { icon: "Github", label: "GitHub", url: "https://github.com/samlanctot" },
                     {
                         icon: "Briefcase",

@@ -103,11 +103,12 @@ const nextConfig = {
   cacheMaxMemorySize: 16 * 1024 * 1024,
   // sharp needs its platform packages (@img/*) for native image processing;
   // compiled binaries are also required beyond what JS tracing usually picks up.
-  serverExternalPackages: ["sharp"],
+  serverExternalPackages: ["sharp", "nodemailer"],
   outputFileTracingIncludes: {
     "/*": [
       "./node_modules/sharp/**/*",
-      "./node_modules/@img/**/*"
+      "./node_modules/@img/**/*",
+      "./node_modules/nodemailer/**/*"
     ]
   },
   experimental: {

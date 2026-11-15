@@ -9,6 +9,10 @@ const baseUrl = (process.env.NEXTAUTH_URL?.trim() || "http://localhost:3000").re
 export async function GET() {
     const doc = await getResume();
     const exported = toJsonResume(doc, { canonical: `${baseUrl}/resume` });
+    const basics = exported.basics;
+    if (basics && typeof basics === "object" && !Array.isArray(basics)) {
+        delete (basics as Record<string, unknown>).email;
+    }
     const slug = slugify(doc.basics.name);
     const filename = slug ? `${slug}-resume.json` : "resume.json";
 

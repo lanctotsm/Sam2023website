@@ -17,10 +17,38 @@ describe("public home section rendering", () => {
         expect(html).toContain("What I Do");
         expect(html).toContain("Beyond the Screen");
         expect(html).toContain("Connect");
+        expect(html).toContain("Send message");
         expect(html).toContain("<svg");
         expect(html).not.toContain("Pick icon");
-        expect(html).not.toContain("<input");
-        expect(html).not.toContain("<textarea");
+        expect(html).not.toContain("mailto:");
+        expect(html).not.toContain("@");
+    });
+
+    it("renders a contact form and drops saved email addresses", () => {
+        const html = render({
+            sections: [
+                {
+                    id: "contact",
+                    templateId: "contact",
+                    label: "Contact",
+                    data: {
+                        heading: "Write owner@example.com",
+                        text: "Reach owner@example.com any time.",
+                        showSocials: true,
+                        links: [
+                            { icon: "Mail", label: "Email", url: "mailto:owner@example.com" },
+                            { icon: "Github", label: "GitHub", url: "https://github.com/example" }
+                        ]
+                    }
+                }
+            ],
+            sectionOrder: ["contact"]
+        });
+        expect(html).toContain('id="contact"');
+        expect(html).toContain("Send message");
+        expect(html).toContain("https://github.com/example");
+        expect(html).not.toContain("owner@example.com");
+        expect(html).not.toContain("mailto:");
     });
 
     it("preserves configured order, content, and arbitrary icon choices", () => {

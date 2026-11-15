@@ -2,7 +2,7 @@
   "basics": {
     "name": "Samuel Lanctot",
     "label": "Senior Software Engineer",
-    "email": "lanctotsm@gmail.com",
+    "email": "",
     "url": "https://samlanctot.com",
     "summary": "Full-stack engineer with nine years across insurance and banking, currently building commercial insurance software at GEICO. I automate the work nobody should be doing by hand — issue pipelines, deployment flows, underwriting operations — and the systems I build have removed hundreds of thousands of dollars in annual manual-processing cost while the business grew past $1B in premium.",
     "location": { "city": "Silver Spring", "region": "MD" },

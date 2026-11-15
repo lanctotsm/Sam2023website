@@ -1,6 +1,8 @@
 import type { ContactSectionData } from "@/lib/frontPageDefaults";
+import { linkExposesEmail, redactEmails } from "@/lib/public-contact";
 import { safeHttpUrl } from "@/lib/safe-url";
 import LucideIcon from "@/components/LucideIcon";
+import { ContactForm } from "@/components/home/ContactForm";
 import {
     homeBodyClass,
     homeBodyStyle,
@@ -10,27 +12,34 @@ import {
 } from "@/components/home/homeSectionStyles";
 
 export function ContactSectionView({ data }: { data: ContactSectionData }) {
+    const heading = redactEmails(data.heading) || "Contact";
+    const text = redactEmails(data.text);
+    const links = data.showSocials ? data.links.filter((link) => !linkExposesEmail(link)) : [];
+
     return (
-        <section className={`${homeCardClass} text-center`}>
+        <section id="contact" className={`${homeCardClass} scroll-mt-24 text-center`}>
             <h2 className={homeSectionTitleClass} style={homeHeadingStyle}>
-                {data.heading}
+                {heading}
             </h2>
-            <p
-                className={`mx-auto mb-6 max-w-[600px] text-[1.05rem] leading-relaxed ${homeBodyClass}`}
-                style={homeBodyStyle}
-            >
-                {data.text}
-            </p>
-            {data.showSocials && (
-                <div className="flex flex-wrap justify-center gap-4">
-                    {data.links.map((link) => {
+            {text ? (
+                <p
+                    className={`mx-auto mb-6 max-w-[600px] text-[1.05rem] leading-relaxed ${homeBodyClass}`}
+                    style={homeBodyStyle}
+                >
+                    {text}
+                </p>
+            ) : null}
+            <ContactForm />
+            {links.length > 0 && (
+                <div className="mt-6 flex flex-wrap justify-center gap-4">
+                    {links.map((link) => {
                         const href = safeHttpUrl(link.url);
                         const className =
                             "flex items-center gap-2 rounded-lg bg-chestnut px-6 py-3 font-semibold text-desert-tan transition-all hover:-translate-y-0.5 hover:bg-chestnut-light dark:bg-caramel dark:text-chestnut-dark dark:hover:bg-caramel-light";
                         const content = (
                             <>
                                 <LucideIcon name={link.icon} size={20} />
-                                {link.label}
+                                {redactEmails(link.label)}
                             </>
                         );
                         if (!href) {

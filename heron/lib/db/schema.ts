@@ -134,3 +134,11 @@ export const settings = sqliteTable("settings", {
   value: text("value").notNull().default(""),
   updatedAt: text("updated_at").notNull().default(sql`CURRENT_TIMESTAMP`)
 });
+
+export const contactMessages = sqliteTable("contact_messages", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  name: text("name").notNull(),
+  email: text("email").notNull(),
+  message: text("message").notNull(),
+  createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`)
+});

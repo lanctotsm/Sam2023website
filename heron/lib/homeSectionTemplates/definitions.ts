@@ -1,3 +1,4 @@
+import { linkExposesEmail, redactEmails } from "@/lib/public-contact";
 import type {
     BannerSectionData,
     CardGridSectionData,
@@ -60,7 +61,7 @@ export const HOME_SECTION_TEMPLATE_DEFS: Record<HomeSectionTemplateId, HomeSecti
     contact: {
         id: "contact",
         label: "Contact",
-        description: "Contact blurb with optional social links.",
+        description: "Contact form with optional social links. Email addresses are not shown publicly.",
         defaultData: () => ({
             heading: "Contact",
             text: "",
@@ -207,13 +208,25 @@ function sanitizeTagListData(raw: unknown, fallback: TagListSectionData): TagLis
 }
 
 function sanitizeContactData(raw: unknown, fallback: ContactSectionData): ContactSectionData {
-    if (!raw || typeof raw !== "object") return { ...fallback };
+    if (!raw || typeof raw !== "object") {
+        return {
+            ...fallback,
+            heading: redactEmails(fallback.heading) || "Contact",
+            text: redactEmails(fallback.text),
+            links: fallback.links.filter((link) => !linkExposesEmail(link)),
+        };
+    }
     const r = raw as Record<string, unknown>;
+    const heading = redactEmails(typeof r.heading === "string" ? r.heading : fallback.heading) || "Contact";
+    const text = redactEmails(typeof r.text === "string" ? r.text : fallback.text);
+    const links = sanitizeContactLinks(r.links, fallback.links)
+        .filter((link) => !linkExposesEmail(link))
+        .map((link) => ({ ...link, label: redactEmails(link.label) }));
     return {
-        heading: typeof r.heading === "string" ? r.heading : fallback.heading,
-        text: typeof r.text === "string" ? r.text : fallback.text,
+        heading,
+        text,
         showSocials: typeof r.showSocials === "boolean" ? r.showSocials : fallback.showSocials,
-        links: sanitizeContactLinks(r.links, fallback.links),
+        links,
     };
 }
 
