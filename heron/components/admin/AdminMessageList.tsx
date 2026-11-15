@@ -59,7 +59,7 @@ export default function AdminMessageList({
                 <p className="mt-2 text-sm text-chestnut-dark dark:text-dark-muted">
                     {notifiesByEmail
                         ? "New messages are saved here and a copy is emailed to the inbox configured on the server."
-                        : "New messages are saved here. Email notification is off until SMTP settings are added on the server."}
+                        : "New messages are saved here. Email notification is off until Amazon SES is configured on the server."}
                 </p>
             </section>
 

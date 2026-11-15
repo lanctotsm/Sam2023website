@@ -55,14 +55,10 @@ describe("POST /api/contact", () => {
     it("still returns success when notification mail fails", async () => {
         vi.mocked(readContactMailConfig).mockReturnValue({
             to: "inbox@example.com",
-            host: "smtp.example.com",
-            port: 587,
-            user: "mailer@example.com",
-            pass: "secret",
             from: "site@example.com",
-            secure: false
+            region: "us-east-1"
         });
-        vi.mocked(sendContactMail).mockRejectedValue(new Error("smtp down"));
+        vi.mocked(sendContactMail).mockRejectedValue(new Error("ses down"));
         const res = await POST(post(message, "203.0.113.11"));
         expect(res.status).toBe(200);
         const text = await res.text();

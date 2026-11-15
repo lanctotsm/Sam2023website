@@ -309,12 +309,7 @@ jobs:
           GOOGLE_CLIENT_ID=${{ secrets.GOOGLE_CLIENT_ID }}
           GOOGLE_CLIENT_SECRET=${{ secrets.GOOGLE_CLIENT_SECRET }}
           CONTACT_TO_EMAIL=${{ secrets.CONTACT_TO_EMAIL }}
-          SMTP_HOST=${{ secrets.SMTP_HOST }}
-          SMTP_PORT=${{ secrets.SMTP_PORT }}
-          SMTP_USER=${{ secrets.SMTP_USER }}
-          SMTP_PASS=${{ secrets.SMTP_PASS }}
-          SMTP_FROM=${{ secrets.SMTP_FROM }}
-          SMTP_SECURE=${{ secrets.SMTP_SECURE }}
+          CONTACT_FROM_EMAIL=${{ secrets.CONTACT_FROM_EMAIL }}
           EOF
 
       - name: Run database migrations and seed

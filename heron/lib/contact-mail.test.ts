@@ -3,38 +3,25 @@ import { readContactMailConfig } from "./contact-mail";
 
 const complete = {
     CONTACT_TO_EMAIL: "inbox@example.com",
-    SMTP_HOST: "smtp.example.com",
-    SMTP_PORT: "587",
-    SMTP_USER: "mailer@example.com",
-    SMTP_PASS: "secret",
-    SMTP_FROM: "site@example.com"
+    CONTACT_FROM_EMAIL: "site@example.com",
+    S3_REGION: "us-east-1"
 } as NodeJS.ProcessEnv;
 
 describe("readContactMailConfig", () => {
-    it("returns null until every required value is set", () => {
+    it("returns null until both addresses are set", () => {
         expect(readContactMailConfig({} as NodeJS.ProcessEnv)).toBeNull();
-        expect(readContactMailConfig({ ...complete, SMTP_PASS: "  " })).toBeNull();
+        expect(readContactMailConfig({ ...complete, CONTACT_FROM_EMAIL: "  " })).toBeNull();
+        expect(readContactMailConfig({ ...complete, CONTACT_TO_EMAIL: "" })).toBeNull();
     });
 
-    it("reads a STARTTLS setup and does not treat port 587 as implicit TLS", () => {
+    it("reads the SES region from S3_REGION and defaults it to us-east-1", () => {
         expect(readContactMailConfig(complete)).toEqual({
             to: "inbox@example.com",
-            host: "smtp.example.com",
-            port: 587,
-            user: "mailer@example.com",
-            pass: "secret",
             from: "site@example.com",
-            secure: false
+            region: "us-east-1"
         });
-    });
-
-    it("uses implicit TLS for port 465 unless SMTP_SECURE is false", () => {
-        expect(readContactMailConfig({ ...complete, SMTP_PORT: "465" })?.secure).toBe(true);
-        expect(readContactMailConfig({ ...complete, SMTP_PORT: "465", SMTP_SECURE: "false" })?.secure).toBe(false);
-    });
-
-    it("rejects a port that is not a TCP port", () => {
-        expect(readContactMailConfig({ ...complete, SMTP_PORT: "0" })).toBeNull();
-        expect(readContactMailConfig({ ...complete, SMTP_PORT: "smtp" })).toBeNull();
+        const withoutRegion = { ...complete };
+        delete withoutRegion.S3_REGION;
+        expect(readContactMailConfig(withoutRegion)?.region).toBe("us-east-1");
     });
 });
