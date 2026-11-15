@@ -1,4 +1,4 @@
-const EMAIL_ADDRESS = /[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i;
+const EMAIL_ADDRESS = /[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{1,}/i;
 
 /** True when a string contains an email address. */
 export function containsEmailAddress(value: string): boolean {

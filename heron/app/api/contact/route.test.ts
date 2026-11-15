@@ -72,6 +72,22 @@ describe("POST /api/contact", () => {
         expect(createContactMessage).not.toHaveBeenCalled();
     });
 
+    it("rejects a body larger than 16KB before storing it", async () => {
+        const res = await POST(
+            new Request("http://localhost:3000/api/contact", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    "x-forwarded-for": "203.0.113.16",
+                    "content-length": String(20 * 1024)
+                },
+                body: JSON.stringify({ ...message, message: "x".repeat(20 * 1024) })
+            })
+        );
+        expect(res.status).toBe(413);
+        expect(createContactMessage).not.toHaveBeenCalled();
+    });
+
     it("returns 400 for an empty message", async () => {
         const res = await POST(post({ ...message, message: "" }, "203.0.113.13"));
         expect(res.status).toBe(400);

@@ -5,7 +5,12 @@ import { renderAndPublishResumePdf } from "@/services/resumePdf";
 
 export async function GET() {
     const doc = await getResume();
-    return NextResponse.json(doc);
+    const user = await getAuthUser();
+    if (user) return NextResponse.json(doc);
+    return NextResponse.json({
+        ...doc,
+        basics: { ...doc.basics, email: "" }
+    });
 }
 
 export async function PUT(request: Request) {

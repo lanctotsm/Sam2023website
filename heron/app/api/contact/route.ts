@@ -1,10 +1,13 @@
 import { NextResponse } from "next/server";
 import { errorResponse } from "@/lib/api-utils";
+import { BoundedBodyError, readBoundedJson } from "@/lib/bounded-json";
 import { loadContactMailConfig, sendContactMail } from "@/lib/contact-mail";
 import { parseContactSubmission } from "@/lib/contact-submission";
 import { rateLimit } from "@/lib/rate-limit";
 import { clientAddress } from "@/lib/request-guards";
 import { createContactMessage } from "@/services/contact-messages";
+
+const MAX_BODY_BYTES = 16 * 1024;
 
 const WINDOW_MS = 10 * 60 * 1000;
 const LIMIT = 5;
@@ -16,8 +19,11 @@ export async function POST(request: Request) {
 
     let body: unknown;
     try {
-        body = await request.json();
-    } catch {
+        body = await readBoundedJson(request, MAX_BODY_BYTES);
+    } catch (err) {
+        if (err instanceof BoundedBodyError && err.message === "Request is too large.") {
+            return errorResponse(err.message, 413);
+        }
         return errorResponse("Invalid request.", 400);
     }
 

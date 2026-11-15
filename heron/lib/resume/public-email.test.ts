@@ -15,4 +15,12 @@ describe("public resume email", () => {
         expect(html).not.toContain("owner@example.com");
         expect(html).not.toContain("mailto:");
     });
+
+    it("still links to the contact form when the email field is empty", () => {
+        const doc = createDefaultResume();
+        doc.basics.name = "Sam";
+        const html = renderToStaticMarkup(createElement(ResumeView, { doc }));
+        expect(html).toContain('href="/#contact"');
+        expect(html).toContain(">Contact<");
+    });
 });
