@@ -1,13 +1,17 @@
 import { NextResponse } from "next/server";
 import { getResume } from "@/services/resume";
 import { toJsonResume } from "@/lib/resume/jsonResume";
+import { RESUME_PUBLISH_EMAIL_SETTING, resumeEmailIsPublic, resumeForPublic } from "@/lib/resume/publish-email";
 import { slugify } from "@/lib/slug";
+import { getSetting } from "@/services/settings";
 
 const baseUrl = (process.env.NEXTAUTH_URL?.trim() || "http://localhost:3000").replace(/\/+$/, "");
 
 /** Public download of the canonical resume.json — the portability artifact. */
 export async function GET() {
-    const doc = await getResume();
+    const stored = await getResume();
+    const publish = resumeEmailIsPublic(await getSetting(RESUME_PUBLISH_EMAIL_SETTING));
+    const doc = resumeForPublic(stored, publish);
     const exported = toJsonResume(doc, { canonical: `${baseUrl}/resume` });
     const slug = slugify(doc.basics.name);
     const filename = slug ? `${slug}-resume.json` : "resume.json";

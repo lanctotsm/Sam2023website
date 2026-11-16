@@ -11,6 +11,9 @@ export function ContactSectionEditor({ data, onChange, ui }: SectionEditorProps<
         onChange({ links: data.links.map((link, i) => (i === index ? { ...link, ...patch } : link)) });
     return (
         <div className="grid gap-4">
+            <p className="m-0 text-sm text-olive-dark dark:text-dark-muted">
+                Visitors send a message through the form. Mailto links and email addresses in this section are left off the public page.
+            </p>
             <div>
                 <label className={labelClass}>Section heading</label>
                 <input

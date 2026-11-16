@@ -17,7 +17,8 @@ export function toPersonJsonLd(
     if (basics.name) person.name = basics.name;
     if (basics.label) person.jobTitle = basics.label;
     if (basics.summary) person.description = basics.summary;
-    if (basics.email) person.email = `mailto:${basics.email}`;
+    // Callers pass a public copy. An empty email means the admin left publishing off.
+    if (basics.email) person.email = basics.email;
     if (basics.phone) person.telephone = basics.phone;
     if (basics.url) person.url = basics.url;
 

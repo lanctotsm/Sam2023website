@@ -37,6 +37,7 @@ export const ADMIN_NAV_ITEMS = [
   { href: "/admin/albums", label: "Albums" },
   { href: "/admin/media", label: "Media Library" },
   { href: "/admin/resume", label: "Resume" },
+  { href: "/admin/messages", label: "Messages" },
   { href: "/admin/users", label: "Users" },
   { href: "/admin/settings", label: "Settings" },
   { href: "/upload", label: "Upload Photos" }
@@ -47,5 +48,6 @@ export const ADMIN_HOME_TILES = [
   { href: "/admin/albums", kicker: "Photos", label: "Albums" },
   { href: "/admin/posts", kicker: "Writing", label: "Posts" },
   { href: "/admin/media", kicker: "Library", label: "Media" },
+  { href: "/admin/messages", kicker: "Inbox", label: "Messages" },
   { href: "/admin/users", kicker: "Access", label: "Users" }
 ] as const;

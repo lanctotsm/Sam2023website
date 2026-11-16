@@ -19,14 +19,20 @@ vi.mock("@/services/resumePdf", () => ({
     renderAndPublishResumePdf: vi.fn()
 }));
 
+vi.mock("@/services/settings", () => ({
+    getSetting: vi.fn(async () => null)
+}));
+
 const { getAuthUser } = await import("@/lib/api-utils");
 const { getResume, saveResume } = await import("@/services/resume");
+const { getSetting } = await import("@/services/settings");
 const { renderAndPublishResumePdf } = await import("@/services/resumePdf");
 
 describe("RESUME /api/resume", () => {
     beforeEach(() => {
         vi.clearAllMocks();
         vi.mocked(getAuthUser).mockResolvedValue(null);
+        vi.mocked(getSetting).mockResolvedValue(null);
         vi.mocked(getResume).mockResolvedValue(createDefaultResume());
         vi.mocked(saveResume).mockImplementation(async (raw) => sanitizeResumeDocument(raw));
         vi.mocked(renderAndPublishResumePdf).mockResolvedValue({
@@ -37,11 +43,37 @@ describe("RESUME /api/resume", () => {
     });
 
     describe("GET", () => {
-        it("is public and returns the stored document", async () => {
+        it("is public and omits the email address", async () => {
+            const doc = createDefaultResume();
+            doc.basics.name = "Sam";
+            doc.basics.email = "owner@example.com";
+            vi.mocked(getResume).mockResolvedValue(doc);
             const res = await GET();
             expect(res.status).toBe(200);
             const data = await res.json();
-            expect(data).toEqual(createDefaultResume());
+            expect(data.basics.name).toBe("Sam");
+            expect(data.basics.email).toBe("");
+            expect(JSON.stringify(data)).not.toContain("owner@example.com");
+        });
+
+        it("includes the email when an admin has turned public email on", async () => {
+            const doc = createDefaultResume();
+            doc.basics.email = "owner@example.com";
+            vi.mocked(getResume).mockResolvedValue(doc);
+            vi.mocked(getSetting).mockResolvedValue("true");
+            const res = await GET();
+            const data = await res.json();
+            expect(data.basics.email).toBe("owner@example.com");
+        });
+
+        it("returns the email to a signed-in admin", async () => {
+            const doc = createDefaultResume();
+            doc.basics.email = "owner@example.com";
+            vi.mocked(getResume).mockResolvedValue(doc);
+            vi.mocked(getAuthUser).mockResolvedValue(MOCK_AUTH_USER as never);
+            const res = await GET();
+            expect(res.status).toBe(200);
+            expect((await res.json()).basics.email).toBe("owner@example.com");
         });
     });
 

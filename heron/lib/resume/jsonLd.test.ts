@@ -45,10 +45,13 @@ describe("lib/resume/jsonLd", () => {
         expect(ld.worksFor).toMatchObject({ "@type": "Organization", name: "GEICO" });
     });
 
-    it("omits telephone when the phone is blank and formats email as mailto", () => {
+    it("omits telephone when the phone is blank and includes email only when the document still has one", () => {
         const ld = toPersonJsonLd(sampleDoc(), BASE);
         expect(ld).not.toHaveProperty("telephone");
-        expect(ld.email).toBe("mailto:sam@example.com");
+        expect(ld.email).toBe("sam@example.com");
+        const hidden = sampleDoc();
+        hidden.basics.email = "";
+        expect(toPersonJsonLd(hidden, BASE)).not.toHaveProperty("email");
     });
 
     it("maps profiles to sameAs, skills to knowsAbout, education and certificates", () => {

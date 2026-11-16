@@ -5,6 +5,7 @@ import { getSetting } from "@/services/settings";
 
 const footerLinks = [
   { href: "/", label: "About" },
+  { href: "/#contact", label: "Contact" },
   { href: "/resume", label: "Resume" },
   { href: "/posts", label: "Posts" },
   { href: "/albums", label: "Albums" }

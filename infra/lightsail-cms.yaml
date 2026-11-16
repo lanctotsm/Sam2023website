@@ -213,7 +213,7 @@ Resources:
       StaticIpName: !Ref StaticIpName
       AttachedTo: !Ref CmsInstance
 
-  # Managed policy for the CMS app IAM user (S3 uploads + AI alt text via Bedrock).
+  # Managed policy for the CMS app IAM user (S3, Bedrock alt text, SES contact mail).
   # Already attached to that user; stack updates refresh permissions in place.
   CmsS3UploaderPolicy:
     Type: AWS::IAM::ManagedPolicy
@@ -253,6 +253,19 @@ Resources:
               - bedrock:InvokeModel
             Resource:
               - !Sub "arn:aws:bedrock:${AWS::Region}::foundation-model/amazon.nova-lite-v1:0"
+          - Sid: AllowSesSendEmail
+            Effect: Allow
+            Action:
+              - ses:SendEmail
+            Resource: !Sub "arn:aws:ses:${AWS::Region}:${AWS::AccountId}:identity/*"
+          # Non-sending SES API actions use Resource "*" (SES access control guide).
+          - Sid: AllowSesManageContactIdentity
+            Effect: Allow
+            Action:
+              - ses:CreateEmailIdentity
+              - ses:GetEmailIdentity
+              - ses:DeleteEmailIdentity
+            Resource: "*"
 
 Outputs:
   BackupBucket:
@@ -271,5 +284,5 @@ Outputs:
   CmsDataDiskName:
     Value: !Ref DataDiskName
   CmsS3UploaderPolicyArn:
-    Description: "CMS app IAM managed policy (S3 + AI alt text)."
+    Description: "CMS app IAM managed policy (S3, AI alt text, and SES contact mail)."
     Value: !Ref CmsS3UploaderPolicy

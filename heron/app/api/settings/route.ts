@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { errorResponse, getAuthUser } from "@/lib/api-utils";
 import { parsePostsPageConfig } from "@/lib/postsPage";
+import { RESUME_PUBLISH_EMAIL_SETTING, resumeEmailIsPublic } from "@/lib/resume/publish-email";
 import { getSetting, getSettings, updateSetting, updateSettings } from "@/services/settings";
 
 function normalizeSettingValue(key: string, value: string): string {
@@ -30,6 +31,7 @@ const ALLOWED_SETTING_KEYS = new Set([
     "page_styles",
     "nav_styles",
     "ai_alt_text_enabled",
+    "resume_publish_email",
 ]);
 
 const MAX_VALUE_LENGTH = 100_000; // 100 KB
@@ -74,7 +76,13 @@ export async function PUT(request: Request) {
         if (payload.value.length > MAX_VALUE_LENGTH) {
             return errorResponse("value too large", 400);
         }
-        await updateSetting(payload.key, normalizeSettingValue(payload.key, payload.value));
+        const previousPublish =
+            payload.key === RESUME_PUBLISH_EMAIL_SETTING ? await getSetting(RESUME_PUBLISH_EMAIL_SETTING) : null;
+        const nextValue = normalizeSettingValue(payload.key, payload.value);
+        await updateSetting(payload.key, nextValue);
+        if (payload.key === RESUME_PUBLISH_EMAIL_SETTING) {
+            await refreshResumePdf(previousPublish, nextValue);
+        }
         return NextResponse.json({ ok: true });
     }
 
@@ -91,9 +99,27 @@ export async function PUT(request: Request) {
             }
             normalized[key] = normalizeSettingValue(key, value);
         }
+        const nextPublish = normalized[RESUME_PUBLISH_EMAIL_SETTING];
+        const previousPublish =
+            nextPublish === undefined ? null : await getSetting(RESUME_PUBLISH_EMAIL_SETTING);
         await updateSettings(normalized);
+        if (nextPublish !== undefined) {
+            await refreshResumePdf(previousPublish, nextPublish);
+        }
         return NextResponse.json({ ok: true });
     }
 
     return errorResponse("invalid payload", 400);
+}
+
+/** Rebuilds the public PDF only when the email visibility actually changes. */
+async function refreshResumePdf(previous: string | null, next: string): Promise<void> {
+    if (resumeEmailIsPublic(previous) === resumeEmailIsPublic(next)) return;
+    try {
+        const { getResume } = await import("@/services/resume");
+        const { renderAndPublishResumePdf } = await import("@/services/resumePdf");
+        await renderAndPublishResumePdf(await getResume());
+    } catch {
+        console.error("Resume PDF could not be refreshed after the email setting changed.");
+    }
 }

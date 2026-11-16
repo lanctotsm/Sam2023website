@@ -1,11 +1,16 @@
 import { NextResponse } from "next/server";
 import { getAuthUser, errorResponse } from "@/lib/api-utils";
+import { RESUME_PUBLISH_EMAIL_SETTING, resumeEmailIsPublic, resumeForPublic } from "@/lib/resume/publish-email";
 import { getResume, saveResume } from "@/services/resume";
 import { renderAndPublishResumePdf } from "@/services/resumePdf";
+import { getSetting } from "@/services/settings";
 
 export async function GET() {
     const doc = await getResume();
-    return NextResponse.json(doc);
+    const user = await getAuthUser();
+    if (user) return NextResponse.json(doc);
+    const publish = resumeEmailIsPublic(await getSetting(RESUME_PUBLISH_EMAIL_SETTING));
+    return NextResponse.json(resumeForPublic(doc, publish));
 }
 
 export async function PUT(request: Request) {

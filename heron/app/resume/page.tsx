@@ -5,6 +5,8 @@ import PageStyleProvider from "@/components/PageStyleProvider";
 import ResumeView, { isResumeEmpty } from "@/components/resume/ResumeView";
 import { getResume } from "@/services/resume";
 import { toPersonJsonLd } from "@/lib/resume/jsonLd";
+import { RESUME_PUBLISH_EMAIL_SETTING, resumeEmailIsPublic, resumeForPublic } from "@/lib/resume/publish-email";
+import { getSetting } from "@/services/settings";
 import { publicPageMetadata, siteUrl } from "@/lib/site-metadata";
 
 const baseUrl = siteUrl();
@@ -31,7 +33,10 @@ export default function ResumePage() {
 
 async function ResumeContent() {
     await connection();
-    const doc = await getResume();
+    const doc = resumeForPublic(
+        await getResume(),
+        resumeEmailIsPublic(await getSetting(RESUME_PUBLISH_EMAIL_SETTING))
+    );
     const jsonLd = toPersonJsonLd(doc, baseUrl);
 
     return (
