@@ -55,6 +55,7 @@ export default function AdminSettingsPage() {
     const [siteTitle, setSiteTitle] = useState("");
     const [footerText, setFooterText] = useState("");
     const [aiAltTextEnabled, setAiAltTextEnabled] = useState(false);
+    const [resumePublishEmail, setResumePublishEmail] = useState(false);
 
     // Home page
     const [config, setConfig] = useState<FrontPageSettings>(defaultFrontPage);
@@ -86,12 +87,13 @@ export default function AdminSettingsPage() {
         (async () => {
             try {
                 const data = await apiFetch<Record<string, string>>(
-                    "/settings?keys=site_title,footer_text,front_page,posts_page,page_styles,nav_styles,ai_alt_text_enabled",
+                    "/settings?keys=site_title,footer_text,front_page,posts_page,page_styles,nav_styles,ai_alt_text_enabled,resume_publish_email",
                     { cache: "no-store" }
                 );
                 if (data.site_title) setSiteTitle(data.site_title);
                 if (data.footer_text) setFooterText(data.footer_text);
                 if (data.ai_alt_text_enabled === "true") setAiAltTextEnabled(true);
+                if (data.resume_publish_email === "true") setResumePublishEmail(true);
                 if (data.front_page) setConfig(parseFrontPageConfig(data.front_page));
                 if (data.posts_page) setPostsPageConfig(parsePostsPageConfig(data.posts_page));
 
@@ -136,6 +138,7 @@ export default function AdminSettingsPage() {
                         site_title: siteTitle,
                         footer_text: footerText,
                         ai_alt_text_enabled: aiAltTextEnabled ? "true" : "false",
+                        resume_publish_email: resumePublishEmail ? "true" : "false",
                         front_page: JSON.stringify(config),
                         posts_page: JSON.stringify(normalizedPostsPage),
                         page_styles: newPageStylesJson,
@@ -289,6 +292,44 @@ export default function AdminSettingsPage() {
                                 <span
                                     className={`absolute top-0.5 left-0.5 h-6 w-6 rounded-full bg-white shadow transition-transform ${
                                         aiAltTextEnabled ? "translate-x-5" : "translate-x-0"
+                                    }`}
+                                />
+                            </button>
+                        </div>
+
+                        <div className="flex items-start justify-between gap-4 rounded-lg border border-desert-tan-dark p-3 dark:border-dark-muted">
+                            <div>
+                                <p
+                                    id="settings-resume-email-label"
+                                    className="m-0 text-sm font-semibold text-chestnut-dark dark:text-dark-text"
+                                >
+                                    Show email on the public resume
+                                </p>
+                                <p
+                                    id="settings-resume-email-help"
+                                    className="mt-1 m-0 text-xs text-olive dark:text-dark-muted"
+                                >
+                                    Off by default. The address stays in the resume editor. Until this is on, the public
+                                    page, JSON, and PDF leave it out and link to the contact form.
+                                </p>
+                            </div>
+                            <button
+                                id="settings-resume-email"
+                                type="button"
+                                role="switch"
+                                aria-checked={resumePublishEmail}
+                                aria-labelledby="settings-resume-email-label"
+                                aria-describedby="settings-resume-email-help"
+                                onClick={() => setResumePublishEmail((v) => !v)}
+                                className={`relative h-7 w-12 shrink-0 rounded-full transition-colors ${
+                                    resumePublishEmail
+                                        ? "bg-chestnut dark:bg-caramel"
+                                        : "bg-desert-tan-dark dark:bg-dark-muted"
+                                }`}
+                            >
+                                <span
+                                    className={`absolute top-0.5 left-0.5 h-6 w-6 rounded-full bg-white shadow transition-transform ${
+                                        resumePublishEmail ? "translate-x-5" : "translate-x-0"
                                     }`}
                                 />
                             </button>

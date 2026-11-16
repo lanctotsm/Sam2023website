@@ -56,9 +56,15 @@ function BasicsHeader({ doc }: { doc: ResumeDocument }) {
                 style={bodyFontStyle}
             >
                 {locationText && <span>{locationText}</span>}
-                <Link href="/#contact" className={linkText}>
-                    Contact
-                </Link>
+                {basics.email ? (
+                    <a href={`mailto:${basics.email}`} className={linkText}>
+                        {basics.email}
+                    </a>
+                ) : (
+                    <Link href="/#contact" className={linkText}>
+                        Contact
+                    </Link>
+                )}
                 {basics.phone && (
                     <a href={`tel:${basics.phone.replace(/[^+\d]/g, "")}`} className={linkText}>
                         {basics.phone}

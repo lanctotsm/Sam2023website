@@ -11,6 +11,7 @@ import { putObject } from "@/lib/s3";
 import { getSetting, updateSetting } from "@/services/settings";
 import { slugify } from "@/lib/slug";
 import { toJsonResume } from "@/lib/resume/jsonResume";
+import { RESUME_PUBLISH_EMAIL_SETTING, resumeEmailIsPublic, resumeForPublic } from "@/lib/resume/publish-email";
 import type { ResumeDocument } from "@/lib/resume/types";
 
 export const RESUME_PDF_SETTING_KEY = "resume_pdf";
@@ -68,7 +69,8 @@ export async function renderAndPublishResumePdf(doc: ResumeDocument): Promise<Re
     }
 
     const dir = templateDir();
-    const payload = JSON.stringify(toJsonResume(doc));
+    const publish = resumeEmailIsPublic(await getSetting(RESUME_PUBLISH_EMAIL_SETTING));
+    const payload = JSON.stringify(toJsonResume(resumeForPublic(doc, publish)));
 
     let workDir: string | null = null;
     try {
