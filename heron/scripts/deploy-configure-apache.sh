@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Configure Apache reverse proxy and Let's Encrypt. Requires SITE_DOMAIN (and optionally LETSENCRYPT_EMAIL) in env.
+# Configure Apache reverse proxy and Let's Encrypt. Requires SITE_DOMAIN (and optionally LETSENCRYPT_EMAIL) in env. If www.<domain> resolves in DNS, it is also served and redirected to <domain>.
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -12,6 +12,14 @@ WEBROOT="/var/lib/letsencrypt-webroot"
 if [ -z "${SITE_DOMAIN:-}" ]; then
   echo "SITE_DOMAIN is empty; skipping Apache reverse proxy and Let's Encrypt configuration."
   exit 0
+fi
+
+# Also serve www.<domain> only when its DNS name resolves. Requesting a certificate
+# for a name that does not resolve makes Let's Encrypt validation fail.
+WWW_DOMAIN=""
+if [[ "$SITE_DOMAIN" != www.* ]] && getent hosts "www.${SITE_DOMAIN}" >/dev/null 2>&1; then
+  WWW_DOMAIN="www.${SITE_DOMAIN}"
+  echo "www.${SITE_DOMAIN} resolves; it will also be served and redirected to ${SITE_DOMAIN}."
 fi
 
 if [ "$DEPLOY_VENDOR" != bitnami ]; then
@@ -49,25 +57,39 @@ else
   fi
 fi
 
+# Both stay empty unless WWW_DOMAIN is set. They are expanded inside the APACHE heredoc below.
+SERVER_ALIAS_LINE=""
+WWW_REDIRECT_BLOCK=""
+if [ -n "$WWW_DOMAIN" ]; then
+  SERVER_ALIAS_LINE="ServerAlias ${WWW_DOMAIN}"
+  WWW_REDIRECT_BLOCK="$(printf '%s\n' \
+    '  RewriteEngine On' \
+    '  RewriteCond %{HTTP_HOST} ^www\. [NC]' \
+    "  RewriteRule ^(.*)\$ https://${SITE_DOMAIN}\$1 [R=301,L]")"
+fi
+
 sudo tee "$DEPLOY_VHOST_PATH" > /dev/null <<APACHE
 <VirtualHost *:80>
   ServerName ${SITE_DOMAIN}
+  ${SERVER_ALIAS_LINE}
   Alias /.well-known/acme-challenge ${WEBROOT}/.well-known/acme-challenge
   <Directory ${WEBROOT}/.well-known/acme-challenge>
     Require all granted
   </Directory>
   RewriteEngine On
   RewriteCond %{REQUEST_URI} !^/.well-known/acme-challenge/
-  RewriteRule ^(.*)$ https://%{HTTP_HOST}\$1 [R=301,L]
+  RewriteRule ^(.*)$ https://${SITE_DOMAIN}\$1 [R=301,L]
 </VirtualHost>
 <VirtualHost *:443>
   ServerName ${SITE_DOMAIN}
+  ${SERVER_ALIAS_LINE}
   SSLEngine on
   SSLCertificateFile "${CERT_FILE}"
   SSLCertificateKeyFile "${KEY_FILE}"
   ProxyPreserveHost On
   # TLS ends here. Without this, Node sees http:// and rejects the browser's https Origin.
   RequestHeader set X-Forwarded-Proto "https"
+${WWW_REDIRECT_BLOCK}
   # Compress text on the way out. mod_deflate skips a response that already
   # has Content-Encoding, so this does not double-gzip when Next compresses.
   <IfModule mod_deflate.c>
@@ -102,9 +124,27 @@ if [ -n "${LETSENCRYPT_EMAIL:-}" ]; then
     sudo apt-get update -qq -y
     sudo apt-get install -y -qq certbot
   fi
-  if sudo certbot certonly --webroot -w "$WEBROOT" -d "$SITE_DOMAIN" \
-    --non-interactive --agree-tos --email "$LETSENCRYPT_EMAIL" \
-    --keep-until-expiring 2>/dev/null; then
+  # Takes the -d arguments as parameters. Called in an if condition, so set -e does not abort on failure.
+  request_certificate() {
+    sudo certbot certonly --webroot -w "$WEBROOT" "$@" \
+      --cert-name "$SITE_DOMAIN" --expand --renew-with-new-domains \
+      --non-interactive --agree-tos --email "$LETSENCRYPT_EMAIL" \
+      --keep-until-expiring 2>/dev/null
+  }
+  CERTBOT_DOMAINS=(-d "$SITE_DOMAIN")
+  if [ -n "$WWW_DOMAIN" ]; then
+    CERTBOT_DOMAINS+=(-d "$WWW_DOMAIN")
+  fi
+  CERT_OK=false
+  if request_certificate "${CERTBOT_DOMAINS[@]}"; then
+    CERT_OK=true
+  elif [ -n "$WWW_DOMAIN" ]; then
+    echo "⚠ Could not add ${WWW_DOMAIN} to the certificate; retrying for ${SITE_DOMAIN} only"
+    if request_certificate -d "$SITE_DOMAIN"; then
+      CERT_OK=true
+    fi
+  fi
+  if [ "$CERT_OK" = true ]; then
     echo "✓ Let's Encrypt certificate obtained or already valid"
     sudo sed -i "s|SSLCertificateFile .*|SSLCertificateFile $LE_CERT|" "$DEPLOY_VHOST_PATH"
     sudo sed -i "s|SSLCertificateKeyFile .*|SSLCertificateKeyFile $LE_KEY|" "$DEPLOY_VHOST_PATH"

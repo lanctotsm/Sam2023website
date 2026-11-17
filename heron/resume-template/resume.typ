@@ -43,15 +43,27 @@
 
 #let fmt-partial(s) = {
   let t = if type(s) == str { s } else { str(s) }
-  if t.len() == 7 and t.at(4) == "-" and is-digit-str(t.slice(0, 4)) and is-digit-str(t.slice(5, 7)) {
+  let has-year-month = (
+    t.len() >= 7
+      and t.at(4) == "-"
+      and is-digit-str(t.slice(0, 4))
+      and is-digit-str(t.slice(5, 7))
+  )
+  // A full date (YYYY-MM-DD) reads as month and year, like the web resume.
+  let has-day = (
+    t.len() == 10
+      and t.at(7) == "-"
+      and is-digit-str(t.slice(8, 10))
+      and int(t.slice(8, 10)) >= 1
+      and int(t.slice(8, 10)) <= 31
+  )
+  if has-year-month and (t.len() == 7 or has-day) {
     let m = int(t.slice(5, 7))
     if m >= 1 and m <= 12 {
       month-names.at(m - 1) + " " + t.slice(0, 4)
     } else {
       t
     }
-  } else if t.len() == 4 and is-digit-str(t) {
-    t
   } else {
     t
   }

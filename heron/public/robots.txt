@@ -1,6 +1,0 @@
-# Allow indexing of public content, but disallow photo/album pages and admin areas
-User-agent: *
-Allow: /
-Disallow: /albums/
-Disallow: /upload
-Disallow: /admin/

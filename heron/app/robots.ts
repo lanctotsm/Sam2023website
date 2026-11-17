@@ -1,18 +1,22 @@
 import type { MetadataRoute } from "next";
+import { INDEX_ALBUM_PAGES } from "@/lib/search-indexing";
+import { siteUrl } from "@/lib/site-metadata";
 
-const baseUrl =
-  process.env.NEXTAUTH_URL?.trim() ||
-  (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "http://localhost:3000") ||
-  "http://localhost:3000";
+const PRIVATE_PATHS = ["/admin", "/api", "/upload"];
+// The trailing slash keeps the /albums index crawlable while hiding album detail pages.
+const ALBUM_DETAIL_PATHS = ["/albums/"];
 
 export default function robots(): MetadataRoute.Robots {
-  const root = baseUrl.replace(/\/+$/, "");
+  const disallow = INDEX_ALBUM_PAGES
+    ? PRIVATE_PATHS
+    : [...PRIVATE_PATHS, ...ALBUM_DETAIL_PATHS];
+
   return {
     rules: {
       userAgent: "*",
       allow: "/",
-      disallow: ["/admin", "/api", "/upload"]
+      disallow
     },
-    sitemap: `${root}/sitemap.xml`
+    sitemap: `${siteUrl()}/sitemap.xml`
   };
 }

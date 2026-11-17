@@ -2,19 +2,17 @@ import type { MetadataRoute } from "next";
 import { connection } from "next/server";
 import { getAllPosts } from "@/services/posts";
 import { getAllAlbums } from "@/services/albums";
-
-const baseUrl =
-  process.env.NEXTAUTH_URL?.trim() ||
-  (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "http://localhost:3000") ||
-  "http://localhost:3000";
+import { INDEX_ALBUM_PAGES } from "@/lib/search-indexing";
+import { siteUrl } from "@/lib/site-metadata";
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   await connection();
-  const root = baseUrl.replace(/\/+$/, "");
+  const root = siteUrl();
 
   const [postRows, albumRows] = await Promise.all([
     getAllPosts({}),
-    getAllAlbums()
+    // Skipped entirely while album detail pages are hidden from crawlers.
+    INDEX_ALBUM_PAGES ? getAllAlbums() : []
   ]);
 
   const posts = Array.isArray(postRows) ? postRows : [];
@@ -34,12 +32,14 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     priority: 0.7
   }));
 
-  const albumPages: MetadataRoute.Sitemap = albums.map((a) => ({
-    url: `${root}/albums/${a.slug}`,
-    lastModified: new Date(a.updatedAt),
-    changeFrequency: "monthly" as const,
-    priority: 0.7
-  }));
+  const albumPages: MetadataRoute.Sitemap = INDEX_ALBUM_PAGES
+    ? albums.map((a) => ({
+        url: `${root}/albums/${a.slug}`,
+        lastModified: new Date(a.updatedAt),
+        changeFrequency: "monthly" as const,
+        priority: 0.7
+      }))
+    : [];
 
   return [...staticPages, ...postPages, ...albumPages];
 }
