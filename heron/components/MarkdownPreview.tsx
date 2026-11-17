@@ -1,6 +1,5 @@
 "use client";
 
-import React from "react";
 import { parseShortcodes } from "@/lib/shortcodes-parser";
 import ClientAlbumEmbed from "./ClientAlbumEmbed";
 

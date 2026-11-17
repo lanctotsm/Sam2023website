@@ -29,7 +29,7 @@ export type AvailableFont = (typeof AVAILABLE_FONTS)[number];
  * to put in React SSR `style="..."` attributes (embedded `"` would terminate
  * the attribute and leave headings stuck on the Fraunces fallback).
  */
-export const FONT_CSS_VARS: Record<AvailableFont, `--${string}`> = {
+const FONT_CSS_VARS: Record<AvailableFont, `--${string}`> = {
     Inter: "--font-body",
     Fraunces: "--font-display",
     Roboto: "--font-roboto",

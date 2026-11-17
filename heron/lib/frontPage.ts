@@ -2,7 +2,6 @@
 
 import {
     HOME_SECTION_TEMPLATE_DEFS,
-    HOME_SECTION_TEMPLATE_IDS,
     getTemplateLabel,
     resolveTemplateId,
     sanitizeTemplateData,
@@ -22,7 +21,7 @@ export type {
     ContactLink,
 } from "./homeSectionTemplates/types";
 
-export { HOME_SECTION_TEMPLATE_IDS, HOME_SECTION_TEMPLATE_DEFS, getTemplateLabel } from "./homeSectionTemplates";
+export { HOME_SECTION_TEMPLATE_IDS, HOME_SECTION_TEMPLATE_DEFS } from "./homeSectionTemplates";
 
 /** A single home page section row (template + data), stored in the DB. */
 export type HomeSection = {
@@ -38,7 +37,7 @@ export type FrontPageSettings = {
     sectionOrder: string[];
 };
 
-export function newSectionId(): string {
+function newSectionId(): string {
     if (typeof crypto !== "undefined" && crypto.randomUUID) {
         return crypto.randomUUID();
     }

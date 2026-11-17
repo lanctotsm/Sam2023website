@@ -1,7 +1,7 @@
 const baseClass =
   "animate-pulse rounded-md bg-desert-tan-dark/40 dark:bg-dark-muted/40";
 
-export function Skeleton({
+function Skeleton({
   className = "",
   ...props
 }: React.ComponentProps<"div"> & { className?: string }) {

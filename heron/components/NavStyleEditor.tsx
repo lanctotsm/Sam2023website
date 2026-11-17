@@ -1,6 +1,5 @@
 "use client";
 
-import { useCallback } from "react";
 import type { NavStyleConfig } from "@/lib/frontPageDefaults";
 import { AVAILABLE_FONTS } from "@/lib/fonts";
 import NavStylePreview from "@/components/NavStylePreview";

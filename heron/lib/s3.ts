@@ -10,7 +10,7 @@ function getEnv(name: string, fallback = "") {
   return process.env[name] || fallback;
 }
 
-export function getS3Client() {
+function getS3Client() {
   const region = getEnv("S3_REGION", "us-east-1");
   const endpoint = getEnv("S3_ENDPOINT_URL");
   const forcePathStyle = getEnv("S3_FORCE_PATH_STYLE", "false") === "true";
