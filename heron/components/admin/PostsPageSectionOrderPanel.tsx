@@ -5,9 +5,9 @@ import {
     createPostsPageSection,
     DEFAULT_POSTS_LIST_SECTION_ID,
     getPostsPageSectionDisplayLabel,
+    getPostsPageTemplateLabel,
 } from "@/lib/postsPage";
 import {
-    getAddTemplateLabel,
     getPostsPageRegistryEntry,
     POSTS_PAGE_ADD_TEMPLATE_IDS,
 } from "@/components/posts/sectionRegistry";
@@ -159,7 +159,7 @@ export default function PostsPageSectionOrderPanel({
                     </option>
                     {POSTS_PAGE_ADD_TEMPLATE_IDS.map((templateId) => (
                         <option key={templateId} value={templateId}>
-                            {getAddTemplateLabel(templateId)}
+                            {getPostsPageTemplateLabel(templateId)}
                         </option>
                     ))}
                 </select>

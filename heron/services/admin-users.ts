@@ -9,7 +9,7 @@ export async function listUsers() {
     .orderBy(desc(adminUsers.isBaseAdmin), asc(adminUsers.createdAt));
 }
 
-export async function getUserById(id: number) {
+async function getUserById(id: number) {
   const rows = await getDb().select().from(adminUsers).where(eq(adminUsers.id, id)).limit(1);
   return rows[0] || null;
 }
@@ -24,7 +24,7 @@ export async function createUser(email: string, name?: string) {
   return created[0] || null;
 }
 
-export async function deleteUser(id: number) {
+async function deleteUser(id: number) {
   await getDb().delete(adminUsers).where(eq(adminUsers.id, id));
 }
 

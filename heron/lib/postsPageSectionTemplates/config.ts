@@ -89,7 +89,7 @@ export function getPostsPageTemplateLabel(templateId: PostsPageTemplateId): stri
     return HOME_SECTION_TEMPLATE_DEFS[templateId].label;
 }
 
-export function createDefaultPostsListSection(): PostsPageSection {
+function createDefaultPostsListSection(): PostsPageSection {
     return {
         id: DEFAULT_POSTS_LIST_SECTION_ID,
         templateId: "posts-list",
@@ -110,7 +110,7 @@ export function createDefaultPostsPageConfig(): PostsPageSettings {
 
 export const defaultPostsPage = createDefaultPostsPageConfig();
 
-export function newPostsPageSectionId(): string {
+function newPostsPageSectionId(): string {
     if (typeof crypto !== "undefined" && crypto.randomUUID) {
         return crypto.randomUUID();
     }

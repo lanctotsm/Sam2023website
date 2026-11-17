@@ -1,4 +1,3 @@
-import React from "react";
 import { parseShortcodes } from "./shortcodes-parser";
 import { getDb } from "@/lib/db";
 import { albums, albumImages, images } from "@/lib/db/schema";

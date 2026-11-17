@@ -3,7 +3,7 @@ import {
   InvokeModelCommand
 } from "@aws-sdk/client-bedrock-runtime";
 
-export const NOVA_LITE_MODEL_ID = "amazon.nova-lite-v1:0";
+const NOVA_LITE_MODEL_ID = "amazon.nova-lite-v1:0";
 
 const ALT_SYSTEM_PROMPT =
   "You write short accessibility alt text for photographs. " +

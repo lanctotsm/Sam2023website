@@ -77,7 +77,7 @@ export const HOME_SECTION_TEMPLATE_IDS = Object.keys(
 ) as HomeSectionTemplateId[];
 
 /** Maps stored JSON from older saves (`type` / camelCase ids) to current template ids. */
-export const LEGACY_TEMPLATE_ID_MAP: Record<string, HomeSectionTemplateId> = {
+const LEGACY_TEMPLATE_ID_MAP: Record<string, HomeSectionTemplateId> = {
     hero: "banner",
     textBlock: "text-block",
     cards: "card-grid",

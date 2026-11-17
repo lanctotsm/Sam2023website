@@ -8,7 +8,6 @@ import type {
 } from "@/lib/postsPage";
 import { POSTS_PAGE_TEMPLATE_DEFS } from "@/lib/postsPage";
 import { HOME_SECTION_REGISTRY } from "@/components/home/sectionRegistry";
-import { HOME_SECTION_TEMPLATE_DEFS } from "@/lib/homeSectionTemplates/definitions";
 import type { SectionEditorProps } from "@/components/home/sectionEditorTypes";
 import { PostsListSectionEditor } from "@/components/posts/templates/PostsListSection";
 import { RssFeedSectionEditor } from "@/components/posts/templates/RssFeedSection";
@@ -61,10 +60,3 @@ export const POSTS_PAGE_ADD_TEMPLATE_IDS: PostsPageTemplateId[] = [
     "tag-list",
     "contact",
 ];
-
-export function getAddTemplateLabel(templateId: PostsPageTemplateId): string {
-    if (templateId === "posts-list" || templateId === "rss-feed") {
-        return POSTS_PAGE_TEMPLATE_DEFS[templateId].label;
-    }
-    return HOME_SECTION_TEMPLATE_DEFS[templateId as HomeSectionTemplateId].label;
-}

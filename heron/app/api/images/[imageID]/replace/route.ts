@@ -4,7 +4,7 @@ import { NextResponse } from "next/server";
 
 import { errorResponse, getAuthUser, parseId } from "@/lib/api-utils";
 import { serializeImage } from "@/lib/serializers";
-import { deleteImage, getImageById, updateImage } from "@/services/images";
+import { getImageById, updateImage } from "@/services/images";
 import { deleteObjects, putObject } from "@/lib/s3";
 import { processImage } from "@/lib/image-processing";
 import { ALLOWED_IMAGE_TYPES, MAX_UPLOAD_BYTES } from "@/lib/upload-limits";
